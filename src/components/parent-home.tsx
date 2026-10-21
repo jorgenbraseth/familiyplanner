@@ -13,7 +13,7 @@ function Dot({ colour }: { colour: string }) {
   return <span aria-hidden className="size-3.5 shrink-0 rounded-full" style={{ backgroundColor: colour }} />;
 }
 
-/** The parents' home cards for the children: give stars, pending approvals, upload, homework, school end. */
+/** The parents' home cards for the children: give stars, pending approvals, upload, homework, notes. */
 export function ParentHomeCards({ data }: { data: ParentHome }) {
   const { children, uploadWeek } = data;
   if (children.length === 0) return <p className="card p-4 text-muted">{t.parentHome.noChildren}</p>;
@@ -165,21 +165,29 @@ export function ParentHomeCards({ data }: { data: ParentHome }) {
           ))}
         </ul>
       </section>
-
-      <section className="card space-y-3 p-4" aria-labelledby="end-title">
-        <h2 id="end-title" className={cardTitle}>{t.parentHome.endTitle}</h2>
-        <ul className="space-y-1">
-          {children.map(({ child, schoolEnd }) => (
-            <li key={child.id} className="flex items-center gap-2 text-lg">
-              <Dot colour={child.colour} />
-              <span className="font-extrabold">{child.name}:</span>
-              <span className={schoolEnd.kind === "time" ? "font-bold" : "text-muted"}>
-                {schoolEnd.kind === "time" ? schoolEnd.time : schoolEnd.kind === "unknown" ? t.parentHome.endUnknown : t.parentHome.endNone}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
     </>
+  );
+}
+
+/** "Skolen slutter": when each child's school day ends. Shown at the top of the parents' home page. */
+export function ParentSchoolEndCard({ data }: { data: ParentHome }) {
+  const { children } = data;
+  if (children.length === 0) return null;
+
+  return (
+    <section className="card space-y-3 p-4" aria-labelledby="end-title">
+      <h2 id="end-title" className={cardTitle}>{t.parentHome.endTitle}</h2>
+      <ul className="space-y-1">
+        {children.map(({ child, schoolEnd }) => (
+          <li key={child.id} className="flex items-center gap-2 text-lg">
+            <Dot colour={child.colour} />
+            <span className="font-extrabold">{child.name}:</span>
+            <span className={schoolEnd.kind === "time" ? "font-bold" : "text-muted"}>
+              {schoolEnd.kind === "time" ? schoolEnd.time : schoolEnd.kind === "unknown" ? t.parentHome.endUnknown : t.parentHome.endNone}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
