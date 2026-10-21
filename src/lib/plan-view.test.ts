@@ -9,6 +9,8 @@ import {
   hoursForDate,
   isWeekPlanDayEmpty,
   mergeEntries,
+  myDayEntries,
+  type PeriodLine,
   nextSchoolDay,
   parentNoteWeeks,
   periodsForDate,
@@ -318,5 +320,47 @@ describe("parentNoteWeeks", () => {
   });
   it("is empty without notes", () => {
     expect(parentNoteWeeks([item("2026-10-20", "homework")])).toEqual([]);
+  });
+});
+
+describe("myDayEntries", () => {
+  const period = (id: string, period: number, startsAt: string, endsAt: string): PeriodLine => ({
+    id,
+    period,
+    time: `${startsAt}–${endsAt}`,
+    title: id,
+    startsAt,
+    endsAt,
+  });
+  const periods = [period("p1", 1, "08:15", "09:00"), period("p2", 2, "09:00", "09:45"), period("p3", 3, "10:00", "10:45")];
+  const hours = { starts_at: "08:15", ends_at: "10:45" };
+  const ev = (id: string, sortKey: number, timeLabel = id): EventEntry => ({ id, memberId: "m", title: id, timeLabel, sortKey });
+  const names = (entries: ReturnType<typeof myDayEntries>) =>
+    entries.map((e) => (e.type === "event" ? `e:${e.event.id}` : e.type === "period" ? e.line.id : "-"));
+
+  it("lists only the timeline without events and only events without periods", () => {
+    expect(names(myDayEntries(periods, hours, []))).toEqual(["-", "p1", "-", "p2", "-", "p3", "-"]);
+    expect(names(myDayEntries([], hours, [ev("b", 900), ev("a", 600)]))).toEqual(["e:a", "e:b"]);
+    expect(myDayEntries([], undefined, [])).toEqual([]);
+  });
+
+  it("puts all-day events first and events before school before the first divider", () => {
+    const out = names(myDayEntries(periods, hours, [ev("early", 7 * 60), ev("allday", -1)]));
+    expect(out.slice(0, 3)).toEqual(["e:allday", "e:early", "-"]);
+  });
+
+  it("puts an event starting during a period right after that period's card", () => {
+    const out = names(myDayEntries(periods, hours, [ev("mid", 8 * 60 + 30)]));
+    expect(out).toEqual(["-", "p1", "e:mid", "-", "p2", "-", "p3", "-"]);
+  });
+
+  it("puts an event in a break after the break divider", () => {
+    const out = names(myDayEntries(periods, hours, [ev("brk", 9 * 60 + 50)]));
+    expect(out).toEqual(["-", "p1", "-", "p2", "-", "e:brk", "p3", "-"]);
+  });
+
+  it("puts events after school after the last divider, in time order", () => {
+    const out = names(myDayEntries(periods, hours, [ev("late2", 17 * 60), ev("late1", 15 * 60 + 30)]));
+    expect(out.slice(-3)).toEqual(["-", "e:late1", "e:late2"]);
   });
 });

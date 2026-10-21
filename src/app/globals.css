@@ -20,6 +20,10 @@
   --on-warning-soft: #8a4b0f;
   --chip: #f3ecdd;
   --chip-ink: #5c4e3c;
+  --school-soft: #e1f0dc;
+  --on-school-soft: #1f5a2a;
+  --event-soft: #fdebd3;
+  --on-event-soft: #8a4b0f;
   --card-shadow: 0 2px 8px rgb(120 90 40 / 0.08);
 }
 
@@ -43,6 +47,10 @@
     --on-warning-soft: #f4c38a;
     --chip: #3a342a;
     --chip-ink: #e5dcc8;
+    --school-soft: #243a26;
+    --on-school-soft: #b9e4bf;
+    --event-soft: #3a2c18;
+    --on-event-soft: #f4c38a;
     --card-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
   }
 }
@@ -66,6 +74,10 @@
   --color-on-warning-soft: var(--on-warning-soft);
   --color-chip: var(--chip);
   --color-chip-ink: var(--chip-ink);
+  --color-school-soft: var(--school-soft);
+  --color-on-school-soft: var(--on-school-soft);
+  --color-event-soft: var(--event-soft);
+  --color-on-event-soft: var(--on-event-soft);
   --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-baloo), var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
 }
