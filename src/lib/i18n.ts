@@ -350,6 +350,7 @@ export const t = {
     schoolHours: (hours: string) => `Skolen ${hours}`,
     breakLabel: "friminutt",
     legendSchool: "Skole",
+    legendPause: "Pause",
     legendAppointments: "Avtaler",
     nothingToday: "Ingen skole eller avtaler i dag.",
     homework: "Lekser",
