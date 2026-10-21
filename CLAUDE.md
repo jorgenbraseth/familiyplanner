@@ -14,6 +14,10 @@ Phase 0 scaffold is in the repo; the Vercel project, env vars and the `planner.b
 
 Update this checklist as phases land.
 
+## How to work (owner rule)
+
+For every task: plan the work with Opus (the main session), then hand it off to one or more Sonnet subagents (model `sonnet`) to carry out; review their results before committing and pushing.
+
 ## Stack
 
 - Next.js (App Router) + TypeScript (strict) + Tailwind CSS, deployed on Vercel (EU region)
