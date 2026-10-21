@@ -6,9 +6,9 @@ import { z } from "zod";
 import { getCurrentMember, requireParent } from "@/lib/auth";
 import { t } from "@/lib/i18n";
 import { notifyMembers, notifyParents } from "@/lib/push";
-import { noteSchema, parseTrackForm, reasonSchema } from "@/lib/star-forms";
+import { amountSchema, noteSchema, parseTrackForm, reasonSchema, type TaskInput } from "@/lib/star-forms";
 import { TRACK_COLUMNS } from "@/lib/star-data";
-import { justReachedMilestone, milestonesOf, type StarTrackRow } from "@/lib/stars";
+import { approvedTotal, justReachedMilestone, milestonesOf, type StarTrackRow } from "@/lib/stars";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/view-as";
 
@@ -36,14 +36,54 @@ function dbError(action: string, error: { code?: string; message?: string }): st
   return t.stars.errors.failed;
 }
 
-async function approvedCount(supabase: Client, trackId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from("stars")
-    .select("id", { count: "exact", head: true })
+/** Sum of the approved star amounts of a track (what milestones are measured in). */
+async function approvedSum(supabase: Client, trackId: string): Promise<number> {
+  const { data, error } = await supabase.from("stars").select("status, amount").eq("track_id", trackId).eq("status", "approved");
+  if (error) throw new Error("Could not sum the approved stars");
+  return approvedTotal((data ?? []) as { status: "approved"; amount: number }[]);
+}
+
+/** A task of the given track (RLS lets a child read the tasks of their own track), or null. */
+async function readTask(supabase: Client, trackId: string, taskId: string) {
+  const { data } = await supabase
+    .from("star_tasks")
+    .select("id, name, stars")
+    .eq("id", taskId)
     .eq("track_id", trackId)
-    .eq("status", "approved");
-  if (error) throw new Error("Could not count the approved stars");
-  return count ?? 0;
+    .maybeSingle();
+  return (data as { id: string; name: string; stars: number } | null) ?? null;
+}
+
+/** Makes the track's tasks equal to `tasks` (ids kept for existing ones, list order = sort). */
+async function syncTasks(supabase: Client, trackId: string, tasks: TaskInput[]): Promise<boolean> {
+  const { data: existing, error } = await supabase.from("star_tasks").select("id").eq("track_id", trackId);
+  if (error) return false;
+  const existingIds = new Set((existing ?? []).map((row) => row.id as string));
+  const keep = new Set(tasks.flatMap((task) => (task.id && existingIds.has(task.id) ? [task.id] : [])));
+
+  const removed = [...existingIds].filter((id) => !keep.has(id));
+  if (removed.length > 0) {
+    const { error: deleteError } = await supabase.from("star_tasks").delete().in("id", removed);
+    if (deleteError) return false;
+  }
+  for (const [sort, task] of tasks.entries()) {
+    if (task.id && keep.has(task.id)) {
+      const { error: updateError } = await supabase
+        .from("star_tasks")
+        .update({ name: task.name, stars: task.stars, sort })
+        .eq("id", task.id)
+        .eq("track_id", trackId);
+      if (updateError) return false;
+    }
+  }
+  const added = tasks.flatMap((task, sort) =>
+    task.id && keep.has(task.id) ? [] : [{ track_id: trackId, name: task.name, stars: task.stars, sort }],
+  );
+  if (added.length > 0) {
+    const { error: insertError } = await supabase.from("star_tasks").insert(added);
+    if (insertError) return false;
+  }
+  return true;
 }
 
 async function readTrack(supabase: Client, trackId: string): Promise<StarTrackRow | null> {
@@ -60,12 +100,13 @@ async function readChildName(supabase: Client, memberId: string): Promise<string
 async function notifyApproved(
   track: StarTrackRow,
   reason: string,
+  amount: number,
   before: number,
   after: number,
   childName: string,
   title: string,
 ) {
-  await notifyMembers([track.member_id], { title, body: reason, url: "/stars", tag: "star-decision" });
+  await notifyMembers([track.member_id], { title, body: t.stars.push.approvedBody(amount, reason), url: "/stars", tag: "star-decision" });
   const milestone = justReachedMilestone(before, after, track);
   if (milestone === null) return;
   const reward = (milestone >= track.goal ? track.big_reward : track.small_reward) || t.stars.rewardFallback;
@@ -85,14 +126,17 @@ async function notifyApproved(
   ]);
 }
 
-/** A child asks for a star on their active track (preset or free-text reason). */
+/** A child asks for stars on their active track: a task (one tap) or a free-text reason (1 star). */
 export async function requestStar(_prev: StarActionState, formData: FormData): Promise<StarActionState> {
   const me = await getCurrentMember();
   const viewer = await getViewer();
   if (me.role !== "child" || viewer.previewing) return { ok: false, error: t.stars.errors.notAllowed };
 
-  const reason = reasonSchema.safeParse(field(formData, "reason"));
-  if (!reason.success) return { ok: false, error: t.stars.errors.reason };
+  const taskId = field(formData, "task");
+  const taskIdParsed = taskId === "" ? null : idSchema.safeParse(taskId);
+  if (taskIdParsed && !taskIdParsed.success) return { ok: false, error: t.stars.errors.taskGone };
+  const freeReason = taskIdParsed ? null : reasonSchema.safeParse(field(formData, "reason"));
+  if (freeReason && !freeReason.success) return { ok: false, error: t.stars.errors.reason };
 
   const supabase = await createClient();
   const { data: track, error: trackError } = await supabase
@@ -104,10 +148,25 @@ export async function requestStar(_prev: StarActionState, formData: FormData): P
   if (trackError) return { ok: false, error: dbError("requestStar", trackError) };
   if (!track) return { ok: false, error: t.stars.errors.noTrack };
 
+  let reason: string;
+  let amount = 1;
+  let task: { id: string } | null = null;
+  if (taskIdParsed?.success) {
+    task = await readTask(supabase, track.id as string, taskIdParsed.data);
+    if (!task) return { ok: false, error: t.stars.errors.taskGone };
+    const full = task as { id: string; name: string; stars: number };
+    reason = full.name;
+    amount = full.stars;
+  } else {
+    reason = (freeReason as { data: string }).data;
+  }
+
+  // The database sets the amount from the task (and forces 1 without one); `amount` here is for the push text only.
   const { error } = await supabase.from("stars").insert({
     track_id: track.id,
     member_id: me.id,
-    reason: reason.data,
+    reason,
+    task_id: task?.id ?? null,
     status: "pending",
     requested_by: me.id,
   });
@@ -115,7 +174,7 @@ export async function requestStar(_prev: StarActionState, formData: FormData): P
 
   await notifyParents({
     title: t.stars.push.requestTitle,
-    body: t.stars.push.requestBody(me.name, reason.data),
+    body: t.stars.push.requestBodyAmount(me.name, amount, reason),
     url: "/stars",
     tag: "star-request",
   });
@@ -132,12 +191,12 @@ export async function decideStar(formData: FormData): Promise<void> {
   if (!id.success || !decision.success || !note.success) return;
 
   const supabase = await createClient();
-  const { data: star } = await supabase.from("stars").select("id, track_id, reason, status").eq("id", id.data).maybeSingle();
+  const { data: star } = await supabase.from("stars").select("id, track_id, reason, status, amount").eq("id", id.data).maybeSingle();
   if (!star) return;
   const track = await readTrack(supabase, star.track_id as string);
   if (!track) return;
 
-  const before = await approvedCount(supabase, track.id);
+  const before = await approvedSum(supabase, track.id);
   const status = decision.data === "approve" ? "approved" : "declined";
   const { data, error } = await supabase
     .from("stars")
@@ -148,12 +207,13 @@ export async function decideStar(formData: FormData): Promise<void> {
     if (error) console.error("decideStar failed", error.code);
     return;
   }
-  const after = await approvedCount(supabase, track.id);
+  const after = await approvedSum(supabase, track.id);
 
   if (status === "approved") {
     await notifyApproved(
       track,
       star.reason as string,
+      star.amount as number,
       before,
       after,
       await readChildName(supabase, track.member_id),
@@ -170,13 +230,18 @@ export async function decideStar(formData: FormData): Promise<void> {
   refresh();
 }
 
-/** A parent gives an approved star straight to a child's active track. */
+/** A parent gives approved stars straight to a child's active track: a task (its stars) or free text + amount. */
 export async function giveStar(_prev: StarActionState, formData: FormData): Promise<StarActionState> {
   const parent = await requireParent();
   const childId = idSchema.safeParse(field(formData, "child"));
-  const reason = reasonSchema.safeParse(field(formData, "reason"));
   if (!childId.success) return { ok: false, error: t.stars.errors.failed };
-  if (!reason.success) return { ok: false, error: t.stars.errors.reason };
+  const taskId = field(formData, "task");
+  const taskIdParsed = taskId === "" ? null : idSchema.safeParse(taskId);
+  if (taskIdParsed && !taskIdParsed.success) return { ok: false, error: t.stars.errors.taskGone };
+  const freeReason = taskIdParsed ? null : reasonSchema.safeParse(field(formData, "reason"));
+  if (freeReason && !freeReason.success) return { ok: false, error: t.stars.errors.reason };
+  const freeAmount = taskIdParsed ? null : amountSchema.safeParse(field(formData, "amount") || "1");
+  if (freeAmount && !freeAmount.success) return { ok: false, error: t.stars.errors.amount };
 
   const supabase = await createClient();
   const { data: trackData, error: trackError } = await supabase
@@ -189,20 +254,38 @@ export async function giveStar(_prev: StarActionState, formData: FormData): Prom
   if (!trackData) return { ok: false, error: t.stars.errors.noTrack };
   const track = trackData as StarTrackRow;
 
-  const before = await approvedCount(supabase, track.id);
+  let reason: string;
+  let amount: number;
+  let taskRef: string | null = null;
+  if (taskIdParsed?.success) {
+    const task = await readTask(supabase, track.id, taskIdParsed.data);
+    if (!task) return { ok: false, error: t.stars.errors.taskGone };
+    reason = task.name;
+    amount = task.stars;
+    taskRef = task.id;
+  } else {
+    reason = (freeReason as { data: string }).data;
+    amount = (freeAmount as { data: number }).data;
+  }
+
+  const before = await approvedSum(supabase, track.id);
+  // For a task the database sets the amount from the task; otherwise the parent's amount (1..10) is used.
   const { error } = await supabase.from("stars").insert({
     track_id: track.id,
     member_id: track.member_id,
-    reason: reason.data,
+    reason,
+    task_id: taskRef,
+    amount,
     status: "approved",
     requested_by: parent.id,
   });
   if (error) return { ok: false, error: dbError("giveStar", error) };
-  const after = await approvedCount(supabase, track.id);
+  const after = await approvedSum(supabase, track.id);
 
   await notifyApproved(
     track,
-    reason.data,
+    reason,
+    amount,
     before,
     after,
     await readChildName(supabase, track.member_id),
@@ -260,10 +343,20 @@ export async function createTrack(_prev: StarActionState, formData: FormData): P
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? t.stars.errors.failed };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("star_tracks").insert({ ...parsed.data, member_id: childId.data });
-  if (error) {
-    if (error.code === "23505") return { ok: false, error: t.stars.errors.alreadyActive };
-    return { ok: false, error: dbError("createTrack", error) };
+  const { tasks, ...trackFields } = parsed.data;
+  const { data: created, error } = await supabase
+    .from("star_tracks")
+    .insert({ ...trackFields, member_id: childId.data })
+    .select("id")
+    .single();
+  if (error || !created) {
+    if (error?.code === "23505") return { ok: false, error: t.stars.errors.alreadyActive };
+    return { ok: false, error: dbError("createTrack", error ?? {}) };
+  }
+  if (!(await syncTasks(supabase, created.id as string, tasks))) {
+    // Don't leave a half-made track behind: the parent can submit the form again.
+    await supabase.from("star_tracks").delete().eq("id", created.id);
+    return { ok: false, error: t.stars.errors.failed };
   }
   refresh();
   redirect("/stars");
@@ -278,9 +371,11 @@ export async function updateTrack(_prev: StarActionState, formData: FormData): P
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? t.stars.errors.failed };
 
   const supabase = await createClient();
-  const { data, error } = await supabase.from("star_tracks").update(parsed.data).eq("id", id.data).select("id");
+  const { tasks, ...trackFields } = parsed.data;
+  const { data, error } = await supabase.from("star_tracks").update(trackFields).eq("id", id.data).select("id");
   if (error) return { ok: false, error: dbError("updateTrack", error) };
   if (!data || data.length === 0) return { ok: false, error: t.stars.errors.notAllowed };
+  if (!(await syncTasks(supabase, id.data, tasks))) return { ok: false, error: t.stars.errors.failed };
   refresh();
   redirect("/stars");
 }

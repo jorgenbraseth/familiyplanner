@@ -6,8 +6,19 @@ import type { DayView } from "@/lib/calendar/view";
 import { t } from "@/lib/i18n";
 
 /** Merged family week with a toggle chip per person. */
-export function FamilyCalendar({ days, members }: { days: DayView[]; members: MemberDot[] }) {
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
+export function FamilyCalendar({
+  days,
+  members,
+  onlyMemberId,
+}: {
+  days: DayView[];
+  members: MemberDot[];
+  /** Start with only this member's calendar on (the others can be switched on). */
+  onlyMemberId?: string;
+}) {
+  const [hidden, setHidden] = useState<Set<string>>(
+    () => new Set(onlyMemberId ? members.filter((m) => m.id !== onlyMemberId).map((m) => m.id) : []),
+  );
   const toggle = (id: string) =>
     setHidden((prev) => {
       const next = new Set(prev);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { dayKey } from "./dates";
 import type { PlanItemKind, PlanItemRow } from "./plan";
-import { groupItemsByDay, nextSchoolDay, todayView } from "./plan-view";
+import { formatSchoolHours, formatWeekday, groupItemsByDay, nextSchoolDay, todayView, visibleDays, weekPlan } from "./plan-view";
 
 let n = 0;
 function item(date: string, kind: PlanItemKind, sort = 0, text = "Test"): PlanItemRow {
@@ -16,6 +16,9 @@ function item(date: string, kind: PlanItemKind, sort = 0, text = "Test"): PlanIt
     text,
     done: false,
     sort,
+    period: null,
+    starts_at: null,
+    ends_at: null,
   };
 }
 
@@ -78,5 +81,60 @@ describe("todayView", () => {
   it("looks to Monday on a Friday", () => {
     const view = todayView([item("2026-10-26", "homework", 0, "Mandag")], { year: 2026, month: 10, day: 23 });
     expect(view.homeworkDue.map((i) => i.text)).toEqual(["Mandag"]);
+  });
+});
+
+describe("formatWeekday", () => {
+  it("gives the capitalised weekday only", () => {
+    expect(formatWeekday(monday)).toBe("Mandag");
+    expect(formatWeekday({ year: 2026, month: 10, day: 25 })).toBe("Søndag");
+  });
+});
+
+describe("visibleDays", () => {
+  const days = ["2026-10-19", "2026-10-20", "2026-10-21"].map((key) => ({ key }));
+  it("hides past days in the current week only", () => {
+    expect(visibleDays(days, "2026-10-20", 0).map((d) => d.key)).toEqual(["2026-10-20", "2026-10-21"]);
+    expect(visibleDays(days, "2026-10-20", 1)).toHaveLength(3);
+    expect(visibleDays(days, "2026-10-20", -1)).toHaveLength(3);
+  });
+});
+
+describe("formatSchoolHours", () => {
+  it("formats known times", () => {
+    expect(formatSchoolHours("08:15:00", "14:00:00")).toBe("08:15–14:00");
+    expect(formatSchoolHours("8:15", null)).toBe("08:15");
+    expect(formatSchoolHours(null, null)).toBeNull();
+  });
+});
+
+describe("weekPlan", () => {
+  const lesson = (date: string, period: number | null, text: string, sort = 0) => ({
+    ...item(date, "lesson", sort, text),
+    period,
+    starts_at: period ? `0${7 + period}:15:00` : null,
+  });
+  const items = [
+    lesson("2026-10-21", 2, "Norsk"),
+    lesson("2026-10-21", 1, "Matte"),
+    lesson("2026-10-21", null, "Fri", 5),
+    item("2026-10-21", "homework", 0, "Les"),
+    item("2026-10-24", "note", 0, "Tur"),
+  ];
+  const hours = new Map([["2026-10-21", { starts_at: "08:15:00", ends_at: "14:00:00" }]]);
+
+  it("orders lessons by period, adds hours and keeps weekends only with items", () => {
+    const days = weekPlan(items, hours, monday, "2026-10-19", 1);
+    expect(days.map((d) => d.key)).toEqual(["2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24"]);
+    const wed = days[2];
+    expect(wed.lessons.map((l) => l.text)).toEqual(["Matte", "Norsk", "Fri"]);
+    expect(wed.hours).toBe("08:15–14:00");
+    expect(wed.homework).toHaveLength(1);
+    expect(days[0].hours).toBeNull();
+  });
+
+  it("hides past days in the current week", () => {
+    const days = weekPlan(items, hours, monday, "2026-10-22", 0);
+    expect(days.map((d) => d.key)).toEqual(["2026-10-22", "2026-10-23", "2026-10-24"]);
   });
 });

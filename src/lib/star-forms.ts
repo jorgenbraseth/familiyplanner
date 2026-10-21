@@ -1,24 +1,48 @@
 // Validation of the star screens' forms. Pure, so it can be tested.
 import { z } from "zod";
 import { t } from "./i18n";
+import { MAX_TASKS, MAX_TASK_NAME, MAX_TASK_STARS } from "./stars";
 
 const e = t.stars.errors;
 
-export const MAX_PRESET_REASONS = 20;
-export const MAX_PRESET_LENGTH = 60;
+export { MAX_TASKS, MAX_TASK_NAME, MAX_TASK_STARS };
 
-/** One preset reason per line: trimmed, empty lines dropped, duplicates removed. */
-export function parsePresetReasons(text: string): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const line of text.split(/\r?\n/)) {
-    const reason = line.trim();
-    if (reason === "" || seen.has(reason)) continue;
-    seen.add(reason);
-    out.push(reason);
-  }
-  return out;
-}
+/** A task a child can request stars for. `id` is set for tasks that already exist. */
+export const taskInputSchema = z.object({
+  id: z.uuid().optional(),
+  name: z.string().trim().min(1, e.taskName).max(MAX_TASK_NAME, e.taskName),
+  stars: z.number(e.taskStars).int(e.taskStars).min(1, e.taskStars).max(MAX_TASK_STARS, e.taskStars),
+});
+
+export type TaskInput = z.infer<typeof taskInputSchema>;
+
+export const taskListSchema = z
+  .array(taskInputSchema)
+  .max(MAX_TASKS, e.taskCount)
+  .refine((tasks) => new Set(tasks.map((task) => task.name.toLowerCase())).size === tasks.length, {
+    message: e.taskDuplicate,
+  });
+
+/**
+ * The tasks of the track form, sent as JSON `[{id?, name, stars}]` in order. Rows with a blank
+ * name are dropped (an untouched "add task" row). Order of the list is the sort order.
+ */
+export const tasksFieldSchema = z
+  .string()
+  .transform((text, ctx) => {
+    try {
+      const value: unknown = JSON.parse(text === "" ? "[]" : text);
+      if (!Array.isArray(value)) throw new Error("not a list");
+      return value.filter((row) => !(row && typeof row === "object" && typeof row.name === "string" && row.name.trim() === ""));
+    } catch {
+      ctx.addIssue({ code: "custom", message: e.tasks });
+      return z.NEVER;
+    }
+  })
+  .pipe(taskListSchema);
+
+/** Stars as the amount of a star given by a parent without a task. */
+export const amountSchema = z.coerce.number(e.amount).int(e.amount).min(1, e.amount).max(MAX_TASK_STARS, e.amount);
 
 /** The reason of a star request or a star given by a parent. */
 export const reasonSchema = z.string().trim().min(1, e.reason).max(120, e.reason);
@@ -37,14 +61,7 @@ export const trackInputSchema = z
     milestone_every: z.coerce.number(e.every).int(e.every).min(1, e.every).max(50, e.every),
     small_reward: z.string().trim().max(200, e.reward),
     big_reward: z.string().trim().max(200, e.reward),
-    preset_reasons: z
-      .string()
-      .transform(parsePresetReasons)
-      .pipe(
-        z
-          .array(z.string().max(MAX_PRESET_LENGTH, e.presetLength))
-          .max(MAX_PRESET_REASONS, e.presetCount),
-      ),
+    tasks: tasksFieldSchema,
   })
   .refine((track) => track.goal % track.milestone_every === 0, {
     message: e.everyDivides,
@@ -65,6 +82,6 @@ export function parseTrackForm(formData: FormData) {
     milestone_every: field(formData, "milestone_every"),
     small_reward: field(formData, "small_reward"),
     big_reward: field(formData, "big_reward"),
-    preset_reasons: field(formData, "preset_reasons"),
+    tasks: field(formData, "tasks"),
   });
 }

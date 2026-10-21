@@ -36,10 +36,37 @@ export type PlanItemRow = {
   text: string;
   done: boolean;
   sort: number;
+  /** Lessons: period number in the school day (1..15), if the plan has one. */
+  period: number | null;
+  /** Lessons: start/end time as Postgres returns it ("HH:MM:SS"), if known. */
+  starts_at: string | null;
+  ends_at: string | null;
+};
+
+/** School start/end for one day of an uploaded week plan. Times are "HH:MM:SS" as Postgres returns them. */
+export type SchoolDayRow = {
+  id: string;
+  document_id: string;
+  member_id: string;
+  /** "YYYY-MM-DD" in Europe/Copenhagen. */
+  date: string;
+  starts_at: string | null;
+  ends_at: string | null;
 };
 
 /** An item as extraction produces it, before it gets ids. */
-export type ExtractedItem = Pick<PlanItemRow, "date" | "kind" | "subject" | "text">;
+export type ExtractedItem = Pick<PlanItemRow, "date" | "kind" | "subject" | "text"> & {
+  /** Lessons only; null when the plan doesn't say. Times are "HH:MM". */
+  period: number | null;
+  starts_at: string | null;
+  ends_at: string | null;
+};
+
+/** School start/end extracted for one day ("HH:MM" or null). */
+export type ExtractedDay = { date: string; starts_at: string | null; ends_at: string | null };
+
+/** What extraction produces for one document. */
+export type Extraction = { items: ExtractedItem[]; days: ExtractedDay[] };
 
 /** Upload types Claude can read (PDF + images). HEIC isn't supported; phones send JPEG from the file picker. */
 export const ACCEPTED_MIME_TYPES = {

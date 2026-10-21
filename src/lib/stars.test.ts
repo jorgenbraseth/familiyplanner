@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   STAR_DAILY_LIMIT,
+  approvedTotal,
+  celebratingReward,
   justReachedMilestone,
   milestonesOf,
   requestsLeftToday,
   rewardTextAt,
+  starIcons,
   trackProgress,
   type RewardRow,
   type StarRow,
@@ -39,8 +42,14 @@ function stars(status: StarStatus, n: number, trackId = "t1"): StarRow[] {
     decided_by: null,
     decided_at: null,
     note: null,
+    amount: 1,
+    task_id: null,
     created_at: "2026-10-02T10:00:00Z",
   }));
+}
+
+function starOf(status: StarStatus, amount: number, trackId = "t1"): StarRow {
+  return { ...stars(status, 1, trackId)[0], amount };
 }
 
 function reward(atCount: number, kind: "small" | "big" = "small", trackId = "t1"): RewardRow {
@@ -55,6 +64,20 @@ describe("milestonesOf", () => {
 });
 
 describe("trackProgress", () => {
+  it("sums amounts rather than counting rows, capping approved at the goal", () => {
+    const p = trackProgress(
+      track,
+      [starOf("approved", 3), starOf("approved", 4), starOf("pending", 2), starOf("pending", 5), starOf("declined", 10)],
+      [],
+    );
+    expect(p.approved).toBe(7);
+    expect(p.pending).toBe(7);
+    expect(p.declined).toBe(10);
+    expect(p.nextMilestone).toBe(10);
+    expect(p.starsToNext).toBe(3);
+    expect(trackProgress(track, [starOf("approved", 10), starOf("approved", 10), starOf("approved", 10), starOf("approved", 5)], []).approved).toBe(30);
+  });
+
   it("starts empty", () => {
     const p = trackProgress(track, [], []);
     expect(p).toMatchObject({ approved: 0, pending: 0, declined: 0, goal: 30, nextMilestone: 5, starsToNext: 5, complete: false });
@@ -191,5 +214,33 @@ describe("rewardTextAt", () => {
     expect(rewardTextAt(rewards, 5)).toBe("Ice cream");
     expect(rewardTextAt(rewards, 25)).toBe("Ice cream");
     expect(rewardTextAt(rewards, 30)).toBe("Cinema");
+  });
+});
+
+describe("approvedTotal, starIcons and celebratingReward", () => {
+  it("sums approved amounts only", () => {
+    expect(
+      approvedTotal([
+        { status: "approved", amount: 2 },
+        { status: "approved", amount: 3 },
+        { status: "pending", amount: 5 },
+        { status: "declined", amount: 4 },
+      ]),
+    ).toBe(5);
+    expect(approvedTotal([])).toBe(0);
+  });
+  it("draws one star per amount, clamped to 1..10", () => {
+    expect(starIcons(1)).toBe("⭐");
+    expect(starIcons(3)).toBe("⭐⭐⭐");
+    expect(starIcons(0)).toBe("⭐");
+    expect(starIcons(99)).toBe("⭐".repeat(10));
+  });
+  it("celebrates a milestone passed within the window", () => {
+    const owed = [{ atCount: 5, kind: "small" as const, text: "Is" }];
+    expect(celebratingReward({ approved: 5, rewardsOwed: owed })?.atCount).toBe(5);
+    expect(celebratingReward({ approved: 6, rewardsOwed: owed })).toBeNull();
+    expect(celebratingReward({ approved: 6, rewardsOwed: owed }, 3)?.atCount).toBe(5);
+    expect(celebratingReward({ approved: 8, rewardsOwed: owed }, 3)).toBeNull();
+    expect(celebratingReward({ approved: 4, rewardsOwed: [] }, 3)).toBeNull();
   });
 });

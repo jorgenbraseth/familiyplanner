@@ -44,7 +44,7 @@ export function StarParentView({ rows }: { rows: ChildWithStars[] }) {
                   {pending.map((star) => (
                     <li key={star.id} className="space-y-2 rounded-xl bg-warning-soft p-3">
                       <p className="break-words text-lg font-bold text-on-warning-soft">
-                        <span aria-hidden>☆ </span>
+                        <span className="mr-2 font-extrabold">{t.stars.amount(star.amount)}</span>
                         {star.reason}
                       </p>
                       <p className="text-xs capitalize text-on-warning-soft">
@@ -101,7 +101,7 @@ export function StarParentView({ rows }: { rows: ChildWithStars[] }) {
             {active && (
               <div className="space-y-2">
                 <h3 className={sectionTitle}>{t.stars.parent.giveTitle}</h3>
-                <GiveStarForm childId={child.id} presets={active.track.preset_reasons} />
+                <GiveStarForm childId={child.id} tasks={active.tasks} />
               </div>
             )}
 

@@ -6,7 +6,7 @@ import { loadWeek, parseWeekOffset } from "@/lib/calendar/view";
 import { SchoolToday } from "@/components/school-today";
 import { SchoolWeek } from "@/components/school-week";
 import { t } from "@/lib/i18n";
-import { groupItemsByDay, todayView } from "@/lib/plan-view";
+import { groupItemsByDay, todayView, visibleDays } from "@/lib/plan-view";
 import { loadSchoolWeek } from "@/lib/school";
 import { StarCard } from "@/components/star-card";
 import { loadChildStars, loadPendingCount } from "@/lib/star-data";
@@ -16,9 +16,10 @@ import Link from "next/link";
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { me, viewing: member, previewing } = await getViewer();
   const offset = parseWeekOffset((await searchParams).week);
+  const kidView = member.role === "child";
   const showPendingCard = me.role === "parent" && !previewing;
   const [week, school, stars, pendingStars] = await Promise.all([
-    loadWeek([member], offset),
+    loadWeek([member], offset, new Date(), kidView),
     loadSchoolWeek(member.id, offset),
     member.role === "child" ? loadChildStars(member.id) : null,
     showPendingCard ? loadPendingCount() : 0,
@@ -50,18 +51,19 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <section className="space-y-2">
           <h2 className="text-xl font-extrabold">{t.home.today}</h2>
           <DayList days={[today]} />
-          {hasSchoolToday && <SchoolToday view={schoolToday} readOnly={previewing} />}
+          {hasSchoolToday && <SchoolToday view={schoolToday} readOnly={previewing} weekdayOnly={kidView} />}
         </section>
       )}
       <section className="space-y-3">
         <h2 className="text-xl font-extrabold">{t.home.thisWeek}</h2>
         <WeekNav path="/" offset={offset} isoWeek={week.isoWeek} />
-        <DayList days={week.days} />
+        <DayList days={visibleDays(week.days, week.todayKey, offset)} />
         <SchoolWeek
-          days={groupItemsByDay(school.items, school.monday, 7)}
+          days={visibleDays(groupItemsByDay(school.items, school.monday, 7), week.todayKey, offset)}
           documents={school.documents}
           todayKey={week.todayKey}
           readOnly={previewing}
+          weekdayOnly={kidView}
         />
       </section>
       {!previewing && <PushCard />}

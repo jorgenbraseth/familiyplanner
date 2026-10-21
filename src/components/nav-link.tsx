@@ -11,7 +11,7 @@ export function NavLink({ href, children, badge = 0 }: { href: string; children:
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-bold ${
+      className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm font-bold sm:px-4 ${
         active ? "bg-primary text-on-primary" : "text-ink hover:bg-chip"
       }`}
     >

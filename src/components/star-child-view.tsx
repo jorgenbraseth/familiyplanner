@@ -3,7 +3,7 @@ import { StarBar, StarGrid } from "@/components/star-progress";
 import { StarHistory } from "@/components/star-history";
 import { t } from "@/lib/i18n";
 import type { ChildStars } from "@/lib/star-data";
-import { rewardTextAt } from "@/lib/stars";
+import { celebratingReward, rewardTextAt } from "@/lib/stars";
 
 const HISTORY_LIMIT = 15;
 
@@ -28,8 +28,8 @@ export function StarChildView({
     );
   }
 
-  const { track, progress, stars } = data;
-  const celebrating = progress.rewardsOwed.find((r) => r.atCount === progress.approved);
+  const { track, progress, stars, tasks } = data;
+  const celebrating = celebratingReward(progress, Math.max(1, ...tasks.map((task) => task.stars)));
   const nextReward =
     progress.nextMilestone === null
       ? null
@@ -79,7 +79,7 @@ export function StarChildView({
           </ul>
         </section>
       )}
-      <RequestStarForm presets={track.preset_reasons} left={left} previewing={previewing} />
+      <RequestStarForm tasks={tasks} left={left} previewing={previewing} />
       <section className="card space-y-2 p-4">
         <h2 className="text-xl font-extrabold">{t.stars.historyTitle}</h2>
         <StarHistory stars={stars.slice(0, HISTORY_LIMIT)} empty={t.stars.historyEmpty} />

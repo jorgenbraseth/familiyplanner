@@ -30,6 +30,19 @@ export type StarRow = {
   decided_by: string | null;
   decided_at: string | null;
   note: string | null;
+  /** Stars this row is worth (1..10). */
+  amount: number;
+  task_id: string | null;
+  created_at: string;
+};
+
+export type StarTaskRow = {
+  id: string;
+  track_id: string;
+  name: string;
+  /** Stars awarded for the task (1..10). */
+  stars: number;
+  sort: number;
   created_at: string;
 };
 
@@ -52,11 +65,16 @@ export function requestsLeftToday(starsRequestedToday: number): number {
   return Math.max(0, STAR_DAILY_LIMIT - Math.max(0, Math.floor(starsRequestedToday)));
 }
 
+/** Limits of a track's tasks (the database enforces the name length and stars). */
+export const MAX_TASKS = 20;
+export const MAX_TASK_NAME = 60;
+export const MAX_TASK_STARS = 10;
+
 export type OwedReward = { atCount: number; kind: RewardKind; text: string };
 export type GivenReward = OwedReward & { givenAt: string; givenBy: string | null };
 
 export type TrackProgress = {
-  /** Approved stars, capped at the goal. */
+  /** Sum of approved star amounts, capped at the goal. */
   approved: number;
   pending: number;
   declined: number;
@@ -95,9 +113,11 @@ export function trackProgress(
   rewards: readonly RewardRow[],
 ): TrackProgress {
   const own = stars.filter((s) => s.track_id === track.id);
-  const approved = Math.min(track.goal, own.filter((s) => s.status === "approved").length);
-  const pending = own.filter((s) => s.status === "pending").length;
-  const declined = own.filter((s) => s.status === "declined").length;
+  const sumOf = (status: StarStatus) =>
+    own.filter((s) => s.status === status).reduce((sum, s) => sum + s.amount, 0);
+  const approved = Math.min(track.goal, sumOf("approved"));
+  const pending = sumOf("pending");
+  const declined = sumOf("declined");
 
   const milestones = milestonesOf(track);
   const milestonesReached = milestones.filter((m) => m <= approved);
@@ -158,4 +178,26 @@ export function rewardTextAt(
   atCount: number,
 ): string {
   return atCount >= track.goal ? track.big_reward : track.small_reward;
+}
+
+/** Total of the amounts of the approved stars (what milestones and rewards are checked against). */
+export function approvedTotal(stars: readonly Pick<StarRow, "status" | "amount">[]): number {
+  return stars.reduce((sum, s) => (s.status === "approved" ? sum + s.amount : sum), 0);
+}
+
+/** "⭐⭐" for a task worth 2 stars. Clamped to 1..10. */
+export function starIcons(amount: number): string {
+  const n = Math.min(10, Math.max(1, Math.floor(amount)));
+  return "⭐".repeat(n);
+}
+
+/**
+ * The owed reward to celebrate right now: the highest milestone reached within the last
+ * `window` approved stars (use the largest task size, so a multi-star task that jumps over a
+ * milestone still celebrates). With window 1 this is "approved is exactly on a milestone".
+ */
+export function celebratingReward(progress: Pick<TrackProgress, "approved" | "rewardsOwed">, window = 1): OwedReward | null {
+  const w = Math.max(1, Math.floor(window));
+  const recent = progress.rewardsOwed.filter((r) => r.atCount <= progress.approved && r.atCount > progress.approved - w);
+  return recent.length > 0 ? recent[recent.length - 1] : null;
 }

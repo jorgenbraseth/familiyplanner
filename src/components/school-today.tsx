@@ -1,11 +1,19 @@
 import { formatDayHeading } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import type { PlanItemRow } from "@/lib/plan";
-import type { TodayView } from "@/lib/plan-view";
+import { formatWeekday, type TodayView } from "@/lib/plan-view";
 import { SchoolHeading, SchoolHomework, SchoolLines, SchoolNotes } from "./school-items";
 
 /** The school part of "I dag". Renders nothing when there is nothing to show. */
-export function SchoolToday({ view, readOnly = false }: { view: TodayView; readOnly?: boolean }) {
+export function SchoolToday({
+  view,
+  readOnly = false,
+  weekdayOnly = false,
+}: {
+  view: TodayView;
+  readOnly?: boolean;
+  weekdayOnly?: boolean;
+}) {
   const { lessons, bring, notes, homeworkDue } = view;
   if (lessons.length + bring.length + notes.length + homeworkDue.length === 0) return null;
   const section = (heading: React.ReactNode, children: React.ReactNode, key: string) => (
@@ -20,7 +28,7 @@ export function SchoolToday({ view, readOnly = false }: { view: TodayView; readO
       {has(lessons) && section(t.school.timetable, <SchoolLines items={lessons} />, "lessons")}
       {has(bring) && section(t.school.bring, <SchoolLines items={bring} />, "bring")}
       {has(homeworkDue) &&
-        section(t.school.homeworkFor(formatDayHeading(view.nextSchoolDay)), <SchoolHomework items={homeworkDue} readOnly={readOnly} />, "homework")}
+        section(t.school.homeworkFor((weekdayOnly ? formatWeekday : formatDayHeading)(view.nextSchoolDay)), <SchoolHomework items={homeworkDue} readOnly={readOnly} />, "homework")}
       {has(notes) && <SchoolNotes items={notes} />}
     </div>
   );
