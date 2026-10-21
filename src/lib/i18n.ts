@@ -361,6 +361,14 @@ export const t = {
     remember: "Husk",
   },
   // Parents' home page (replaces the parents' Meg page).
+  parentDay: {
+    title: "Dagen i dag",
+    school: "Skole",
+    empty: "Ingenting på programmet i dag.",
+    failed: (names: string) => `Klarte ikke å hente alt for ${names}.`,
+    schoolLabel: "Skole",
+    eventLabel: "Avtale",
+  },
   parentHome: {
     giveTitle: "Gi stjerne",
     giveButton: "Gi stjerner",
