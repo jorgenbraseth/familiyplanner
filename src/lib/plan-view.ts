@@ -145,11 +145,59 @@ export function hoursForDate(
   return row ? { starts_at: row.starts_at, ends_at: row.ends_at } : undefined;
 }
 
-export type PeriodLine = { id: string; period: number | null; time: string | null; title: string };
+export type PeriodLine = {
+  id: string;
+  period: number | null;
+  time: string | null;
+  title: string;
+  /** "HH:MM" start/end of the period when known (the start page's timeline puts them between the cards). */
+  startsAt: string | null;
+  endsAt: string | null;
+};
 
 /** What one timetable period shows: period number, time range and subject. */
 export function periodLine(row: Timetable["periods"][number]): PeriodLine {
-  return { id: row.id, period: row.period, time: formatSchoolHours(row.starts_at, row.ends_at), title: row.subject };
+  return {
+    id: row.id,
+    period: row.period,
+    time: formatSchoolHours(row.starts_at, row.ends_at),
+    title: row.subject,
+    startsAt: formatHm(row.starts_at),
+    endsAt: formatHm(row.ends_at),
+  };
+}
+
+/** A time marker between two period cards: one time, or a break (period ended at `from`, next starts at `to`). */
+export type TimelineDivider = { kind: "time"; time: string } | { kind: "break"; from: string; to: string };
+
+export type PeriodTimelineEntry =
+  | { type: "divider"; divider: TimelineDivider }
+  | { type: "period"; line: PeriodLine };
+
+/**
+ * The periods of a day as a timeline: dividers with times between the period cards instead of a time range on each.
+ * First divider: the first period's start (else the school start); last: the last period's end (else the school end);
+ * between two periods: one time when one ends as the next starts, a break (both times) when there is a gap, and
+ * whichever time is known when only one is. No known time means no divider there.
+ */
+export function periodTimeline(periods: readonly PeriodLine[], hours?: SchoolHours): PeriodTimelineEntry[] {
+  const out: PeriodTimelineEntry[] = [];
+  const push = (divider: TimelineDivider | null) => {
+    if (divider) out.push({ type: "divider", divider });
+  };
+  const single = (time: string | null): TimelineDivider | null => (time ? { kind: "time", time } : null);
+  periods.forEach((line, i) => {
+    if (i === 0) push(single(line.startsAt ?? formatHm(hours?.starts_at)));
+    else {
+      const ended = periods[i - 1].endsAt;
+      const starts = line.startsAt;
+      if (ended && starts && ended < starts) push({ kind: "break", from: ended, to: starts });
+      else push(single(starts ?? ended));
+    }
+    out.push({ type: "period", line });
+    if (i === periods.length - 1) push(single(line.endsAt ?? formatHm(hours?.ends_at)));
+  });
+  return out;
 }
 
 /** The periods of the date's ISO weekday in school order: by period (those without one after), time, then `sort`. */

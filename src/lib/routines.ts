@@ -83,3 +83,8 @@ export function routineProgress(
   const done = items.filter((i) => checked.has(i.id)).length;
   return { done, total, complete: total > 0 && done === total };
 }
+
+/** A finished routine is shown folded up, unless the child has opened it again. */
+export function routineCollapsed(complete: boolean, expanded: boolean): boolean {
+  return complete && !expanded;
+}
