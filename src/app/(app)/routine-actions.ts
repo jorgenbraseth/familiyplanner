@@ -100,7 +100,7 @@ export async function toggleRoutineCheck(itemId: string, checked: boolean): Prom
       return { ok: false };
     }
   } else {
-    const { error } = await supabase.from("routine_checks").delete().eq("item_id", item.id).eq("date", today);
+    const { error } = await supabase.from("routine_checks").delete().eq("item_id", item.id).eq("member_id", me.id).eq("date", today);
     if (error) {
       console.error("toggleRoutineCheck failed", error.code);
       return { ok: false };

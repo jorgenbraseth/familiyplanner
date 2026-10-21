@@ -30,6 +30,11 @@ export async function POST(request: Request) {
     if (!memberData) return json({ error: "unauthorized" }, 401);
     const me = memberData as Member;
 
+    // The family list, read with the asker's own client (every member may read all members).
+    const { data: familyData, error: familyError } = await supabase.from("members").select(MEMBER_COLUMNS).order("created_at");
+    if (familyError) throw new Error("Could not read the family members");
+    const family = (familyData ?? []) as Member[];
+
     const viewer = await getViewer();
     if (viewer.previewing) return json({ error: "preview" }, 403);
 
@@ -59,9 +64,15 @@ export async function POST(request: Request) {
     try {
       result = await runAssistant({
         model,
-        system: buildSystemPrompt({ now: new Date(), firstName: firstNameOf(me.name), role: me.role, locale: me.locale }),
+        system: buildSystemPrompt({
+          now: new Date(),
+          meId: me.id,
+          firstName: firstNameOf(me.name),
+          role: me.role,
+          family: family.map((m) => ({ id: m.id, name: m.name, role: m.role })),
+        }),
         question,
-        ctx: { supabase, me },
+        ctx: { supabase, me, members: family },
       });
     } catch (error) {
       if (error instanceof AssistantAiError) {

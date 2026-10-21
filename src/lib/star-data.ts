@@ -34,7 +34,7 @@ export async function loadChildStars(memberId: string): Promise<ChildStars | nul
   const track = trackData as StarTrackRow;
 
   const [starsResult, rewardsResult, tasksResult] = await Promise.all([
-    supabase.from("stars").select(STAR_COLUMNS).eq("track_id", track.id).order("created_at", { ascending: false }),
+    supabase.from("stars").select(STAR_COLUMNS).eq("track_id", track.id).eq("member_id", memberId).order("created_at", { ascending: false }),
     supabase.from("rewards").select(REWARD_COLUMNS).eq("track_id", track.id),
     supabase.from("star_tasks").select(TASK_COLUMNS).or(taskScopeFilter(memberId)).order("sort").order("created_at"),
   ]);

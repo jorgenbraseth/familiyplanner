@@ -56,7 +56,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       </div>
       <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 p-4 pb-28">{children}</main>
       {/* The assistant answers as the signed-in member, so it is not part of a "Se som barn" preview. */}
-      {!previewing && <AssistantButton locale={me.locale} />}
+      {!previewing && <AssistantButton />}
     </>
   );
 }

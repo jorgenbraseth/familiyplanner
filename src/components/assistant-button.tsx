@@ -5,7 +5,7 @@ import { t } from "@/lib/i18n";
 import { AssistantPanel } from "./assistant-panel";
 
 /** Floating round mic button on every signed-in page; opens the assistant sheet. */
-export function AssistantButton({ locale }: { locale: string }) {
+export function AssistantButton() {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -28,7 +28,7 @@ export function AssistantButton({ locale }: { locale: string }) {
       >
         <MicIcon className="size-8" />
       </button>
-      {open && <AssistantPanel locale={locale} onClose={close} />}
+      {open && <AssistantPanel onClose={close} />}
     </>
   );
 }

@@ -102,18 +102,61 @@ export function shapeSchoolDays(
   return result;
 }
 
-export type NamedMember = { id: string; name: string; calendar_id?: string | null };
+export type NamedMember = { id: string; name: string; role?: string; calendar_id?: string | null };
 
 export type MemberLookup<M extends NamedMember> = { member: M } | { error: string };
 
-/** Finds a member by name, case-insensitively: exact match first, then a unique prefix/substring match. */
+const fold = (text: string) => text.trim().toLocaleLowerCase("nb-NO");
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Finds a member by id or name, case-insensitively. Order: id, full name, first name, then a unique
+ * substring match. Two matches at the same step are ambiguous (an error), never a guess.
+ */
 export function resolveMember<M extends NamedMember>(members: readonly M[], name: string): MemberLookup<M> {
-  const wanted = name.trim().toLocaleLowerCase("nb-NO");
+  const wanted = fold(name);
   if (!wanted) return { error: "No member name given." };
-  const exact = members.filter((m) => m.name.trim().toLocaleLowerCase("nb-NO") === wanted);
-  if (exact.length === 1) return { member: exact[0] };
-  const partial = members.filter((m) => m.name.toLocaleLowerCase("nb-NO").includes(wanted));
-  if (exact.length === 0 && partial.length === 1) return { member: partial[0] };
-  if (exact.length > 1 || partial.length > 1) return { error: "More than one family member matches that name." };
+  if (UUID.test(wanted)) {
+    const byId = members.find((m) => m.id.toLowerCase() === wanted);
+    return byId ? { member: byId } : { error: "No family member with that id." };
+  }
+  const steps: ((m: M) => boolean)[] = [
+    (m) => fold(m.name) === wanted,
+    (m) => fold(m.name).split(/\s+/)[0] === wanted,
+    (m) => fold(m.name).includes(wanted),
+  ];
+  for (const matches of steps) {
+    const found = members.filter(matches);
+    if (found.length === 1) return { member: found[0] };
+    if (found.length > 1) return { error: "More than one family member matches that name." };
+  }
   return { error: "No family member with that name." };
+}
+
+const CHILDREN_WORDS = new Set(["children", "kids", "all children", "all kids", "barna", "alle barna", "barn", "ungene"]);
+const FAMILY_WORDS = new Set(["everyone", "family", "all", "alle", "familien"]);
+
+export type MembersLookup<M extends NamedMember> = { members: M[]; group: boolean } | { error: string };
+
+/**
+ * Who a tool call is about. null/empty means the person asking; "children" (or "kids", "barna") all children;
+ * "everyone" (or "family") the whole family; anything else one member by id or name. `group` is true for
+ * the two group words, so results are listed per member even when the family has a single child.
+ */
+export function resolveTargets<M extends NamedMember>(members: readonly M[], me: M, query: string | null): MembersLookup<M> {
+  if (query === null || query.trim() === "") return { members: [me], group: false };
+  const word = fold(query);
+  if (CHILDREN_WORDS.has(word)) return { members: members.filter((m) => m.role === "child"), group: true };
+  if (FAMILY_WORDS.has(word)) return { members: [...members], group: true };
+  const found = resolveMember(members, query);
+  return "error" in found ? found : { members: [found.member], group: false };
+}
+
+/** Keeps only the periods whose subject contains `subject` (case-insensitive) and drops days left without any. */
+export function filterSchoolDaysBySubject(days: readonly SchoolDayResult[], subject: string | null): SchoolDayResult[] {
+  const wanted = subject === null ? "" : fold(subject);
+  if (!wanted) return [...days];
+  return days
+    .map((d) => ({ ...d, periods: d.periods.filter((p) => fold(p.subject).includes(wanted)) }))
+    .filter((d) => d.periods.length > 0);
 }

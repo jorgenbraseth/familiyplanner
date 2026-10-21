@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { t } from "@/lib/i18n";
+import { locale as SPEECH_LANGUAGE, t } from "@/lib/i18n";
 import { pickVoice } from "@/lib/speech-voice";
 import { MicIcon } from "./assistant-button";
 
@@ -53,7 +53,7 @@ function recognitionConstructor(): SpeechRecognitionConstructorLike | undefined 
   return window.SpeechRecognition ?? window.webkitSpeechRecognition;
 }
 
-export function AssistantPanel({ locale, onClose }: { locale: string; onClose: () => void }) {
+export function AssistantPanel({ onClose }: { onClose: () => void }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [heard, setHeard] = useState("");
   const [question, setQuestion] = useState("");
@@ -81,7 +81,7 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
   async function speakWithDevice(message: string, token: number) {
     if (typeof speechSynthesis === "undefined") return;
     speechSynthesis.cancel();
-    const voice = pickVoice(await loadVoices(), locale);
+    const voice = pickVoice(await loadVoices(), SPEECH_LANGUAGE);
     if (token !== speakTokenRef.current) return; // Stopped, muted or a newer request meanwhile.
     if (!voice) {
       setNoVoice(true);
@@ -235,7 +235,7 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
     stopSpeaking();
     abortRef.current?.abort();
     const recognition = new Recognition();
-    recognition.lang = locale;
+    recognition.lang = SPEECH_LANGUAGE;
     recognition.interimResults = true;
     recognition.continuous = false;
     recognition.maxAlternatives = 1;

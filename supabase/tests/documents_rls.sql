@@ -153,13 +153,13 @@ begin
   perform pg_temp.done();
 end $$;
 
--- 4. Child B cannot see or toggle A's items.
+-- 4. Child B can read A's published items (family-wide reads) but cannot toggle them or see A's files.
 do $$
 declare n int;
 begin
   perform pg_temp.act_as('doc.child.b@example.com', 'authenticated');
   select count(*) into n from public.plan_items;
-  if n <> 0 then raise exception 'child B saw % items', n; end if;
+  if n <> 2 then raise exception 'child B should read the 2 published items of A, saw %', n; end if;
   update public.plan_items set done = true;
   get diagnostics n = row_count;
   if n <> 0 then raise exception 'child B updated % items', n; end if;

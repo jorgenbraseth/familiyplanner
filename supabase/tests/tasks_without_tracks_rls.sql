@@ -73,16 +73,16 @@ begin
   insert into ids values ('a', a), ('b', b), ('ta', ta), ('tb', tb), ('ka', ka), ('kb', kb), ('kall', kall);
 end $$;
 
--- 2. Visibility: a child sees own + all-children tasks, never a sibling's.
+-- 2. Visibility: a child reads own, all-children and (family-wide reads) a sibling's tasks; changes none.
 do $$
 declare n int;
 begin
   perform pg_temp.act_as('free.child.a@example.com', 'authenticated');
-  select count(*) into n from public.star_tasks;
+  select count(*) into n from public.star_tasks where member_id = (select v from ids where k = 'a') or member_id is null;
   -- Own A, For all, and the all-children 'Own A'
   if n <> 3 then raise exception 'child A should see 3 tasks, saw %', n; end if;
   select count(*) into n from public.star_tasks where member_id = (select v from ids where k = 'b');
-  if n <> 0 then raise exception 'child A saw sibling tasks'; end if;
+  if n = 0 then raise exception 'child A should read sibling tasks'; end if;
   select count(*) into n from public.star_tasks where member_id is null;
   if n <> 2 then raise exception 'child A should see 2 all-children tasks, saw %', n; end if;
   begin
@@ -99,10 +99,10 @@ begin
   perform pg_temp.done();
 
   perform pg_temp.act_as('free.child.b@example.com', 'authenticated');
-  select count(*) into n from public.star_tasks where name = 'Own A' and member_id is not null;
+  select count(*) into n from public.star_tasks where name = 'Own A' and member_id = (select v from ids where k = 'b');
   if n <> 1 then raise exception 'child B should see only their own ''Own A'', saw %', n; end if;
   select count(*) into n from public.star_tasks where id = (select v from ids where k = 'ka');
-  if n <> 0 then raise exception 'child B saw child A''s task'; end if;
+  if n = 0 then raise exception 'child B should read child A''s task'; end if;
   perform pg_temp.done();
 
   perform pg_temp.act_as('stranger@example.com', 'authenticated');

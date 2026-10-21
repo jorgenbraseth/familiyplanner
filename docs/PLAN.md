@@ -84,12 +84,14 @@ Rules: max N star requests per child per day (default 5), parent can undo, full 
 ## Feature 4: Voice assistant with Claude
 
 - Mic button (push-to-talk) on every screen, with a text box fallback.
-- Speech → text in the browser (`SpeechRecognition` / `webkitSpeechRecognition`), language from the member's `locale` (e.g. `nb-NO`, `da-DK`).
-- `POST /api/assistant` → Claude with the member's name, today's date and a short kid-friendly system prompt.
+- Speech → text in the browser (`SpeechRecognition` / `webkitSpeechRecognition`), language always `nb-NO` (Norwegian bokmål; every family member is Norwegian).
+- `POST /api/assistant` → Claude with the member's name, the family list (names, roles), today's date and a short kid-friendly system prompt. Always answers in Norwegian bokmål.
 - Claude can call tools that run **as the signed-in user** (so RLS applies):
-  - `get_plan_items(from, to, kind?)` – homework, lessons, things to bring
-  - `get_calendar(from, to, member?)` – calendar events
-  - `get_stars()` – current tracks, approved/pending counts, next milestone
+  - Every tool takes `member_name`: any family member's first name or id, `children`, `everyone`, or null for the person asking. Anyone in the family may ask about anyone else.
+  - `get_plan_items(from, to, kind?, member_name)` – homework, events, messages and school days
+  - `get_timetable(from, to, subject?, member_name)` – school hours and lessons (e.g. which kids have maths tomorrow)
+  - `get_calendar(from, to, member_name)` – calendar events
+  - `get_stars(member_name)` – active track, approved/pending counts, goal, next milestone and reward
 - Answer shown on screen and read aloud with `speechSynthesis`.
 - Guardrails: data access enforced by RLS (not the prompt); short, age-appropriate answers; help plan homework but don't do it; daily question limit per child (default 30); every Q&A stored in `assistant_log` for parents.
 - Models: a fast, cheap model for voice (`claude-haiku-5-5`), a stronger one for document extraction (`claude-sonnet-5-5`). Keep both in env vars so they can be swapped. Verify current model names at https://docs.claude.com before building.
@@ -145,7 +147,7 @@ All child-owned rows carry `member_id`. RLS helper functions: `current_member_id
 RLS summary:
 
 - `members`: everyone signed in and allowlisted can read; parents write.
-- `documents`, `plan_items`, `star_tracks`, `stars`, `rewards`, `assistant_log`: parents full access; children read rows where `member_id = current_member_id()`.
+- `documents`, `plan_items`, `star_tracks`, `stars`, `rewards`, `assistant_log`: parents full access. Children read the whole family's school, star and routine data (published documents and their child/both plan items, timetables, tracks, stars, rewards, tasks, routines), but never parent-audience items, documents in review, files, `assistant_log` of others or push subscriptions. Child-facing app queries therefore filter on `member_id` explicitly.
 - Children may update only `plan_items.done` on their own rows, and insert `stars` with `status = 'pending'` on their own active track.
 - Storage bucket `documents` (private): parents full access; children read objects under `<their member_id>/`.
 
@@ -163,7 +165,7 @@ RLS summary:
 
 Before phase 1:
 
-- [ ] Decide UI language (Norwegian, Danish or both). Keep all UI strings in one file so this is easy to change.
+- [ ] Decide UI language (decided: Norwegian bokmål only). Keep all UI strings in one file so this is easy to change.
 - [ ] Check whether the kids' Google accounts are supervised by Family Link.
 - [ ] Collect one sample school plan PDF per child to test extraction (keep them out of git).
 

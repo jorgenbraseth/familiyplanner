@@ -43,8 +43,8 @@ async function approvedSum(supabase: Client, trackId: string): Promise<number> {
 }
 
 /**
- * A task that applies to the child (their own or for all children), or null. RLS lets a child read
- * only those, and the database rejects a star with any other task.
+ * A task that applies to the child (their own or for all children), or null. Children can read every
+ * task of the family (RLS), so the scope is filtered here; the database also rejects a star with any other task.
  */
 async function readTask(supabase: Client, childId: string, taskId: string) {
   const { data } = await supabase
