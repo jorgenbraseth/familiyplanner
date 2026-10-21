@@ -43,7 +43,8 @@ for f in "$root"/supabase/migrations/*.sql; do
   [ "$(basename "$f")" = "$target" ] && break
   psql_run -f "$f"
 done
-psql_run -f "$root/supabase/seed.sql"
+# seed.sql follows the latest schema, so insert the first parent with columns this older schema has.
+psql_run -c "insert into public.members (name, email, role) values ('Forelder', 'forelder@example.com', 'parent')"
 
 echo "== old-style data"
 psql_run <<'SQL'
