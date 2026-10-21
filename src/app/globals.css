@@ -174,3 +174,38 @@
     line-height: 1;
   }
 }
+
+@layer components {
+  /* Gentle "you earned a reward" animation; off for people who prefer reduced motion. */
+  .celebrate {
+    border-color: var(--accent);
+    background: var(--warning-soft);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .celebrate {
+      animation: celebrate-pulse 2.4s ease-in-out infinite;
+    }
+    .celebrate-star {
+      display: inline-block;
+      animation: celebrate-bob 1.6s ease-in-out infinite;
+    }
+  }
+  @keyframes celebrate-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.015);
+    }
+  }
+  @keyframes celebrate-bob {
+    0%,
+    100% {
+      transform: translateY(0) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-4px) rotate(8deg);
+    }
+  }
+}

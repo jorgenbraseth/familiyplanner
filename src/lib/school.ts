@@ -17,7 +17,8 @@ const ITEM_COLUMNS = "id, document_id, member_id, date, kind, subject, text, don
 
 /**
  * The member's plan items for one ISO week (shifted by `weekOffset`) plus the Monday after it
- * (homework due next Monday is shown on a Friday). RLS only returns published items of the member.
+ * (homework due next Monday is shown on a Friday). Only items of published documents are returned, so a
+ * parent previewing a child sees exactly what the child sees (RLS would show parents the ones in review too).
  */
 export async function loadSchoolWeek(memberId: string, weekOffset = 0, now = new Date()): Promise<SchoolWeek> {
   const today = dateInTimeZone(now);
@@ -26,14 +27,16 @@ export async function loadSchoolWeek(memberId: string, weekOffset = 0, now = new
 
   const { data, error } = await supabase
     .from("plan_items")
-    .select(ITEM_COLUMNS)
+    .select(`${ITEM_COLUMNS}, documents!inner(status)`)
+    .eq("documents.status", "published")
     .eq("member_id", memberId)
     .gte("date", dayKey(monday))
     .lte("date", dayKey(addDays(monday, 7)))
     .order("date")
     .order("sort");
   if (error) throw new Error("Could not read the plan items");
-  const items = (data ?? []) as PlanItemRow[];
+  // Rows also carry the joined `documents` column, which is only there for the filter.
+  const items = (data ?? []) as unknown as PlanItemRow[];
 
   const documentIds = [...new Set(items.map((i) => i.document_id))];
   let documents: SchoolDocument[] = [];

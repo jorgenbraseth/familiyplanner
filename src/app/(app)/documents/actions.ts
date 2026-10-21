@@ -15,6 +15,7 @@ import {
   isAcceptedMimeType,
   type DocumentRow,
 } from "@/lib/plan";
+import { notifyMembers } from "@/lib/push";
 import { createClient } from "@/lib/supabase/server";
 
 const e = t.documents.errors;
@@ -318,14 +319,24 @@ export async function publishDocument(formData: FormData): Promise<void> {
   const parsedId = idSchema.safeParse(formString(formData, "id"));
   if (!parsedId.success) return;
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: published, error } = await supabase
     .from("documents")
     .update({ status: "published", error: null })
     .eq("id", parsedId.data)
-    .eq("status", "review");
+    .eq("status", "review")
+    .select("member_id, iso_week")
+    .maybeSingle();
   if (error) {
     console.error("publishDocument failed", error.code);
     return;
+  }
+  if (published) {
+    await notifyMembers([published.member_id as string], {
+      title: t.push.planPublishedTitle,
+      body: t.push.planPublishedBody(published.iso_week as number),
+      url: "/",
+      tag: "plan-" + parsedId.data,
+    });
   }
   revalidateDocument(parsedId.data);
   revalidatePath("/");

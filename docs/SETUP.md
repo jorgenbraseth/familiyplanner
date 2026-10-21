@@ -135,3 +135,10 @@ cp .env.example .env.local   # fill in values (use the local-dev Anthropic key)
 npm install
 npm run dev                  # http://localhost:3000
 ```
+
+## Push notifications
+
+- The VAPID variables (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`) must be set in Vercel (step 5.3). Without them the app works, but no push is sent.
+- On iPhone, push only works after the app is added to the Home Screen: Safari → Del → **Legg til på Hjem-skjerm**, then open it from there.
+- Each person turns on **Varsler** on their own phone (Meg page, "Varsler" card). Subscriptions are per device.
+- The PNG icons in `public/icons/` come from `tools/make-icons.mjs` (needs `sharp`, which Next.js already installs; run `node tools/make-icons.mjs`).

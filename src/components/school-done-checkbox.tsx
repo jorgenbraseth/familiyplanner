@@ -10,11 +10,14 @@ export function SchoolDoneCheckbox({
   done,
   label,
   detail,
+  readOnly = false,
 }: {
   id: string;
   done: boolean;
   label: string;
   detail?: string | null;
+  /** Preview mode: shown but can't be changed. */
+  readOnly?: boolean;
 }) {
   const [checked, setChecked] = useState(done);
   const [failed, setFailed] = useState(false);
@@ -39,13 +42,14 @@ export function SchoolDoneCheckbox({
   }
 
   return (
-    <label className="flex min-h-12 cursor-pointer items-start gap-1 py-0.5">
+    <label className={`flex min-h-12 items-start gap-1 py-0.5 ${readOnly ? "" : "cursor-pointer"}`}>
       <input
         type="checkbox"
         checked={checked}
+        disabled={readOnly}
         onChange={(e) => toggle(e.target.checked)}
         aria-label={t.school.markDone(label)}
-        className="tick m-2 size-7 shrink-0 cursor-pointer"
+        className={`tick m-2 size-7 shrink-0 ${readOnly ? "opacity-70" : "cursor-pointer"}`}
       />
       <span className={`min-w-0 flex-1 break-words py-2 text-lg ${checked ? "text-muted line-through" : ""}`}>
         {detail && <span className="block text-sm font-semibold text-muted">{detail}</span>}
