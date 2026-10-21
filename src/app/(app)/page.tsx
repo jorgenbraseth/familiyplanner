@@ -8,9 +8,9 @@ import { loadParentDay } from "@/lib/parent-day-data";
 import { loadParentHome } from "@/lib/parent-home";
 import { getViewer } from "@/lib/view-as";
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { viewing: member, previewing } = await getViewer();
-  if (member.role === "child") return <StartView member={member} previewing={previewing} />;
+  if (member.role === "child") return <StartView member={member} previewing={previewing} dag={(await searchParams).dag} />;
 
   const now = new Date();
   const home = await loadParentHome(now);
