@@ -8,6 +8,7 @@ import { SchoolWeek } from "@/components/school-week";
 import { t } from "@/lib/i18n";
 import { groupItemsByDay, todayView, visibleDays } from "@/lib/plan-view";
 import { loadSchoolWeek } from "@/lib/school";
+import { StartView } from "@/components/start-view";
 import { StarCard } from "@/components/star-card";
 import { loadChildStars, loadPendingCount } from "@/lib/star-data";
 import { getViewer } from "@/lib/view-as";
@@ -15,6 +16,9 @@ import Link from "next/link";
 
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { me, viewing: member, previewing } = await getViewer();
+  // Annotated so the check doesn't narrow `member` for the parent code below (which still handles both roles).
+  const isChild: boolean = member.role === "child";
+  if (isChild) return <StartView member={member} previewing={previewing} />;
   const offset = parseWeekOffset((await searchParams).week);
   const kidView = member.role === "child";
   const showPendingCard = me.role === "parent" && !previewing;
