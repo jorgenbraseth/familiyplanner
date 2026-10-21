@@ -55,14 +55,9 @@ export type RewardRow = {
   given_by: string | null;
 };
 
-/**
- * Star requests a child may make per day. Must match `public.star_request_daily_limit()` in
- * supabase/migrations/20261023090000_stars.sql, which is what actually enforces it.
- */
-export const STAR_DAILY_LIMIT = 5;
-
-export function requestsLeftToday(starsRequestedToday: number): number {
-  return Math.max(0, STAR_DAILY_LIMIT - Math.max(0, Math.floor(starsRequestedToday)));
+/** What a child gets to see: declined stars are hidden from them (parents keep seeing them, with undo). */
+export function visibleToChild<T extends { status: StarStatus }>(stars: readonly T[]): T[] {
+  return stars.filter((s) => s.status !== "declined");
 }
 
 /** Limits of a track's tasks (the database enforces the name length and stars). */

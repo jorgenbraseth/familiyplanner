@@ -118,6 +118,12 @@ export function StarParentView({ rows }: { rows: ChildWithStars[] }) {
                   {t.stars.parent.newTrack}
                 </Link>
               )}
+              <Link
+                href={`/stars/routines/${child.id}`}
+                className="inline-flex min-h-11 items-center text-base font-bold text-primary-strong underline underline-offset-4"
+              >
+                {t.routines.admin.link}
+              </Link>
             </div>
 
             {active && (

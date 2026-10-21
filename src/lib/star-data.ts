@@ -1,8 +1,7 @@
 import "server-only";
-import { dateInTimeZone, startOfDay } from "./dates";
 import type { Member } from "./members";
 import { createClient } from "./supabase/server";
-import { requestsLeftToday, trackProgress, type RewardRow, type StarRow, type StarTaskRow, type StarTrackRow, type TrackProgress } from "./stars";
+import { trackProgress, visibleToChild, type RewardRow, type StarRow, type StarTaskRow, type StarTrackRow, type TrackProgress } from "./stars";
 
 export const TRACK_COLUMNS =
   "id, member_id, name, goal, milestone_every, small_reward, big_reward, preset_reasons, status, created_at, completed_at";
@@ -21,7 +20,7 @@ export type ChildStars = {
   progress: TrackProgress;
 };
 
-/** The child's active track with its stars and rewards, or null. Only reads this child's rows. */
+/** The child's active track with its stars (declined ones left out) and rewards, or null. Only reads this child's rows. */
 export async function loadChildStars(memberId: string): Promise<ChildStars | null> {
   const supabase = await createClient();
   const { data: trackData, error } = await supabase
@@ -42,22 +41,10 @@ export async function loadChildStars(memberId: string): Promise<ChildStars | nul
   if (starsResult.error) throw new Error("Could not read the stars");
   if (tasksResult.error) throw new Error("Could not read the star tasks");
   if (rewardsResult.error) throw new Error("Could not read the rewards");
-  const stars = (starsResult.data ?? []) as StarRow[];
+  // Child-facing: declined requests are not shown (history, counts, progress).
+  const stars = visibleToChild((starsResult.data ?? []) as StarRow[]);
   const rewards = (rewardsResult.data ?? []) as RewardRow[];
   return { track, stars, rewards, tasks: (tasksResult.data ?? []) as StarTaskRow[], progress: trackProgress(track, stars, rewards) };
-}
-
-/** How many star requests this child may still make today (Copenhagen day). */
-export async function loadRequestsLeftToday(memberId: string, now = new Date()): Promise<number> {
-  const supabase = await createClient();
-  const dayStart = startOfDay(dateInTimeZone(now)).toISOString();
-  const { count, error } = await supabase
-    .from("stars")
-    .select("id", { count: "exact", head: true })
-    .eq("requested_by", memberId)
-    .gte("created_at", dayStart);
-  if (error) throw new Error("Could not count today's requests");
-  return requestsLeftToday(count ?? 0);
 }
 
 export type ChildWithStars = {

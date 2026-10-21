@@ -4,17 +4,21 @@ import { useState } from "react";
 import { DayList, type MemberDot } from "@/components/day-list";
 import type { DayView } from "@/lib/calendar/view";
 import { t } from "@/lib/i18n";
+import { withoutEmptyDays } from "@/lib/plan-view";
 
 /** Merged family week with a toggle chip per person. */
 export function FamilyCalendar({
   days,
   members,
   onlyMemberId,
+  hideEmptyDays = false,
 }: {
   days: DayView[];
   members: MemberDot[];
   /** Start with only this member's calendar on (the others can be switched on). */
   onlyMemberId?: string;
+  /** Kids' view: weekdays with no events (for the people shown) are left out. */
+  hideEmptyDays?: boolean;
 }) {
   const [hidden, setHidden] = useState<Set<string>>(
     () => new Set(onlyMemberId ? members.filter((m) => m.id !== onlyMemberId).map((m) => m.id) : []),
@@ -27,7 +31,8 @@ export function FamilyCalendar({
       return next;
     });
 
-  const visibleDays = days.map((day) => ({ ...day, events: day.events.filter((e) => !hidden.has(e.memberId)) }));
+  const filtered = days.map((day) => ({ ...day, events: day.events.filter((e) => !hidden.has(e.memberId)) }));
+  const visibleDays = hideEmptyDays ? withoutEmptyDays(filtered, (day) => day.events.length === 0) : filtered;
 
   return (
     <div className="space-y-4">
@@ -50,7 +55,11 @@ export function FamilyCalendar({
           );
         })}
       </div>
-      <DayList days={visibleDays} members={members} />
+      {hideEmptyDays && visibleDays.length === 0 ? (
+        <p className="card p-4 text-lg">{t.family.weekEmpty}</p>
+      ) : (
+        <DayList days={visibleDays} members={members} />
+      )}
     </div>
   );
 }
