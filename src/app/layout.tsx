@@ -33,7 +33,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang={htmlLang} className={`${nunito.variable} ${baloo.variable} antialiased`}>
-      <body className="flex min-h-dvh flex-col font-sans">{children}
+      <body className="flex min-h-dvh flex-col overflow-x-clip font-sans">{children}
         <SwRegister />
       </body>
     </html>

@@ -117,16 +117,15 @@ export function TopNav({ items, signOutAction }: { items: TopNavItem[]; signOutA
               <div className="ml-auto shrink-0">{signOut}</div>
             </div>
           )}
-          {/* Hidden copy with the natural width of the row, so the fit does not depend on what is visible. */}
-          <div
-            ref={measureRef}
-            aria-hidden="true"
-            inert
-            className="pointer-events-none invisible absolute left-0 top-0 flex w-max flex-nowrap items-center gap-1"
-          >
-            <NavLinks items={items} />
-            <div className="ml-3 shrink-0">
-              <span className={signOutClass}>{t.nav.signOut}</span>
+          {/* Hidden copy with the natural width of the row, so the fit does not depend on what is visible.
+              The clipping wrapper keeps this w-max copy from ever widening the page (it would push the
+              layout viewport wider on phones and carry the fixed assistant button off screen). */}
+          <div aria-hidden="true" className="pointer-events-none invisible absolute left-0 top-0 h-0 w-full overflow-hidden">
+            <div ref={measureRef} inert className="flex w-max flex-nowrap items-center gap-1">
+              <NavLinks items={items} />
+              <div className="ml-3 shrink-0">
+                <span className={signOutClass}>{t.nav.signOut}</span>
+              </div>
             </div>
           </div>
         </div>

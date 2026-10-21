@@ -372,6 +372,7 @@ export const t = {
     schoolLabel: "Skole",
     eventLabel: "Avtale",
     allDay: "Hele dagen",
+    people: "Vis/skjul personer",
   },
   parentHome: {
     giveTitle: "Gi stjerne",
