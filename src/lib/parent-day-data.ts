@@ -1,5 +1,5 @@
 import "server-only";
-import { buildParentDay, type DayCalendarEvent, type DaySchoolHours, type ParentDayEntry } from "./parent-day";
+import { buildParentTracks, type DayCalendarEvent, type DaySchoolHours, type ParentTracks } from "./parent-day";
 import { getEvents } from "./calendar/google";
 import { addDays, dateInTimeZone, dayKey, startOfDay } from "./dates";
 import type { Member } from "./members";
@@ -8,7 +8,7 @@ import { loadSchoolEvents } from "./school";
 import { createClient } from "./supabase/server";
 import { fetchHoursOverrides, fetchTimetable } from "./timetable";
 
-export type ParentDay = { entries: ParentDayEntry[]; failedNames: string[] };
+export type ParentDay = { tracks: ParentTracks; failedNames: string[] };
 
 /**
  * Today's events of the parent and all children for the parents' "Dagen i dag": Google calendars, published
@@ -64,7 +64,7 @@ export async function loadParentDay(parent: Member, children: Member[], now = ne
 
   const [calendarEvents, school, schoolHours] = await Promise.all([calendars, schoolEvents, hours]);
   return {
-    entries: buildParentDay({
+    tracks: buildParentTracks({
       members,
       dayStart,
       dayEnd,
