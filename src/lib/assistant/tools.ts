@@ -30,7 +30,7 @@ const calendarInput = z.object({ from: dayString, to: dayString, member_name: nu
 const starsInput = z.object({ member_name: nullableName });
 
 const memberProperty = {
-  type: ["string", "null"],
+  anyOf: [{ type: "string" }, { type: "null" }],
   description: "First name of the family member, or null for the person asking.",
 } as const;
 
@@ -39,13 +39,12 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
     name: "get_plan_items",
     description:
       "School plan items (lessons, homework, things to bring, notes) for a day range of at most 31 days. Homework dates are the day it is due.",
-    strict: true,
     input_schema: {
       type: "object",
       properties: {
         from: { type: "string", description: "First day, YYYY-MM-DD." },
         to: { type: "string", description: "Last day (inclusive), YYYY-MM-DD." },
-        kind: { type: ["string", "null"], enum: [...PLAN_ITEM_KINDS, null], description: "Only this kind of item, or null for all." },
+        kind: { anyOf: [{ type: "string", enum: [...PLAN_ITEM_KINDS] }, { type: "null" }], description: "Only this kind of item, or null for all." },
         member_name: memberProperty,
       },
       required: ["from", "to", "kind", "member_name"],
@@ -55,7 +54,6 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
   {
     name: "get_calendar",
     description: "Calendar events for a day range of at most 31 days. Times are Europe/Copenhagen.",
-    strict: true,
     input_schema: {
       type: "object",
       properties: {
@@ -70,7 +68,6 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
   {
     name: "get_stars",
     description: "Star track progress: approved and pending stars, next milestone and rewards.",
-    strict: true,
     input_schema: {
       type: "object",
       properties: { member_name: memberProperty },
