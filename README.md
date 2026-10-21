@@ -8,7 +8,7 @@ Private family web app at **https://planner.braseth.family**: Google sign-in, ev
 
 ## Development
 
-Node 22+.
+Node 24 (`engines` pins `24.x`, as on Vercel).
 
 ```bash
 cp .env.example .env.local   # fill in values; the app starts without them
