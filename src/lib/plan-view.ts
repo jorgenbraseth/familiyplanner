@@ -200,6 +200,68 @@ export function periodTimeline(periods: readonly PeriodLine[], hours?: SchoolHou
   return out;
 }
 
+/** One row of the kids' "Min dag" list: a school period, an appointment/school event, or a time divider. */
+export type MyDayEntry = PeriodTimelineEntry | { type: "event"; event: EventEntry };
+
+/**
+ * "Min dag": school periods (as in `periodTimeline`, with dividers) and the day's events in one chronological list.
+ * Ordering rule (deterministic):
+ *  - all-day/untimed events (`sortKey < 0`) come first, in their given order;
+ *  - timed events are sorted by start (ties keep their given order) and placed relative to the periods: an event
+ *    starting before the first period starts (first period's start, else the school start) goes before the first
+ *    divider; otherwise it follows the last period that starts at or before it (a period without a known start
+ *    does not count, except the first one that falls back to the school start);
+ *  - if the event starts before that period ends (or its end is unknown) it goes directly after that period's card
+ *    (an event starting during a period goes after the period); if it starts at or after the period's end it goes
+ *    after the divider that follows the period (the break, or the end of school).
+ * Without periods the list is just the events.
+ */
+export function myDayEntries(
+  periods: readonly PeriodLine[],
+  hours: SchoolHours | undefined,
+  events: readonly EventEntry[],
+): MyDayEntry[] {
+  const timeline = periods.length > 0 ? periodTimeline(periods, hours) : [];
+  const allDay = events.filter((e) => e.sortKey < 0);
+  const timed = events
+    .map((event, index) => ({ event, index }))
+    .filter(({ event }) => event.sortKey >= 0)
+    .sort((a, b) => a.event.sortKey - b.event.sortKey || a.index - b.index);
+
+  const periodAt: { at: number; start: number | null; end: number | null }[] = [];
+  let seen = 0;
+  timeline.forEach((entry, at) => {
+    if (entry.type !== "period") return;
+    const start = minutesOf(entry.line.startsAt ?? (seen === 0 ? hours?.starts_at : null));
+    periodAt.push({ at, start, end: minutesOf(entry.line.endsAt) });
+    seen++;
+  });
+
+  // Insert position (index in the timeline the event goes before) -> events in order.
+  const before = new Map<number, EventEntry[]>();
+  for (const { event } of timed) {
+    let pos = 0;
+    const match = periodAt.filter((p) => p.start !== null && p.start <= event.sortKey).at(-1);
+    if (match) {
+      const next = timeline[match.at + 1];
+      const afterEnd = match.end !== null && event.sortKey >= match.end;
+      pos = afterEnd && next?.type === "divider" ? match.at + 2 : match.at + 1;
+    }
+    before.set(pos, [...(before.get(pos) ?? []), event]);
+  }
+
+  const out: MyDayEntry[] = allDay.map((event) => ({ type: "event", event }));
+  const flush = (pos: number) => {
+    for (const event of before.get(pos) ?? []) out.push({ type: "event", event });
+  };
+  timeline.forEach((entry, i) => {
+    flush(i);
+    out.push(entry);
+  });
+  flush(timeline.length);
+  return out;
+}
+
 /** The periods of the date's ISO weekday in school order: by period (those without one after), time, then `sort`. */
 export function periodsForDate(key: string, timetable: Timetable): PeriodLine[] {
   const weekday = isoWeekday(key);

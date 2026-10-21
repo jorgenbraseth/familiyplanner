@@ -1,6 +1,6 @@
 import { t } from "@/lib/i18n";
 import type { PlanItemRow } from "@/lib/plan";
-import type { EventEntry, PeriodLine, PeriodTimelineEntry } from "@/lib/plan-view";
+import type { EventEntry, MyDayEntry, PeriodLine, PeriodTimelineEntry } from "@/lib/plan-view";
 import { SchoolDoneCheckbox } from "./school-done-checkbox";
 
 export function SchoolHeading({ children }: { children: React.ReactNode }) {
@@ -67,29 +67,50 @@ export function SchoolPeriods({ periods }: { periods: PeriodLine[] }) {
   );
 }
 
-/** The kids' school day: period cards with the times as slim dividers between them (see `periodTimeline`). */
-export function SchoolTimeline({ entries }: { entries: PeriodTimelineEntry[] }) {
+/**
+ * The kids' "Min dag": school periods (green, with the period number) and other entries (orange, with their time)
+ * in one list, with time dividers between the periods (see `myDayEntries`).
+ */
+export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
   return (
     <ol className="space-y-1">
-      {entries.map((entry, i) =>
-        entry.type === "divider" ? (
-          <li key={`d${i}`} className="flex items-center gap-2 text-sm font-bold text-muted" aria-label={dividerText(entry)}>
-            <span aria-hidden className="h-0.5 flex-1 bg-line" />
-            <span aria-hidden>{dividerText(entry)}</span>
-            <span aria-hidden className="h-0.5 flex-1 bg-line" />
-          </li>
-        ) : (
-          <li key={entry.line.id} className="card flex min-h-12 items-center gap-3 px-3 py-2 text-lg">
+      {entries.map((entry, i) => {
+        if (entry.type === "divider") {
+          return (
+            <li key={`d${i}`} className="flex items-center gap-2 text-sm font-bold text-muted" aria-label={dividerText(entry)}>
+              <span aria-hidden className="h-0.5 flex-1 bg-line" />
+              <span aria-hidden>{dividerText(entry)}</span>
+              <span aria-hidden className="h-0.5 flex-1 bg-line" />
+            </li>
+          );
+        }
+        if (entry.type === "event") {
+          const { event } = entry;
+          return (
+            <li
+              key={event.id}
+              className="flex min-h-12 items-center gap-3 rounded-2xl border-2 border-line bg-event-soft px-3 py-2 text-lg text-on-event-soft"
+            >
+              <span className="w-24 shrink-0 text-base font-extrabold">{event.timeLabel}</span>
+              <span className="min-w-0 flex-1 break-words font-semibold">{event.title}</span>
+            </li>
+          );
+        }
+        return (
+          <li
+            key={entry.line.id}
+            className="flex min-h-12 items-center gap-3 rounded-2xl border-2 border-line bg-school-soft px-3 py-2 text-lg text-on-school-soft"
+          >
             <span
               aria-hidden
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-chip text-base font-extrabold text-chip-ink"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface text-base font-extrabold text-on-school-soft"
             >
               {entry.line.period ?? "·"}
             </span>
             <span className="min-w-0 flex-1 break-words font-semibold">{entry.line.title}</span>
           </li>
-        ),
-      )}
+        );
+      })}
     </ol>
   );
 }
