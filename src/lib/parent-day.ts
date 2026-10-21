@@ -43,7 +43,7 @@ function range(from: string | null, to: string | null): string | null {
 const minutes = (value: string | null): number => (value ? Number(value.slice(0, 2)) * 60 + Number(value.slice(3)) : -1);
 
 /** `startMin`/`endMin`: clock minutes after midnight (end null when unknown); both null for all-day entries. */
-type Raw = Omit<ParentDayEntry, "key" | "members"> & { memberId: string; dedupe: string; startMin: number | null; endMin: number | null };
+export type Raw = Omit<ParentDayEntry, "key" | "members"> & { memberId: string; dedupe: string; startMin: number | null; endMin: number | null };
 
 function calendarEntry(e: DayCalendarEvent, dayStart: number, dayEnd: number): Raw | null {
   const start = new Date(e.start).getTime();
@@ -111,7 +111,7 @@ type DayInput = {
   schoolHours: readonly DaySchoolHours[];
 };
 
-function collect(input: DayInput): Raw[] {
+export function collect(input: DayInput): Raw[] {
   const dayStart = input.dayStart.getTime();
   const dayEnd = input.dayEnd.getTime();
   return [
@@ -213,7 +213,15 @@ export const minuteLabel = (m: number): string => `${String(Math.floor(m / 60)).
  * per column outside the axis. Shared events are not merged: every member gets their own block.
  */
 export function buildParentTracks(input: DayInput): ParentTracks {
-  const raws = collect(input);
+  return buildTracksFromEntries(input.members, collect(input));
+}
+
+/**
+ * The same layout from already collected entries (plain minutes and strings, safe to pass from server to client).
+ * Entries of members not in `members` are ignored, so passing a subset lays out the axis for those people only.
+ */
+export function buildTracksFromEntries(members: readonly DayMember[], raws: readonly Raw[]): ParentTracks {
+  const input = { members };
   const known = input.members.map((m) => m.id);
   const timed = raws.filter((r) => r.startMin !== null && known.includes(r.memberId));
 

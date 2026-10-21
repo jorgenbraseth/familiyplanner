@@ -1,4 +1,7 @@
-import type { CSSProperties } from "react";
+"use client";
+
+import { useMemo, useSyncExternalStore, type CSSProperties } from "react";
+import { buildTracksFromEntries } from "@/lib/parent-day";
 import type { ParentDay } from "@/lib/parent-day-data";
 import { t } from "@/lib/i18n";
 
@@ -18,8 +21,51 @@ const KIND = {
  * The parents' "Dagen i dag": one vertical track per family member on one shared time axis (see
  * `buildParentTracks` for the row model). Scrolls sideways inside its own container when it does not fit.
  */
+const STORAGE_KEY = "parentDay.hidden";
+const listeners = new Set<() => void>();
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => void listeners.delete(l);
+};
+const readSaved = (): string => {
+  try {
+    return localStorage.getItem(STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+};
+
 export function ParentDayCard({ day }: { day: ParentDay }) {
-  const { tracks } = day;
+  // Everyone is visible on the server and first paint; the saved selection is read after hydration.
+  const saved = useSyncExternalStore(subscribe, readSaved, () => "");
+  const hidden = useMemo(() => {
+    const known = new Set(day.members.map((m) => m.id));
+    let ids: string[] = [];
+    try {
+      const raw: unknown = JSON.parse(saved || "[]");
+      if (Array.isArray(raw)) ids = raw.filter((id): id is string => typeof id === "string" && known.has(id));
+    } catch {
+      // corrupt value: keep everyone visible
+    }
+    return ids.length < day.members.length ? ids : [];
+  }, [saved, day.members]);
+
+  const toggle = (id: string) => {
+    const next = hidden.includes(id) ? hidden.filter((h) => h !== id) : [...hidden, id];
+    if (next.length >= day.members.length) return; // at least one person stays visible
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // storage unavailable: selection is not kept
+    }
+    listeners.forEach((l) => l());
+  };
+
+  const visible = useMemo(() => day.members.filter((m) => !hidden.includes(m.id)), [day.members, hidden]);
+  const tracks = useMemo(
+    () => (hidden.length === 0 ? day.tracks : buildTracksFromEntries(visible, day.entries)),
+    [hidden, visible, day.tracks, day.entries],
+  );
   const headerRows = tracks.hasAllDay ? 2 : 1;
   const rowTemplate = [
     "auto",
@@ -36,6 +82,29 @@ export function ParentDayCard({ day }: { day: ParentDay }) {
     <section className="card space-y-3 p-4" aria-labelledby="day-title">
       <h2 id="day-title" className="text-xl font-extrabold">{t.parentDay.title}</h2>
       {day.failedNames.length > 0 && <p className="text-sm text-muted">{t.parentDay.failed(day.failedNames.join(", "))}</p>}
+      {day.members.length > 1 && (
+        <div role="group" aria-label={t.parentDay.people} className="flex flex-wrap gap-2">
+          {day.members.map((m) => {
+            const on = !hidden.includes(m.id);
+            const last = on && visible.length === 1;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                aria-pressed={on}
+                disabled={last}
+                onClick={() => toggle(m.id)}
+                className={`flex min-h-11 items-center gap-2 rounded-full border px-3 text-sm font-bold ${
+                  on ? "border-line bg-surface" : "border-line bg-transparent text-muted opacity-60"
+                }`}
+              >
+                <span aria-hidden className="size-3 shrink-0 rounded-full" style={{ backgroundColor: m.colour, opacity: on ? 1 : 0.4 }} />
+                <span className="max-w-32 truncate">{m.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       {tracks.empty ? (
         <p className="text-base text-muted">{t.parentDay.empty}</p>
       ) : (

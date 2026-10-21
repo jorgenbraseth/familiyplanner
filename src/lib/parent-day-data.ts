@@ -1,5 +1,5 @@
 import "server-only";
-import { buildParentTracks, type DayCalendarEvent, type DaySchoolHours, type ParentTracks } from "./parent-day";
+import { buildTracksFromEntries, collect, type DayCalendarEvent, type DayMember, type DaySchoolHours, type ParentTracks, type Raw } from "./parent-day";
 import { getEvents } from "./calendar/google";
 import { addDays, dateInTimeZone, dayKey, startOfDay } from "./dates";
 import type { Member } from "./members";
@@ -8,7 +8,13 @@ import { loadSchoolEvents } from "./school";
 import { createClient } from "./supabase/server";
 import { fetchHoursOverrides, fetchTimetable } from "./timetable";
 
-export type ParentDay = { tracks: ParentTracks; failedNames: string[] };
+export type ParentDay = {
+  tracks: ParentTracks;
+  failedNames: string[];
+  /** Serialisable inputs for re-laying out the axis client-side for a subset of members. */
+  members: DayMember[];
+  entries: Raw[];
+};
 
 /**
  * Today's events of the parent and all children for the parents' "Dagen i dag": Google calendars, published
@@ -63,15 +69,19 @@ export async function loadParentDay(parent: Member, children: Member[], now = ne
   );
 
   const [calendarEvents, school, schoolHours] = await Promise.all([calendars, schoolEvents, hours]);
+  const entries = collect({
+    members,
+    dayStart,
+    dayEnd,
+    calendarEvents,
+    schoolEvents: school,
+    schoolHours: schoolHours.filter((h): h is DaySchoolHours => h !== null),
+  });
+  const dayMembers = members.map((m) => ({ id: m.id, name: m.name, colour: m.colour }));
   return {
-    tracks: buildParentTracks({
-      members,
-      dayStart,
-      dayEnd,
-      calendarEvents,
-      schoolEvents: school,
-      schoolHours: schoolHours.filter((h): h is DaySchoolHours => h !== null),
-    }),
+    tracks: buildTracksFromEntries(dayMembers, entries),
     failedNames: members.filter((m) => failed.has(m.id)).map((m) => m.name),
+    members: dayMembers,
+    entries,
   };
 }

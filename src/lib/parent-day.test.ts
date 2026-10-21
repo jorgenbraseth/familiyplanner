@@ -183,3 +183,25 @@ describe("buildParentTracks", () => {
     expect(out.boundaries).toEqual([1080, 1140]);
   });
 });
+
+describe("buildTracksFromEntries", () => {
+  it("lays out the axis for a subset of members only", async () => {
+    const { collect, buildTracksFromEntries } = await import("./parent-day");
+    const entries = collect({
+      ...base,
+      calendarEvents: [
+        ev("m", "Tidlig", "2026-10-21T06:00:00Z", "2026-10-21T07:00:00Z"), // 08:00-09:00
+        ev("a", "Midt", "2026-10-21T09:00:00Z", "2026-10-21T10:00:00Z"), // 11:00-12:00
+        ev("b", "Sent", "2026-10-21T15:00:00Z", "2026-10-21T16:00:00Z"), // 17:00-18:00
+      ],
+    });
+    const full = buildTracksFromEntries(members, entries);
+    expect(full.boundaries).toEqual([480, 540, 660, 720, 1020, 1080]);
+    const subset = buildTracksFromEntries([mom, kidA], entries);
+    expect(subset.boundaries).toEqual([480, 540, 660, 720]);
+    expect(subset.rows.filter((r) => r.kind === "gap")).toHaveLength(1);
+    expect(subset.columns.map((c) => c.member.id)).toEqual(["m", "a"]);
+    expect(full.rows.filter((r) => r.kind === "gap")).toHaveLength(2);
+    expect(JSON.parse(JSON.stringify(entries))).toEqual(entries);
+  });
+});
