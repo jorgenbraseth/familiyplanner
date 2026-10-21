@@ -7,6 +7,8 @@ import { MicIcon } from "./assistant-button";
 
 const MUTE_KEY = "assistant-muted";
 const MAX_LENGTH = 500;
+/** Empty 8-bit mono WAV used to unlock audio playback inside a tap (see unlockAudio). */
+const SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
 /** A press longer than this counts as "hold to talk"; a shorter one toggles listening. */
 const HOLD_MS = 450;
 
@@ -69,13 +71,16 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
   const abortRef = useRef<AbortController | null>(null);
   const mutedRef = useRef(muted);
   const speakTokenRef = useRef(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const ttsAbortRef = useRef<AbortController | null>(null);
   const pressRef = useRef({ downAt: 0, ignoreUp: false });
   const transcriptRef = useRef({ final: "", interim: "", error: "" });
 
-  async function speak(message: string) {
+  /** Device voice: the fallback when Google TTS fails or the browser blocks audio playback. */
+  async function speakWithDevice(message: string, token: number) {
     if (typeof speechSynthesis === "undefined") return;
     speechSynthesis.cancel();
-    const token = ++speakTokenRef.current;
     const voice = pickVoice(await loadVoices(), locale);
     if (token !== speakTokenRef.current) return; // Stopped, muted or a newer request meanwhile.
     if (!voice) {
@@ -92,8 +97,88 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
     speechSynthesis.speak(utterance);
   }
 
+  function releaseAudio() {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.onplaying = null;
+      audio.onended = null;
+      audio.onerror = null;
+      audio.pause();
+      audio.removeAttribute("src");
+    }
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+  }
+
+  /**
+   * Mobile Safari only lets an element play audio after it was started from a tap. The answer arrives
+   * after a network call (and speech recognition ends outside a tap), so a silent clip is played on the
+   * one shared element during the tap; later `src` changes on it may then play. Failure is harmless:
+   * play() then rejects and speak() falls back to the device voice.
+   */
+  function unlockAudio() {
+    if (typeof Audio === "undefined") return;
+    if (!audioRef.current) audioRef.current = new Audio();
+    const audio = audioRef.current;
+    if (audioUrlRef.current || !audio.paused) return;
+    audio.src = SILENT_WAV;
+    audio.play().then(
+      () => audio.pause(),
+      () => {},
+    );
+  }
+
+  async function speak(message: string) {
+    const token = ++speakTokenRef.current;
+    ttsAbortRef.current?.abort();
+    releaseAudio();
+    if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
+    setNoVoice(false);
+    const audio = audioRef.current ?? (typeof Audio !== "undefined" ? (audioRef.current = new Audio()) : null);
+    if (!audio) {
+      await speakWithDevice(message, token);
+      return;
+    }
+    const controller = new AbortController();
+    ttsAbortRef.current = controller;
+    try {
+      const response = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: message }),
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error("tts failed");
+      const blob = await response.blob();
+      if (token !== speakTokenRef.current) return;
+      const url = URL.createObjectURL(blob);
+      audioUrlRef.current = url;
+      const finish = () => {
+        if (token !== speakTokenRef.current) return;
+        releaseAudio();
+        setSpeaking(false);
+      };
+      audio.onplaying = () => setSpeaking(true);
+      audio.onended = finish;
+      audio.onerror = finish;
+      audio.src = url;
+      await audio.play();
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      if (token !== speakTokenRef.current) return;
+      // Request failed or playback was blocked: use the device voice instead.
+      releaseAudio();
+      setSpeaking(false);
+      await speakWithDevice(message, token);
+    }
+  }
+
   function stopSpeaking() {
     speakTokenRef.current++;
+    ttsAbortRef.current?.abort();
+    releaseAudio();
     if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
     setSpeaking(false);
   }
@@ -101,6 +186,7 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
   async function ask(raw: string) {
     const q = raw.trim().slice(0, MAX_LENGTH);
     if (!q) return;
+    unlockAudio();
     stopSpeaking();
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -145,6 +231,7 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
   function startListening() {
     const Recognition = recognitionConstructor();
     if (!Recognition) return;
+    unlockAudio();
     stopSpeaking();
     abortRef.current?.abort();
     const recognition = new Recognition();
@@ -290,11 +377,14 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
       const recognition = recognitionRef.current;
       recognitionRef.current = null;
       recognition?.abort();
+      ttsAbortRef.current?.abort();
+      audioRef.current?.pause();
+      if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
       if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
     };
   }, []);
 
-  const hasSynthesis = typeof speechSynthesis !== "undefined";
+  const hasSynthesis = typeof Audio !== "undefined" || typeof speechSynthesis !== "undefined";
   const shownQuestion = listening ? heard : question;
 
   return (
@@ -370,7 +460,14 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
           <div className="flex min-h-11 items-center justify-between gap-2">
             <p className="text-sm font-bold text-muted">{left !== null ? t.assistant.questionsLeft(left) : ""}</p>
             {hasSynthesis && phase === "answer" && !noVoice && (
-              <button type="button" onClick={() => (speaking ? stopSpeaking() : void speak(answer))} className="btn btn-secondary min-h-11">
+              <button type="button" onClick={() => {
+                  if (speaking) {
+                    stopSpeaking();
+                  } else {
+                    unlockAudio();
+                    void speak(answer);
+                  }
+                }} className="btn btn-secondary min-h-11">
                 {speaking ? t.assistant.stop : t.assistant.readAgain}
               </button>
             )}

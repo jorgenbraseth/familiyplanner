@@ -64,6 +64,10 @@ The consent screen now lives in **Google Auth Platform** (menu → APIs & Servic
 6. **Each family member** (or you, for the kids' accounts): Google Calendar → the calendar's **Settings and sharing → Share with specific people → add the service account email → "See all event details".**
 7. The calendar ID is under **Integrate calendar** on the same page; for a primary calendar it's the Gmail address.
 
+**C. Text-to-Speech (assistant read-aloud)**
+
+The voice assistant reads answers aloud with Google Cloud Text-to-Speech, using the same `GOOGLE_SERVICE_ACCOUNT_KEY`. In the Google Cloud project that owns the service account: **APIs & Services → Library → Cloud Text-to-Speech API → Enable** (billing must be enabled on the project; the free tier covers normal family use). Optional env vars: `GOOGLE_TTS_VOICE` (default `nb-NO-Wavenet-F`; a wrong name falls back to any `nb-NO` voice) and `GOOGLE_TTS_SPEAKING_RATE` (default `1.0`, clamped 0.5–1.5). If the API or key is missing, the app falls back to the device's own voice.
+
 ## 4. Supabase Auth
 
 1. **Authentication → Providers → Google:** enable, paste Client ID + secret from 3A.
@@ -83,7 +87,7 @@ The consent screen now lives in **Google Auth Platform** (menu → APIs & Servic
 3. **Environment Variables** (Production and Preview) — see `.env.example` for the full list:
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
    - `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL_EXTRACT`, `ANTHROPIC_MODEL_ASSISTANT`
-   - `GOOGLE_SERVICE_ACCOUNT_KEY`
+   - `GOOGLE_SERVICE_ACCOUNT_KEY` (and optionally `GOOGLE_TTS_VOICE`, `GOOGLE_TTS_SPEAKING_RATE`)
    - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (generate with `npx web-push generate-vapid-keys`; subject `mailto:jorgen.braseth@gmail.com`)
    - `NEXT_PUBLIC_SITE_URL=https://planner.braseth.family`
 4. **Settings → Domains → Add** `planner.braseth.family`. Vercel shows the DNS record it wants (normally a CNAME to `cname.vercel-dns.com`, or a project-specific target — use exactly what Vercel shows).
