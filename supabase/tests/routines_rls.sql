@@ -36,8 +36,8 @@ begin
 
   insert into public.star_tracks (member_id, name, goal, milestone_every) values (a, 'Routine A', 10, 5) returning id into ta;
   insert into public.star_tracks (member_id, name, goal, milestone_every) values (b, 'Routine B', 10, 5) returning id into tb;
-  insert into public.star_tasks (track_id, name, stars) values (ta, 'Morning done', 3) returning id into ka;
-  insert into public.star_tasks (track_id, name, stars) values (tb, 'Morning done B', 2) returning id into kb;
+  insert into public.star_tasks (member_id, name, stars) values (a, 'Morning done', 3) returning id into ka;
+  insert into public.star_tasks (member_id, name, stars) values (b, 'Morning done B', 2) returning id into kb;
 
   insert into public.routine_items (member_id, slot, name, sort) values (a, 'morning', 'Brush teeth', 0) returning id into i1;
   insert into public.routine_items (member_id, slot, name, sort) values (a, 'morning', 'Get dressed', 1) returning id into i2;

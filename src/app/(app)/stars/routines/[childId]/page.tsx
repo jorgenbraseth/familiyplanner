@@ -4,6 +4,7 @@ import { requireParent } from "@/lib/auth";
 import { t } from "@/lib/i18n";
 import { parseViewAsId } from "@/lib/preview";
 import type { RoutineItemRow, RoutineSettingsRow, RoutineSlot } from "@/lib/routines";
+import { taskScopeFilter } from "@/lib/stars";
 import { createClient } from "@/lib/supabase/server";
 import { RoutineForm, type StarTaskOption } from "./routine-form";
 
@@ -34,7 +35,7 @@ export default async function ChildRoutinesPage({ params }: PageProps<"/stars/ro
     const { data, error } = await supabase
       .from("star_tasks")
       .select("id, name, stars")
-      .eq("track_id", trackId)
+      .or(taskScopeFilter(childId))
       .order("sort")
       .order("created_at");
     if (error) throw new Error("Could not read the star tasks");

@@ -35,32 +35,32 @@ begin
 
   insert into public.star_tracks (member_id, name, goal, milestone_every) values (a, 'Tasks A', 10, 5) returning id into ta;
   insert into public.star_tracks (member_id, name, goal, milestone_every) values (b, 'Tasks B', 10, 5) returning id into tb;
-  insert into public.star_tasks (track_id, name, stars, sort) values (ta, 'Tidy room', 3, 0) returning id into k1;
-  insert into public.star_tasks (track_id, name, stars, sort) values (ta, 'Help cook', 1, 1) returning id into k2;
-  insert into public.star_tasks (track_id, name, stars, sort) values (tb, 'Read a book', 2, 0) returning id into kb;
+  insert into public.star_tasks (member_id, name, stars, sort) values (a, 'Tidy room', 3, 0) returning id into k1;
+  insert into public.star_tasks (member_id, name, stars, sort) values (a, 'Help cook', 1, 1) returning id into k2;
+  insert into public.star_tasks (member_id, name, stars, sort) values (b, 'Read a book', 2, 0) returning id into kb;
 
   begin
-    insert into public.star_tasks (track_id, name, stars) values (ta, 'Tidy room', 2);
+    insert into public.star_tasks (member_id, name, stars) values (a, 'Tidy room', 2);
     raise exception 'duplicate task name accepted';
   exception when unique_violation then null;
   end;
   begin
-    insert into public.star_tasks (track_id, name, stars) values (ta, 'Zero', 0);
+    insert into public.star_tasks (member_id, name, stars) values (a, 'Zero', 0);
     raise exception 'task with 0 stars accepted';
   exception when check_violation then null;
   end;
   begin
-    insert into public.star_tasks (track_id, name, stars) values (ta, 'Eleven', 11);
+    insert into public.star_tasks (member_id, name, stars) values (a, 'Eleven', 11);
     raise exception 'task with 11 stars accepted';
   exception when check_violation then null;
   end;
   begin
-    insert into public.star_tasks (track_id, name, stars) values (ta, '', 1);
+    insert into public.star_tasks (member_id, name, stars) values (a, '', 1);
     raise exception 'empty task name accepted';
   exception when check_violation then null;
   end;
   begin
-    insert into public.star_tasks (track_id, name, stars) values (ta, repeat('x', 61), 1);
+    insert into public.star_tasks (member_id, name, stars) values (a, repeat('x', 61), 1);
     raise exception '61-char task name accepted';
   exception when check_violation then null;
   end;
@@ -76,10 +76,10 @@ begin
   perform pg_temp.act_as('task.child.a@example.com', 'authenticated');
   select count(*) into n from public.star_tasks;
   if n <> 2 then raise exception 'child A should see 2 tasks, saw %', n; end if;
-  select count(*) into n from public.star_tasks where track_id = (select v from ids where k = 'tb');
+  select count(*) into n from public.star_tasks where member_id = (select v from ids where k = 'b');
   if n <> 0 then raise exception 'child A saw sibling tasks'; end if;
   begin
-    insert into public.star_tasks (track_id, name, stars) values ((select v from ids where k = 'ta'), 'Mine', 10);
+    insert into public.star_tasks (member_id, name, stars) values ((select v from ids where k = 'a'), 'Mine', 10);
     raise exception 'child created a task';
   exception when insufficient_privilege then null;
   end;
@@ -130,11 +130,11 @@ begin
   select amount into amt from public.stars where reason = 'Free text';
   if amt <> 1 then raise exception 'child amount not forced to 1, got %', amt; end if;
 
-  -- a task from another track is rejected
+  -- a task of another child is rejected
   begin
     insert into public.stars (track_id, member_id, reason, requested_by, task_id)
       values (ta, a, 'Wrong task', a, kb);
-    raise exception 'task from another track accepted';
+    raise exception 'task of another child accepted';
   exception when check_violation then null;
   end;
   perform pg_temp.done();
@@ -201,25 +201,7 @@ begin
   perform pg_temp.done();
 end $$;
 
--- 5. Preset reasons become tasks (the migration's insert, re-run on a new track; idempotent).
-do $$
-declare c uuid; t uuid; n int;
-begin
-  insert into public.members (name, email, role) values ('Task Child C', 'task.child.c@example.com', 'child') returning id into c;
-  insert into public.star_tracks (member_id, name, preset_reasons) values (c, 'Presets', array['One', 'Two', 'Three']) returning id into t;
-  perform public.star_tasks_from_presets();
-  perform public.star_tasks_from_presets();
-  select count(*) into n from public.star_tasks where track_id = t and stars = 1;
-  if n <> 3 then raise exception 'expected 3 preset tasks, got %', n; end if;
-  if (select sort from public.star_tasks where track_id = t and name = 'Three') <> 2 then
-    raise exception 'preset sort wrong';
-  end if;
-  -- existing tracks without presets get nothing extra
-  select count(*) into n from public.star_tasks where track_id = (select v from ids where k = 'ta');
-  if n <> 2 then raise exception 'track A tasks changed by presets: %', n; end if;
-end $$;
-
--- 6. school_days and plan_items period/times.
+-- 5. school_days and plan_items period/times.
 do $$
 declare a uuid; b uuid; da uuid; n int;
 begin

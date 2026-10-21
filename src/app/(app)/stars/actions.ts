@@ -6,9 +6,9 @@ import { z } from "zod";
 import { getCurrentMember, requireParent } from "@/lib/auth";
 import { t } from "@/lib/i18n";
 import { notifyMembers, notifyParents } from "@/lib/push";
-import { amountSchema, noteSchema, parseTrackForm, reasonSchema, type TaskInput } from "@/lib/star-forms";
+import { amountSchema, noteSchema, parseTrackForm, reasonSchema } from "@/lib/star-forms";
 import { TRACK_COLUMNS } from "@/lib/star-data";
-import { approvedTotal, justReachedMilestone, milestonesOf, type StarTrackRow } from "@/lib/stars";
+import { approvedTotal, justReachedMilestone, milestonesOf, taskScopeFilter, type StarTrackRow } from "@/lib/stars";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/view-as";
 
@@ -42,47 +42,18 @@ async function approvedSum(supabase: Client, trackId: string): Promise<number> {
   return approvedTotal((data ?? []) as { status: "approved"; amount: number }[]);
 }
 
-/** A task of the given track (RLS lets a child read the tasks of their own track), or null. */
-async function readTask(supabase: Client, trackId: string, taskId: string) {
+/**
+ * A task that applies to the child (their own or for all children), or null. RLS lets a child read
+ * only those, and the database rejects a star with any other task.
+ */
+async function readTask(supabase: Client, childId: string, taskId: string) {
   const { data } = await supabase
     .from("star_tasks")
     .select("id, name, stars")
     .eq("id", taskId)
-    .eq("track_id", trackId)
+    .or(taskScopeFilter(childId))
     .maybeSingle();
   return (data as { id: string; name: string; stars: number } | null) ?? null;
-}
-
-/** Makes the track's tasks equal to `tasks` (ids kept for existing ones, list order = sort). */
-async function syncTasks(supabase: Client, trackId: string, tasks: TaskInput[]): Promise<boolean> {
-  const { data: existing, error } = await supabase.from("star_tasks").select("id").eq("track_id", trackId);
-  if (error) return false;
-  const existingIds = new Set((existing ?? []).map((row) => row.id as string));
-  const keep = new Set(tasks.flatMap((task) => (task.id && existingIds.has(task.id) ? [task.id] : [])));
-
-  const removed = [...existingIds].filter((id) => !keep.has(id));
-  if (removed.length > 0) {
-    const { error: deleteError } = await supabase.from("star_tasks").delete().in("id", removed);
-    if (deleteError) return false;
-  }
-  for (const [sort, task] of tasks.entries()) {
-    if (task.id && keep.has(task.id)) {
-      const { error: updateError } = await supabase
-        .from("star_tasks")
-        .update({ name: task.name, stars: task.stars, sort })
-        .eq("id", task.id)
-        .eq("track_id", trackId);
-      if (updateError) return false;
-    }
-  }
-  const added = tasks.flatMap((task, sort) =>
-    task.id && keep.has(task.id) ? [] : [{ track_id: trackId, name: task.name, stars: task.stars, sort }],
-  );
-  if (added.length > 0) {
-    const { error: insertError } = await supabase.from("star_tasks").insert(added);
-    if (insertError) return false;
-  }
-  return true;
 }
 
 async function readTrack(supabase: Client, trackId: string): Promise<StarTrackRow | null> {
@@ -151,7 +122,7 @@ export async function requestStar(_prev: StarActionState, formData: FormData): P
   let amount = 1;
   let task: { id: string } | null = null;
   if (taskIdParsed?.success) {
-    task = await readTask(supabase, track.id as string, taskIdParsed.data);
+    task = await readTask(supabase, me.id, taskIdParsed.data);
     if (!task) return { ok: false, error: t.stars.errors.taskGone };
     const full = task as { id: string; name: string; stars: number };
     reason = full.name;
@@ -257,7 +228,7 @@ export async function giveStar(_prev: StarActionState, formData: FormData): Prom
   let amount: number;
   let taskRef: string | null = null;
   if (taskIdParsed?.success) {
-    const task = await readTask(supabase, track.id, taskIdParsed.data);
+    const task = await readTask(supabase, track.member_id, taskIdParsed.data);
     if (!task) return { ok: false, error: t.stars.errors.taskGone };
     reason = task.name;
     amount = task.stars;
@@ -342,20 +313,14 @@ export async function createTrack(_prev: StarActionState, formData: FormData): P
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? t.stars.errors.failed };
 
   const supabase = await createClient();
-  const { tasks, ...trackFields } = parsed.data;
   const { data: created, error } = await supabase
     .from("star_tracks")
-    .insert({ ...trackFields, member_id: childId.data })
+    .insert({ ...parsed.data, member_id: childId.data })
     .select("id")
     .single();
   if (error || !created) {
     if (error?.code === "23505") return { ok: false, error: t.stars.errors.alreadyActive };
     return { ok: false, error: dbError("createTrack", error ?? {}) };
-  }
-  if (!(await syncTasks(supabase, created.id as string, tasks))) {
-    // Don't leave a half-made track behind: the parent can submit the form again.
-    await supabase.from("star_tracks").delete().eq("id", created.id);
-    return { ok: false, error: t.stars.errors.failed };
   }
   refresh();
   redirect("/stars");
@@ -370,11 +335,9 @@ export async function updateTrack(_prev: StarActionState, formData: FormData): P
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? t.stars.errors.failed };
 
   const supabase = await createClient();
-  const { tasks, ...trackFields } = parsed.data;
-  const { data, error } = await supabase.from("star_tracks").update(trackFields).eq("id", id.data).select("id");
+  const { data, error } = await supabase.from("star_tracks").update(parsed.data).eq("id", id.data).select("id");
   if (error) return { ok: false, error: dbError("updateTrack", error) };
   if (!data || data.length === 0) return { ok: false, error: t.stars.errors.notAllowed };
-  if (!(await syncTasks(supabase, id.data, tasks))) return { ok: false, error: t.stars.errors.failed };
   refresh();
   redirect("/stars");
 }

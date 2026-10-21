@@ -36,9 +36,10 @@ export type StarRow = {
   created_at: string;
 };
 
+/** A task is for one child (`member_id`) or for all children (null) and applies to the child's active track. */
 export type StarTaskRow = {
   id: string;
-  track_id: string;
+  member_id: string | null;
   name: string;
   /** Stars awarded for the task (1..10). */
   stars: number;
@@ -60,7 +61,7 @@ export function visibleToChild<T extends { status: StarStatus }>(stars: readonly
   return stars.filter((s) => s.status !== "declined");
 }
 
-/** Limits of a track's tasks (the database enforces the name length and stars). */
+/** Limits of a list of tasks: the all-children list and each child's own list (the database enforces the name length and stars). */
 export const MAX_TASKS = 20;
 export const MAX_TASK_NAME = 60;
 export const MAX_TASK_STARS = 10;
@@ -195,4 +196,25 @@ export function celebratingReward(progress: Pick<TrackProgress, "approved" | "re
   const w = Math.max(1, Math.floor(window));
   const recent = progress.rewardsOwed.filter((r) => r.atCount <= progress.approved && r.atCount > progress.approved - w);
   return recent.length > 0 ? recent[recent.length - 1] : null;
+}
+
+/** True when the task applies to the child: it is for all children or for this child. */
+export function taskAppliesTo(task: Pick<StarTaskRow, "member_id">, childId: string): boolean {
+  return task.member_id === null || task.member_id === childId;
+}
+
+/** The tasks a child can use (their own and the all-children ones), keeping the given order. */
+export function tasksForChild<T extends Pick<StarTaskRow, "member_id">>(tasks: readonly T[], childId: string): T[] {
+  return tasks.filter((task) => taskAppliesTo(task, childId));
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * PostgREST `or` filter for the tasks that apply to a child: `.or(taskScopeFilter(childId))`.
+ * The id is validated as a uuid first, because it ends up inside the filter text.
+ */
+export function taskScopeFilter(childId: string): string {
+  if (!UUID.test(childId)) throw new Error("Invalid child id");
+  return `member_id.is.null,member_id.eq.${childId}`;
 }

@@ -6,6 +6,9 @@ import {
   milestonesOf,
   rewardTextAt,
   starIcons,
+  taskAppliesTo,
+  taskScopeFilter,
+  tasksForChild,
   trackProgress,
   visibleToChild,
   type RewardRow,
@@ -239,5 +242,27 @@ describe("visibleToChild", () => {
     ];
     expect(visibleToChild(rows).map((r) => r.id)).toEqual(["a", "c"]);
     expect(visibleToChild([])).toEqual([]);
+  });
+});
+
+describe("tasks apply to children, not to tracks", () => {
+  const all = { id: "k1", member_id: null };
+  const mine = { id: "k2", member_id: "m1" };
+  const sibling = { id: "k3", member_id: "m2" };
+  it("a task applies to its child and to all children, not to a sibling", () => {
+    expect(taskAppliesTo(all, "m1")).toBe(true);
+    expect(taskAppliesTo(all, "m2")).toBe(true);
+    expect(taskAppliesTo(mine, "m1")).toBe(true);
+    expect(taskAppliesTo(mine, "m2")).toBe(false);
+  });
+  it("tasksForChild keeps the order and drops a sibling's tasks", () => {
+    expect(tasksForChild([sibling, mine, all], "m1").map((k) => k.id)).toEqual(["k2", "k1"]);
+    expect(tasksForChild([sibling, mine, all], "m2").map((k) => k.id)).toEqual(["k3", "k1"]);
+  });
+  it("taskScopeFilter builds the PostgREST filter and rejects anything but a uuid", () => {
+    const id = "3f0c9a52-0f4e-4d0e-9a5b-2f1f6d1c7a11";
+    expect(taskScopeFilter(id)).toBe(`member_id.is.null,member_id.eq.${id}`);
+    expect(() => taskScopeFilter("x),member_id.not.is.null")).toThrow();
+    expect(() => taskScopeFilter("")).toThrow();
   });
 });

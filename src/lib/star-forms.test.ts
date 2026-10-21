@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { amountSchema, noteSchema, parseTrackForm, reasonSchema, tasksFieldSchema } from "./star-forms";
+import { amountSchema, noteSchema, parseTaskForm, parseTrackForm, reasonSchema, taskMemberOf } from "./star-forms";
 
 function form(values: Record<string, string>): FormData {
   const data = new FormData();
@@ -13,39 +13,34 @@ const valid = {
   milestone_every: "5",
   small_reward: "Is",
   big_reward: "Kinotur",
-  tasks: JSON.stringify([
-    { name: "Ryddet rommet", stars: 2 },
-    { name: "Dekket bordet", stars: 1 },
-  ]),
 };
 
-describe("tasksFieldSchema", () => {
-  const parse = (value: unknown) => tasksFieldSchema.safeParse(typeof value === "string" ? value : JSON.stringify(value));
-  it("accepts tasks, keeps order and ids, trims names", () => {
-    const id = "3f0c9a52-0f4e-4d0e-9a5b-2f1f6d1c7a11";
-    const parsed = parse([{ id, name: "  A ", stars: 3 }, { name: "B", stars: 10 }]);
-    expect(parsed.success && parsed.data).toEqual([{ id, name: "A", stars: 3 }, { name: "B", stars: 10 }]);
+describe("parseTaskForm", () => {
+  const child = "3f0c9a52-0f4e-4d0e-9a5b-2f1f6d1c7a11";
+  const parse = (values: Record<string, string>) => parseTaskForm(form(values));
+  it("accepts a task for all children or for one child, trimming the name", () => {
+    const all = parse({ name: "  Ryddet rommet ", stars: "3", who: "all" });
+    expect(all.success && all.data).toMatchObject({ name: "Ryddet rommet", stars: 3, who: "all" });
+    expect(all.success && taskMemberOf(all.data)).toBeNull();
+    const own = parse({ id: child, name: "A", stars: "10", who: child });
+    expect(own.success && own.data).toMatchObject({ id: child, who: child });
+    expect(own.success && taskMemberOf(own.data)).toBe(child);
   });
-  it("treats empty text and an empty list as no tasks", () => {
-    expect(parse("")).toMatchObject({ success: true, data: [] });
-    expect(parse([])).toMatchObject({ success: true, data: [] });
+  it("treats a missing id as a new task", () => {
+    const parsed = parse({ name: "A", stars: "1", who: "all" });
+    expect(parsed.success && parsed.data.id).toBeUndefined();
   });
-  it("drops rows with a blank name", () => {
-    expect(parse([{ name: "  ", stars: 1 }, { name: "A", stars: 1 }])).toMatchObject({ success: true, data: [{ name: "A", stars: 1 }] });
-  });
-  it("rejects bad stars, long names, duplicates, more than 20 and broken JSON", () => {
-    expect(parse([{ name: "A", stars: 0 }]).success).toBe(false);
-    expect(parse([{ name: "A", stars: 11 }]).success).toBe(false);
-    expect(parse([{ name: "A", stars: 1.5 }]).success).toBe(false);
-    expect(parse([{ name: "A", stars: "2" }]).success).toBe(false);
-    expect(parse([{ name: "x".repeat(61), stars: 1 }]).success).toBe(false);
-    expect(parse([{ name: "x".repeat(60), stars: 1 }]).success).toBe(true);
-    expect(parse([{ name: "A", stars: 1 }, { name: " a ", stars: 2 }]).success).toBe(false);
-    expect(parse(Array.from({ length: 21 }, (_, i) => ({ name: `T${i}`, stars: 1 }))).success).toBe(false);
-    expect(parse(Array.from({ length: 20 }, (_, i) => ({ name: `T${i}`, stars: 1 }))).success).toBe(true);
-    expect(parse("{oops").success).toBe(false);
-    expect(parse({ name: "A" }).success).toBe(false);
-    expect(parse([{ id: "nope", name: "A", stars: 1 }]).success).toBe(false);
+  it("rejects bad stars, names, who and ids", () => {
+    expect(parse({ name: "A", stars: "0", who: "all" }).success).toBe(false);
+    expect(parse({ name: "A", stars: "11", who: "all" }).success).toBe(false);
+    expect(parse({ name: "A", stars: "1.5", who: "all" }).success).toBe(false);
+    expect(parse({ name: "A", stars: "x", who: "all" }).success).toBe(false);
+    expect(parse({ name: "  ", stars: "1", who: "all" }).success).toBe(false);
+    expect(parse({ name: "x".repeat(61), stars: "1", who: "all" }).success).toBe(false);
+    expect(parse({ name: "x".repeat(60), stars: "1", who: "all" }).success).toBe(true);
+    expect(parse({ name: "A", stars: "1", who: "" }).success).toBe(false);
+    expect(parse({ name: "A", stars: "1", who: "everyone" }).success).toBe(false);
+    expect(parse({ id: "nope", name: "A", stars: "1", who: "all" }).success).toBe(false);
   });
 });
 
@@ -66,10 +61,6 @@ describe("parseTrackForm", () => {
     if (parsed.success) {
       expect(parsed.data.goal).toBe(30);
       expect(parsed.data.milestone_every).toBe(5);
-      expect(parsed.data.tasks).toEqual([
-        { name: "Ryddet rommet", stars: 2 },
-        { name: "Dekket bordet", stars: 1 },
-      ]);
     }
   });
   it("requires the interval to divide the goal", () => {
@@ -87,13 +78,6 @@ describe("parseTrackForm", () => {
     ["small_reward", "x".repeat(201)],
   ])("rejects %s = %s", (key, value) => {
     expect(parseTrackForm(form({ ...valid, [key]: value })).success).toBe(false);
-  });
-  it("rejects an invalid task list", () => {
-    const tasks = JSON.stringify([{ name: "A", stars: 11 }]);
-    expect(parseTrackForm(form({ ...valid, tasks })).success).toBe(false);
-  });
-  it("allows a track without tasks", () => {
-    expect(parseTrackForm(form({ ...valid, tasks: "[]" })).success).toBe(true);
   });
 });
 
