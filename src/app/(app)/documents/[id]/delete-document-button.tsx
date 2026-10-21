@@ -12,10 +12,7 @@ export function DeleteDocumentButton({ id }: { id: string }) {
       }}
     >
       <input type="hidden" name="id" value={id} />
-      <button
-        type="submit"
-        className="btn btn-danger w-full sm:w-auto"
-      >
+      <button type="submit" className="btn btn-danger w-full sm:w-auto">
         {t.documents.delete}
       </button>
     </form>

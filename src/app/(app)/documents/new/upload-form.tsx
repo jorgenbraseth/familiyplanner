@@ -3,12 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { t } from "@/lib/i18n";
-import { DOCUMENT_TYPES, MAX_UPLOAD_BYTES, isAcceptedMimeType } from "@/lib/plan";
+import {
+  DOCUMENT_TYPES,
+  MAX_UPLOAD_BYTES,
+  isAcceptedMimeType,
+} from "@/lib/plan";
 import { createClient } from "@/lib/supabase/client";
 import { createDocument, discardUpload, processDocument } from "../actions";
 
-const input =
-  "field";
+const input = "field";
 const label = "block space-y-1 text-sm font-bold";
 
 type Phase = "idle" | "uploading" | "reading";
@@ -88,7 +91,12 @@ export function UploadForm({
       <fieldset disabled={busy} className="space-y-3">
         <label className={label}>
           <span>{t.documents.fields.child}</span>
-          <select name="member_id" required defaultValue={kids[0]?.id} className={input}>
+          <select
+            name="member_id"
+            required
+            defaultValue={kids[0]?.id}
+            className={input}
+          >
             {kids.map((child) => (
               <option key={child.id} value={child.id}>
                 {child.name}
@@ -147,15 +155,15 @@ export function UploadForm({
             {t.documents.fields.fileHelp}
           </span>
         </label>
-        <button
-          type="submit"
-          className="btn btn-primary"
-        >
+        <button type="submit" className="btn btn-primary">
           {t.documents.submit}
         </button>
       </fieldset>
       {busy && (
-        <p role="status" className="rounded-xl bg-chip p-3 text-sm font-semibold text-chip-ink">
+        <p
+          role="status"
+          className="rounded-xl bg-chip p-3 text-sm font-semibold text-chip-ink"
+        >
           {phase === "uploading" ? t.documents.uploading : t.documents.reading}
         </p>
       )}

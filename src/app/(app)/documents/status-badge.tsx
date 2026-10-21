@@ -10,7 +10,9 @@ const styles: Record<DocumentStatus, string> = {
 
 export function StatusBadge({ status }: { status: DocumentStatus }) {
   return (
-    <span className={`inline-block shrink-0 rounded-full px-3 py-1 text-xs font-extrabold ${styles[status]}`}>
+    <span
+      className={`inline-block shrink-0 rounded-full px-3 py-1 text-xs font-extrabold ${styles[status]}`}
+    >
       {t.documents.statuses[status]}
     </span>
   );

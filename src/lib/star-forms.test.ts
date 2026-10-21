@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { noteSchema, parsePresetReasons, parseTrackForm, reasonSchema } from "./star-forms";
+import { amountSchema, noteSchema, parseTrackForm, reasonSchema, tasksFieldSchema } from "./star-forms";
 
 function form(values: Record<string, string>): FormData {
   const data = new FormData();
@@ -13,16 +13,49 @@ const valid = {
   milestone_every: "5",
   small_reward: "Is",
   big_reward: "Kinotur",
-  preset_reasons: "Ryddet rommet\nDekket bordet",
+  tasks: JSON.stringify([
+    { name: "Ryddet rommet", stars: 2 },
+    { name: "Dekket bordet", stars: 1 },
+  ]),
 };
 
-describe("parsePresetReasons", () => {
-  it("trims, drops empty lines and duplicates, handles CRLF", () => {
-    expect(parsePresetReasons("  A \r\n\r\nB\nA\n  \nC")).toEqual(["A", "B", "C"]);
+describe("tasksFieldSchema", () => {
+  const parse = (value: unknown) => tasksFieldSchema.safeParse(typeof value === "string" ? value : JSON.stringify(value));
+  it("accepts tasks, keeps order and ids, trims names", () => {
+    const id = "3f0c9a52-0f4e-4d0e-9a5b-2f1f6d1c7a11";
+    const parsed = parse([{ id, name: "  A ", stars: 3 }, { name: "B", stars: 10 }]);
+    expect(parsed.success && parsed.data).toEqual([{ id, name: "A", stars: 3 }, { name: "B", stars: 10 }]);
   });
-  it("returns an empty list for blank text", () => {
-    expect(parsePresetReasons("")).toEqual([]);
-    expect(parsePresetReasons(" \n \n")).toEqual([]);
+  it("treats empty text and an empty list as no tasks", () => {
+    expect(parse("")).toMatchObject({ success: true, data: [] });
+    expect(parse([])).toMatchObject({ success: true, data: [] });
+  });
+  it("drops rows with a blank name", () => {
+    expect(parse([{ name: "  ", stars: 1 }, { name: "A", stars: 1 }])).toMatchObject({ success: true, data: [{ name: "A", stars: 1 }] });
+  });
+  it("rejects bad stars, long names, duplicates, more than 20 and broken JSON", () => {
+    expect(parse([{ name: "A", stars: 0 }]).success).toBe(false);
+    expect(parse([{ name: "A", stars: 11 }]).success).toBe(false);
+    expect(parse([{ name: "A", stars: 1.5 }]).success).toBe(false);
+    expect(parse([{ name: "A", stars: "2" }]).success).toBe(false);
+    expect(parse([{ name: "x".repeat(61), stars: 1 }]).success).toBe(false);
+    expect(parse([{ name: "x".repeat(60), stars: 1 }]).success).toBe(true);
+    expect(parse([{ name: "A", stars: 1 }, { name: " a ", stars: 2 }]).success).toBe(false);
+    expect(parse(Array.from({ length: 21 }, (_, i) => ({ name: `T${i}`, stars: 1 }))).success).toBe(false);
+    expect(parse(Array.from({ length: 20 }, (_, i) => ({ name: `T${i}`, stars: 1 }))).success).toBe(true);
+    expect(parse("{oops").success).toBe(false);
+    expect(parse({ name: "A" }).success).toBe(false);
+    expect(parse([{ id: "nope", name: "A", stars: 1 }]).success).toBe(false);
+  });
+});
+
+describe("amountSchema", () => {
+  it("accepts 1..10 only", () => {
+    expect(amountSchema.parse("3")).toBe(3);
+    expect(amountSchema.safeParse("0").success).toBe(false);
+    expect(amountSchema.safeParse("11").success).toBe(false);
+    expect(amountSchema.safeParse("1.5").success).toBe(false);
+    expect(amountSchema.safeParse("x").success).toBe(false);
   });
 });
 
@@ -33,7 +66,10 @@ describe("parseTrackForm", () => {
     if (parsed.success) {
       expect(parsed.data.goal).toBe(30);
       expect(parsed.data.milestone_every).toBe(5);
-      expect(parsed.data.preset_reasons).toEqual(["Ryddet rommet", "Dekket bordet"]);
+      expect(parsed.data.tasks).toEqual([
+        { name: "Ryddet rommet", stars: 2 },
+        { name: "Dekket bordet", stars: 1 },
+      ]);
     }
   });
   it("requires the interval to divide the goal", () => {
@@ -52,11 +88,12 @@ describe("parseTrackForm", () => {
   ])("rejects %s = %s", (key, value) => {
     expect(parseTrackForm(form({ ...valid, [key]: value })).success).toBe(false);
   });
-  it("limits presets to 20 of at most 60 characters", () => {
-    const twentyOne = Array.from({ length: 21 }, (_, i) => `Forslag ${i}`).join("\n");
-    expect(parseTrackForm(form({ ...valid, preset_reasons: twentyOne })).success).toBe(false);
-    expect(parseTrackForm(form({ ...valid, preset_reasons: "x".repeat(61) })).success).toBe(false);
-    expect(parseTrackForm(form({ ...valid, preset_reasons: "x".repeat(60) })).success).toBe(true);
+  it("rejects an invalid task list", () => {
+    const tasks = JSON.stringify([{ name: "A", stars: 11 }]);
+    expect(parseTrackForm(form({ ...valid, tasks })).success).toBe(false);
+  });
+  it("allows a track without tasks", () => {
+    expect(parseTrackForm(form({ ...valid, tasks: "[]" })).success).toBe(true);
   });
 });
 

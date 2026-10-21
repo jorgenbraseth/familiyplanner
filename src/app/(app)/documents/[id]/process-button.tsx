@@ -31,9 +31,7 @@ export function ProcessButton({
     });
   }
 
-  const style = primary
-    ? "btn-primary"
-    : "btn-secondary";
+  const style = primary ? "btn-primary" : "btn-secondary";
 
   return (
     <div className="space-y-2">

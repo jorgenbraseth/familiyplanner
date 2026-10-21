@@ -1,7 +1,7 @@
 import { formatDayHeading } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import type { PlanItemRow } from "@/lib/plan";
-import type { DayItems } from "@/lib/plan-view";
+import { formatWeekday, type DayItems } from "@/lib/plan-view";
 import type { SchoolDocument } from "@/lib/school";
 import { SchoolHeading, SchoolHomework, SchoolLines, SchoolNotes } from "./school-items";
 
@@ -11,11 +11,14 @@ export function SchoolWeek({
   documents,
   todayKey,
   readOnly = false,
+  weekdayOnly = false,
 }: {
   days: DayItems[];
   documents: SchoolDocument[];
   todayKey: string;
   readOnly?: boolean;
+  /** Kids' headings: weekday name only. */
+  weekdayOnly?: boolean;
 }) {
   const filled = days.filter((d) => d.items.length > 0);
   if (filled.length === 0) return null;
@@ -37,7 +40,7 @@ export function SchoolWeek({
               <h4
                 className={`text-base font-extrabold capitalize ${day.key === todayKey ? "text-primary-strong" : "text-muted"}`}
               >
-                {formatDayHeading(day.date)}
+                {weekdayOnly ? formatWeekday(day.date) : formatDayHeading(day.date)}
               </h4>
               {lessons.length > 0 && (
                 <div>

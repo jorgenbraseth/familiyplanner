@@ -23,14 +23,21 @@ export default async function NewDocumentPage() {
 
   return (
     <>
-      <Link href="/documents" className="inline-flex min-h-11 items-center text-sm font-bold text-primary-strong">
+      <Link
+        href="/documents"
+        className="inline-flex min-h-11 items-center text-sm font-bold text-primary-strong"
+      >
         ← {t.documents.back}
       </Link>
       <h1 className="text-3xl font-extrabold">{t.documents.newTitle}</h1>
       {children.length === 0 ? (
         <p className="text-sm text-muted">{t.documents.noChildren}</p>
       ) : (
-        <UploadForm kids={children} defaultWeek={isoWeek} defaultYear={isoYear} />
+        <UploadForm
+          kids={children}
+          defaultWeek={isoWeek}
+          defaultYear={isoYear}
+        />
       )}
     </>
   );

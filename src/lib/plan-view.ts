@@ -1,6 +1,7 @@
 // Pure helpers that shape a child's plan items for the Today and This week views.
 
 import { addDays, dayKey, type CalendarDate } from "./dates";
+import { locale } from "./i18n";
 import type { PlanItemKind, PlanItemRow } from "./plan";
 
 const KIND_ORDER: Record<PlanItemKind, number> = { lesson: 0, homework: 1, bring: 2, note: 3 };
@@ -56,4 +57,82 @@ export function todayView(items: PlanItemRow[], today: CalendarDate): TodayView 
     nextSchoolDay: next,
     nextSchoolDayKey: nextKey,
   };
+}
+
+/** "Mandag": the weekday name only, capitalised (kids' headings show no date). */
+export function formatWeekday(date: CalendarDate): string {
+  const name = new Intl.DateTimeFormat(locale, { timeZone: "UTC", weekday: "long" }).format(
+    new Date(Date.UTC(date.year, date.month - 1, date.day)),
+  );
+  return name.charAt(0).toLocaleUpperCase(locale) + name.slice(1);
+}
+
+/** In the current week (offset 0) days before today are dropped; other weeks keep every day. */
+export function visibleDays<T extends { key: string }>(days: T[], todayKey: string, weekOffset: number): T[] {
+  return weekOffset === 0 ? days.filter((d) => d.key >= todayKey) : days;
+}
+
+/** "08:15:00" or "08:15" gives "08:15"; null/empty gives null. */
+export function formatHm(time: string | null | undefined): string | null {
+  const match = time?.match(/^(\d{1,2}):(\d{2})/);
+  return match ? `${match[1].padStart(2, "0")}:${match[2]}` : null;
+}
+
+/** "08:15–14:00", or just one end when only one is known, or null. */
+export function formatSchoolHours(startsAt: string | null | undefined, endsAt: string | null | undefined): string | null {
+  const from = formatHm(startsAt);
+  const to = formatHm(endsAt);
+  if (from && to) return `${from}–${to}`;
+  return from ?? to;
+}
+
+export type SchoolHours = { starts_at: string | null; ends_at: string | null };
+
+/** Lessons in school order: by period (those without one after, by `sort`), then time. */
+export function sortLessons(lessons: PlanItemRow[]): PlanItemRow[] {
+  const rank = (i: PlanItemRow) => i.period ?? Number.POSITIVE_INFINITY;
+  return [...lessons].sort(
+    (a, b) =>
+      (rank(a) === rank(b) ? 0 : rank(a) < rank(b) ? -1 : 1) ||
+      (a.starts_at ?? "").localeCompare(b.starts_at ?? "") ||
+      a.sort - b.sort,
+  );
+}
+
+export type WeekPlanDay = {
+  key: string;
+  date: CalendarDate;
+  /** "08:15–14:00" when the plan says so. */
+  hours: string | null;
+  lessons: PlanItemRow[];
+  homework: PlanItemRow[];
+  bring: PlanItemRow[];
+  notes: PlanItemRow[];
+};
+
+/**
+ * The "Ukeplan" cards: Monday–Friday always, Saturday/Sunday only when they have items, and
+ * (current week only) no days before today. `schoolDays` maps "YYYY-MM-DD" to the school hours.
+ */
+export function weekPlan(
+  items: PlanItemRow[],
+  schoolDays: Map<string, SchoolHours>,
+  monday: CalendarDate,
+  todayKey: string,
+  weekOffset: number,
+): WeekPlanDay[] {
+  const days = groupItemsByDay(items, monday, 7).filter((d, i) => i < 5 || d.items.length > 0);
+  return visibleDays(days, todayKey, weekOffset).map((d) => {
+    const of = (kind: PlanItemKind) => d.items.filter((i) => i.kind === kind);
+    const hours = schoolDays.get(d.key);
+    return {
+      key: d.key,
+      date: d.date,
+      hours: formatSchoolHours(hours?.starts_at, hours?.ends_at),
+      lessons: sortLessons(of("lesson")),
+      homework: of("homework"),
+      bring: of("bring"),
+      notes: of("note"),
+    };
+  });
 }

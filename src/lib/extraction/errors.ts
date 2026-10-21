@@ -15,7 +15,11 @@ export class ExtractionError extends Error {
   readonly code: ExtractionErrorCode;
   readonly reason: string;
 
-  constructor(code: ExtractionErrorCode, reason: string, options?: { cause?: unknown }) {
+  constructor(
+    code: ExtractionErrorCode,
+    reason: string,
+    options?: { cause?: unknown },
+  ) {
     super(reason, options);
     this.name = "ExtractionError";
     this.code = code;

@@ -1,6 +1,7 @@
 import "server-only";
 import { addDays, dateInTimeZone, dayKey, formatDayHeading, formatTime, isoWeekOf, mondayOf, startOfDay } from "../dates";
 import { t } from "../i18n";
+import { formatWeekday } from "../plan-view";
 import type { Member } from "../members";
 import { groupByDay, type CalendarEvent } from "./events";
 import { getEvents } from "./google";
@@ -42,7 +43,13 @@ export function parseWeekOffset(value: string | string[] | undefined): number {
 }
 
 /** One ISO week (Monday–Sunday, Copenhagen) of events for the given members. */
-export async function loadWeek(members: Member[], weekOffset = 0, now = new Date()): Promise<WeekView> {
+export async function loadWeek(
+  members: Member[],
+  weekOffset = 0,
+  now = new Date(),
+  /** Kids' headings: "Mandag" without the date. */
+  weekdayOnly = false,
+): Promise<WeekView> {
   const today = dateInTimeZone(now);
   const monday = addDays(mondayOf(today), weekOffset * 7);
   const { events, failedMemberIds } = await getEvents(
@@ -56,7 +63,7 @@ export async function loadWeek(members: Member[], weekOffset = 0, now = new Date
     const dayEnd = startOfDay(addDays(date, 1)).getTime();
     return {
       key,
-      heading: formatDayHeading(date),
+      heading: weekdayOnly ? formatWeekday(date) : formatDayHeading(date),
       isToday: key === todayKey,
       events: dayEvents.map((e) => ({
         id: `${e.memberId}:${e.id}`,

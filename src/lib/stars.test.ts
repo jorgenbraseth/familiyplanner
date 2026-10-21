@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   STAR_DAILY_LIMIT,
+  approvedTotal,
+  celebratingReward,
   justReachedMilestone,
   milestonesOf,
   requestsLeftToday,
   rewardTextAt,
+  starIcons,
   trackProgress,
   type RewardRow,
   type StarRow,
@@ -211,5 +214,33 @@ describe("rewardTextAt", () => {
     expect(rewardTextAt(rewards, 5)).toBe("Ice cream");
     expect(rewardTextAt(rewards, 25)).toBe("Ice cream");
     expect(rewardTextAt(rewards, 30)).toBe("Cinema");
+  });
+});
+
+describe("approvedTotal, starIcons and celebratingReward", () => {
+  it("sums approved amounts only", () => {
+    expect(
+      approvedTotal([
+        { status: "approved", amount: 2 },
+        { status: "approved", amount: 3 },
+        { status: "pending", amount: 5 },
+        { status: "declined", amount: 4 },
+      ]),
+    ).toBe(5);
+    expect(approvedTotal([])).toBe(0);
+  });
+  it("draws one star per amount, clamped to 1..10", () => {
+    expect(starIcons(1)).toBe("⭐");
+    expect(starIcons(3)).toBe("⭐⭐⭐");
+    expect(starIcons(0)).toBe("⭐");
+    expect(starIcons(99)).toBe("⭐".repeat(10));
+  });
+  it("celebrates a milestone passed within the window", () => {
+    const owed = [{ atCount: 5, kind: "small" as const, text: "Is" }];
+    expect(celebratingReward({ approved: 5, rewardsOwed: owed })?.atCount).toBe(5);
+    expect(celebratingReward({ approved: 6, rewardsOwed: owed })).toBeNull();
+    expect(celebratingReward({ approved: 6, rewardsOwed: owed }, 3)?.atCount).toBe(5);
+    expect(celebratingReward({ approved: 8, rewardsOwed: owed }, 3)).toBeNull();
+    expect(celebratingReward({ approved: 4, rewardsOwed: [] }, 3)).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import "server-only";
 import { addDays, dateInTimeZone, dayKey, mondayOf, type CalendarDate } from "./dates";
-import type { DocumentRow, DocumentType, PlanItemRow } from "./plan";
+import type { DocumentRow, DocumentType, PlanItemRow, SchoolDayRow } from "./plan";
+import type { SchoolHours } from "./plan-view";
 import { createClient } from "./supabase/server";
 
 export type SchoolDocument = Pick<DocumentRow, "id" | "type" | "iso_week">;
@@ -13,7 +14,7 @@ export type SchoolWeek = {
   documents: SchoolDocument[];
 };
 
-const ITEM_COLUMNS = "id, document_id, member_id, date, kind, subject, text, done, sort";
+const ITEM_COLUMNS = "id, document_id, member_id, date, kind, subject, text, done, sort, period, starts_at, ends_at";
 
 /**
  * The member's plan items for one ISO week (shifted by `weekOffset`) plus the Monday after it
@@ -51,4 +52,28 @@ export async function loadSchoolWeek(memberId: string, weekOffset = 0, now = new
     documents = (docs ?? []) as { id: string; type: DocumentType; iso_week: number }[];
   }
   return { monday, today, items, documents };
+}
+
+/**
+ * School start/end per day of one week (Monday + 6 days), keyed "YYYY-MM-DD". Published documents only.
+ * If two documents give the same day, the one that knows more times wins.
+ */
+export async function loadSchoolHours(memberId: string, monday: CalendarDate): Promise<Map<string, SchoolHours>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("school_days")
+    .select("date, starts_at, ends_at, documents!inner(status)")
+    .eq("documents.status", "published")
+    .eq("member_id", memberId)
+    .gte("date", dayKey(monday))
+    .lte("date", dayKey(addDays(monday, 6)));
+  if (error) throw new Error("Could not read the school days");
+  const rows = (data ?? []) as unknown as Pick<SchoolDayRow, "date" | "starts_at" | "ends_at">[];
+  const known = (r: SchoolHours) => Number(r.starts_at !== null) + Number(r.ends_at !== null);
+  const result = new Map<string, SchoolHours>();
+  for (const row of rows) {
+    const existing = result.get(row.date);
+    if (!existing || known(row) > known(existing)) result.set(row.date, { starts_at: row.starts_at, ends_at: row.ends_at });
+  }
+  return result;
 }

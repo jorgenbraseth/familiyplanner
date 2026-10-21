@@ -29,6 +29,12 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <header className="border-b-2 border-line bg-surface/95 backdrop-blur">
           <nav className="mx-auto flex max-w-2xl flex-wrap items-center gap-1 px-3 py-1.5">
             <NavLink href="/">{t.nav.today}</NavLink>
+            {viewing.role === "child" && (
+              <>
+                <NavLink href="/lekser">{t.school.navHomework}</NavLink>
+                <NavLink href="/ukeplan">{t.school.navWeekPlan}</NavLink>
+              </>
+            )}
             <NavLink href="/family">{t.nav.family}</NavLink>
             <NavLink href="/stars" badge={pending}>
               {t.stars.nav}
