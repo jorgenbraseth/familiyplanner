@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+build/
+coverage/
+.vercel/
+.env
+.env*.local
+*.log
+.DS_Store
+supabase/.temp/
+# never commit real school documents or service-account keys
+*.pdf
+*-key.json
+service-account*.json

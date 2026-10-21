@@ -1,0 +1,49 @@
+# CLAUDE.md – Family Planner
+
+Private family web app at https://planner.braseth.family. Read `docs/PLAN.md` (what to build) and `docs/SETUP.md` (accounts, secrets, deploy) before starting work.
+
+## Current status
+
+The repo contains only planning docs. Next step: **Phase 0** (scaffold), then phases 1–4 in order. Extra features in PLAN.md are out of scope until phases 1–4 are done.
+
+- [ ] Phase 0 – Setup (Next.js + TS + Tailwind, Supabase SSR client, migrations folder, `.env.example`, deploy)
+- [ ] Phase 1 – Google login + allowlist, members admin, calendars
+- [ ] Phase 2 – Document upload, Claude extraction, parent review, child Today/Week
+- [ ] Phase 3 – Star tracks, approvals, rewards, web push, PWA
+- [ ] Phase 4 – Voice assistant (`/api/assistant`, tools, speech in/out, limits, log)
+
+Update this checklist as phases land.
+
+## Stack
+
+- Next.js (App Router) + TypeScript (strict) + Tailwind CSS, deployed on Vercel (EU region)
+- Supabase (EU): Postgres with RLS, Storage (private bucket `documents`), Auth with the Google provider, via `@supabase/ssr`
+- Claude API via `@anthropic-ai/sdk`; model names come from `ANTHROPIC_MODEL_EXTRACT` / `ANTHROPIC_MODEL_ASSISTANT`
+- Google Calendar REST with a service account (`google-auth-library`)
+- Web Push (`web-push`, VAPID)
+- Vitest for unit tests
+
+## Rules
+
+- **Secrets are server-only.** `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_SERVICE_ACCOUNT_KEY`, `VAPID_PRIVATE_KEY` are read only in server code (`import "server-only"` in those modules). Never prefix them with `NEXT_PUBLIC_`.
+- **Authorization lives in the database.** Every table has RLS enabled; policies use `current_member_id()` and `is_parent()`. App code uses the user-scoped Supabase client by default. Use the service-role client only where RLS can't apply (sending push to another member, allowlist check before a session exists) and keep those call sites few and obvious.
+- **The voice assistant's tools run as the signed-in user** (user-scoped client), so RLS limits what Claude can read. Don't widen this with the service-role client.
+- **Allowlist:** a signed-in Google user whose email isn't in `members` is signed out and shown a "not invited" page. Compare emails lowercased.
+- **Children's data:** no real PDFs, photos or calendar data in git, fixtures or logs. Use made-up test data.
+- **Uploads go browser → Supabase Storage directly**, then a server action processes the file (avoids body-size limits). Path: `<member_id>/<document_id>.<ext>`.
+- **Claude extraction** uses a forced tool call with a JSON schema; validate the result (e.g. zod) before writing `plan_items`. Documents go to `review` status; only parents publish.
+- **Schema changes** are new files in `supabase/migrations/` (never edit an applied migration).
+- **UI strings** live in one module (e.g. `src/lib/i18n.ts`) so the language (Norwegian/Danish) can be switched in one place. Dates/times in `Europe/Copenhagen`, weeks are ISO weeks.
+- Mobile first: kids use phones; parents approve stars from their phone.
+
+## Commands (once scaffolded)
+
+```bash
+npm run dev        # local dev on :3000
+npm run lint
+npm run typecheck  # tsc --noEmit
+npm test           # vitest
+npm run build
+```
+
+Run lint, typecheck and tests before committing.

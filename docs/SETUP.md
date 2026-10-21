@@ -1,0 +1,109 @@
+# Setup guide (accounts and secrets)
+
+Everything here is done once, by hand, in web consoles. Secrets go into **Vercel environment variables** and a local `.env.local` — never into git or chat.
+
+Order: 1 Claude API → 2 Supabase → 3 Google Cloud → 4 Supabase Auth → 5 Vercel → 6 Cloudflare DNS → 7 first members.
+
+---
+
+## 1. Claude API (Anthropic Console)
+
+Your Claude.ai subscription does **not** cover API calls from apps you build. The API is a separate pay-as-you-go account.
+
+1. Go to **https://platform.claude.com** and sign in.
+2. **Billing:** add a payment method and buy a small amount of credit (5–10 USD lasts a long time for one family).
+3. **Settings → Workspaces → Create workspace** named `family-planner`. (Spend limits can't be set on the Default workspace, so a separate one matters.)
+4. In that workspace, open **Spend limits** and set a monthly cap, e.g. **10 USD**. When the cap is hit, API calls stop until the 1st of next month (00:00 UTC), so a bug can never cost more than this.
+5. Optional: under organization **Billing → Spend limits**, set an org-wide cap and an email alert at e.g. 50 %.
+6. In the `family-planner` workspace, **create an API key** named `vercel-production`. Copy it once.
+   - Put it in Vercel as `ANTHROPIC_API_KEY` (step 5).
+   - For local development, create a second key `local-dev` and put it in `.env.local`. Separate keys make it easy to revoke one.
+7. The key is used **only on the server** (server actions / route handlers). It must never be imported into a client component or prefixed with `NEXT_PUBLIC_`.
+
+Models (env vars, easy to change):
+
+- `ANTHROPIC_MODEL_EXTRACT=claude-sonnet-5-5` – reading school PDFs/photos
+- `ANTHROPIC_MODEL_ASSISTANT=claude-haiku-5-5` – fast voice answers
+
+Check current model names and prices at https://docs.claude.com before going live.
+
+## 2. Supabase project
+
+1. Create a new project, region **EU** (e.g. Frankfurt or Stockholm). Save the database password in your password manager.
+2. **Project Settings → API:** copy
+   - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
+   - `anon` / publishable key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `service_role` / secret key → `SUPABASE_SERVICE_ROLE_KEY` (server only; used for push notifications and admin tasks, never in the browser)
+3. Migrations live in `supabase/migrations/` and are applied with the Supabase CLI (`supabase link` then `supabase db push`) or pasted into the SQL editor.
+
+## 3. Google Cloud
+
+Create one project, e.g. `family-planner`.
+
+**A. OAuth client (for "Sign in with Google")**
+
+1. **APIs & Services → OAuth consent screen:** External, app name "Familieplanlegger", support email = yours, scopes = only `email`, `profile`, `openid`. With only these basic scopes, no Google verification is needed, so you can set publishing status to **In production**. The app's own allowlist decides who gets in.
+2. **Credentials → Create credentials → OAuth client ID → Web application.**
+   - Authorized redirect URI: `https://<your-project-ref>.supabase.co/auth/v1/callback` (shown in Supabase under Auth → Providers → Google).
+3. Copy the **Client ID** and **Client secret** → paste them into Supabase (step 4). They don't go into Vercel.
+
+**B. Service account (for reading calendars)**
+
+1. **APIs & Services → Library → Google Calendar API → Enable.**
+2. **IAM & Admin → Service accounts → Create**, name `calendar-reader`, no roles needed.
+3. Open it → **Keys → Add key → JSON.** Download the file.
+4. Base64-encode it into one line and store it as `GOOGLE_SERVICE_ACCOUNT_KEY`:
+   - macOS/Linux: `base64 -i key.json | tr -d '\n'`
+   Then delete the downloaded file.
+5. Note the service account's email (`calendar-reader@<project>.iam.gserviceaccount.com`).
+6. **Each family member** (or you, for the kids' accounts): Google Calendar → the calendar's **Settings and sharing → Share with specific people → add the service account email → "See all event details".**
+7. The calendar ID is under **Integrate calendar** on the same page; for a primary calendar it's the Gmail address.
+
+## 4. Supabase Auth
+
+1. **Authentication → Providers → Google:** enable, paste Client ID + secret from 3A.
+2. **Authentication → URL configuration:**
+   - Site URL: `https://planner.braseth.family`
+   - Redirect URLs: `https://planner.braseth.family/**` and `http://localhost:3000/**`
+3. Optional: disable email/password sign-up (only Google is used).
+
+## 5. Vercel
+
+1. **Add New → Project →** import `jorgenbraseth/familiyplanner`. Framework: Next.js.
+2. Project settings → **Functions → Region:** an EU region (e.g. `fra1` Frankfurt or `arn1` Stockholm), close to the Supabase region.
+3. **Environment Variables** (Production and Preview) — see `.env.example` for the full list:
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+   - `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL_EXTRACT`, `ANTHROPIC_MODEL_ASSISTANT`
+   - `GOOGLE_SERVICE_ACCOUNT_KEY`
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (generate with `npx web-push generate-vapid-keys`; subject `mailto:jorgen.braseth@gmail.com`)
+   - `NEXT_PUBLIC_SITE_URL=https://planner.braseth.family`
+4. **Settings → Domains → Add** `planner.braseth.family`. Vercel shows the DNS record it wants (normally a CNAME to `cname.vercel-dns.com`, or a project-specific target — use exactly what Vercel shows).
+
+## 6. Cloudflare DNS
+
+1. Cloudflare dashboard → `braseth.family` → **DNS → Records → Add record**
+   - Type `CNAME`, Name `planner`, Target = the value Vercel showed.
+   - **Proxy status: DNS only (grey cloud).** Vercel issues the SSL certificate itself; the orange-cloud proxy interferes with that.
+2. Wait for Vercel's domain page to show "Valid configuration" (usually minutes).
+3. Optional later: **Email Routing** for addresses like `hjem@braseth.family` (free).
+
+## 7. First members
+
+Once the database is migrated, add yourself as the first parent in the Supabase SQL editor (the seed file shows the exact statement):
+
+```sql
+insert into members (name, email, role, calendar_id, colour, locale)
+values ('Jørgen', 'jorgen.braseth@gmail.com', 'parent', 'jorgen.braseth@gmail.com', '#2563eb', 'nb-NO');
+```
+
+Everyone else can then be added from the app's members page.
+
+---
+
+## Local development
+
+```bash
+cp .env.example .env.local   # fill in values (use the local-dev Anthropic key)
+npm install
+npm run dev                  # http://localhost:3000
+```
