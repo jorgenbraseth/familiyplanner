@@ -143,7 +143,19 @@ export const t = {
   },
   // Push notifications and app install.
   push: {
+    title: "Varsler",
+    description: "Få beskjed på denne telefonen, for eksempel når en ny ukeplan er klar.",
     enable: "Slå på varsler",
+    on: "Varsler er på",
+    disable: "Slå av",
+    unsupported: "Denne nettleseren støtter ikke varsler.",
+    iosInstall:
+      "På iPhone virker varsler først når appen er lagt til på Hjem-skjermen: trykk Del, velg Legg til på Hjem-skjerm, og åpne appen derfra.",
+    denied: "Varsler er blokkert. Endre det i innstillingene til nettleseren eller telefonen.",
+    notConfigured: "Varsler er ikke satt opp på tjeneren ennå.",
+    failed: "Klarte ikke å endre varsler. Prøv igjen.",
+    planPublishedTitle: "Ny ukeplan",
+    planPublishedBody: (week: number) => `Ukeplanen for uke ${week} er klar.`,
   },
   members: {
     title: "Medlemmer",

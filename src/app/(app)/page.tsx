@@ -1,5 +1,6 @@
 import { DayList } from "@/components/day-list";
 import { Notice } from "@/components/notice";
+import { PushCard } from "@/components/push-card";
 import { WeekNav } from "@/components/week-nav";
 import { getCurrentMember } from "@/lib/auth";
 import { loadWeek, parseWeekOffset } from "@/lib/calendar/view";
@@ -43,6 +44,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           todayKey={week.todayKey}
         />
       </section>
+      <PushCard />
     </>
   );
 }
