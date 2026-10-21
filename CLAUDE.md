@@ -4,12 +4,12 @@ Private family web app at https://planner.braseth.family. Read `docs/PLAN.md` (w
 
 ## Current status
 
-Phase 0 scaffold is in the repo; the Vercel project, env vars and the `planner.braseth.family` domain are set up by hand (docs/SETUP.md). Phase 1 is live (Google login + allowlist, members admin, calendar views). Phase 2 is live (upload, Claude extraction, review/publish, child views, sign-up hook); extraction works on real plans. **To revisit later (owner):** the document review page and the children's school views are hard to use and read; give them a usability/readability pass. Phase 3 code is written (star tracks, requests/approvals, rewards, web push, installable PWA, plus the owner-requested "Se som barn" parent preview: read-only, cookie honoured only for parent→child, shows only what the child would see); it is done once a child has requested a star and a parent approved it from their phone. Extra features in PLAN.md are out of scope until phases 1–4 are done.
+Phase 0 scaffold is in the repo; the Vercel project, env vars and the `planner.braseth.family` domain are set up by hand (docs/SETUP.md). Phase 1 is live (Google login + allowlist, members admin, calendar views). Phase 2 is live (upload, Claude extraction, review/publish, child views, sign-up hook); extraction works on real plans. **To revisit later (owner):** the document review page and the children's school views are hard to use and read; give them a usability/readability pass. Phase 3 is live and owner-tested (star tracks, requests/approvals, rewards, web push, installable PWA, plus the owner-requested "Se som barn" parent preview: read-only, cookie honoured only for parent→child, shows only what the child would see). Next step: **Phase 4**. Extra features in PLAN.md are out of scope until phases 1–4 are done.
 
 - [x] Phase 0 – Setup (Next.js + TS + Tailwind, Supabase SSR client, migrations folder, `.env.example`, Vercel config, CI). Owner still to do: Vercel project + domain (docs/SETUP.md §5–6)
 - [x] Phase 1 – Google login + allowlist, members admin, calendars
 - [x] Phase 2 – Document upload, Claude extraction, parent review, child Today/Week (UI polish pending)
-- [ ] Phase 3 – Star tracks, approvals, rewards, web push, PWA, "Se som barn" preview (code written; waiting on owner test)
+- [x] Phase 3 – Star tracks, approvals, rewards, web push, PWA, "Se som barn" preview
 - [ ] Phase 4 – Voice assistant (`/api/assistant`, tools, speech in/out, limits, log)
 
 Update this checklist as phases land.
