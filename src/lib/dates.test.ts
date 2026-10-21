@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateInTimeZone, dayKey, isoWeekNow, isoWeekOf, mondayOf, parseDayKey, startOfDay } from "./dates";
+import { dateInTimeZone, dayKey, isoWeekNow, isoWeekOf, mondayOf, mondayOfIsoWeek, parseDayKey, startOfDay } from "./dates";
 
 describe("isoWeekOf", () => {
   it.each([
@@ -42,5 +42,22 @@ describe("week and day helpers", () => {
     // DST starts 29 March 2026 at 02:00; midnight is still winter time.
     expect(startOfDay({ year: 2026, month: 3, day: 29 }).toISOString()).toBe("2026-03-28T23:00:00.000Z");
     expect(startOfDay({ year: 2026, month: 3, day: 30 }).toISOString()).toBe("2026-03-29T22:00:00.000Z");
+  });
+});
+
+describe("mondayOfIsoWeek", () => {
+  it.each([
+    [2026, 43, "2026-10-19"],
+    [2026, 1, "2025-12-29"],
+    [2026, 53, "2026-12-28"],
+    [2025, 1, "2024-12-30"],
+    [2024, 1, "2024-01-01"],
+  ])("week %i-%i starts on %s", (isoYear, isoWeek, expected) => {
+    expect(dayKey(mondayOfIsoWeek(isoYear, isoWeek))).toBe(expected);
+  });
+
+  it("round-trips with isoWeekOf", () => {
+    const monday = mondayOfIsoWeek(2027, 10);
+    expect(isoWeekOf(monday)).toEqual({ isoYear: 2027, isoWeek: 10 });
   });
 });
