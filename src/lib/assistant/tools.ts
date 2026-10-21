@@ -4,13 +4,13 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getEvents } from "../calendar/google";
-import { addDays, formatDayHeading, formatTime, startOfDay } from "../dates";
+import { addDays, dayKey, formatDayHeading, formatTime, mondayOf, startOfDay } from "../dates";
 import { MEMBER_COLUMNS, type Member } from "../members";
-import { PLAN_ITEM_KINDS } from "../plan";
 import { REWARD_COLUMNS, STAR_COLUMNS, TRACK_COLUMNS } from "../star-data";
 import { trackProgress, type RewardRow, type StarRow, type StarTrackRow } from "../stars";
 import { validateRange } from "./range";
-import { NO_ACCESS_NOTE, resolveMember, shapePlanItems, type PlanItemInput } from "./shape";
+import { fetchHoursOverrides, fetchTimetable } from "../timetable";
+import { NO_ACCESS_NOTE, PLAN_KIND_NAMES, normalizeKind, resolveMember, shapePlanItems, shapeSchoolDays, type PlanItemInput } from "./shape";
 
 // Every tool runs with the signed-in user's Supabase client: RLS decides what it can read.
 // Never pass the admin client in here.
@@ -23,7 +23,8 @@ const dayString = z.string().max(10);
 const planInput = z.object({
   from: dayString,
   to: dayString,
-  kind: z.enum(PLAN_ITEM_KINDS).nullable(),
+  // Legacy names (bring, note, lesson) are accepted too: see normalizeKind.
+  kind: z.string().max(20).nullable(),
   member_name: nullableName,
 });
 const calendarInput = z.object({ from: dayString, to: dayString, member_name: nullableName });
@@ -38,13 +39,13 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
   {
     name: "get_plan_items",
     description:
-      "School plan items (lessons, homework, things to bring, notes) for a day range of at most 31 days. Homework dates are the day it is due.",
+      "School plan for a day range of at most 31 days: ukeplan items (homework, events, messages) plus the school hours and periods (timetable) of each school day. Homework dates are the day it is due. Items with whole_week true belong to the whole week: their date is the Monday of that week.",
     input_schema: {
       type: "object",
       properties: {
         from: { type: "string", description: "First day, YYYY-MM-DD." },
         to: { type: "string", description: "Last day (inclusive), YYYY-MM-DD." },
-        kind: { anyOf: [{ type: "string", enum: [...PLAN_ITEM_KINDS] }, { type: "null" }], description: "Only this kind of item, or null for all." },
+        kind: { anyOf: [{ type: "string", enum: [...PLAN_KIND_NAMES] }, { type: "null" }], description: "Only this kind of item, or null for all." },
         member_name: memberProperty,
       },
       required: ["from", "to", "kind", "member_name"],
@@ -97,18 +98,43 @@ async function getPlanItems(ctx: ToolContext, raw: unknown): Promise<unknown> {
   const target = await targetMember(ctx, input.member_name);
   if ("error" in target) return { error: target.error };
 
-  let query = ctx.supabase
-    .from("plan_items")
-    .select("date, kind, subject, text, done, sort, documents!inner(status)")
-    .eq("member_id", target.member.id)
-    .eq("documents.status", "published")
-    .gte("date", range.fromKey)
-    .lte("date", range.toKey);
-  if (input.kind) query = query.eq("kind", input.kind);
-  const { data, error } = await query.order("date").order("sort").limit(201);
-  if (error) throw new Error("Could not read plan items");
-  const shaped = shapePlanItems((data ?? []) as unknown as PlanItemInput[]);
-  return { member: target.member.name, ...shaped, ...(range.clamped ? { range_limited_to: range.toKey } : {}) };
+  const filter = normalizeKind(input.kind);
+  if ("error" in filter) return { error: filter.error };
+
+  // Whole-week items are dated on the Monday of their week, so the query starts at the Monday of `from` and
+  // day items before `from` are dropped again.
+  // Children only get audience child/both (RLS); a parent asking about a child gets everything.
+  let items: ReturnType<typeof shapePlanItems> = { items: [] };
+  if (!filter.timetableOnly) {
+    let query = ctx.supabase
+      .from("plan_items")
+      .select("date, kind, subject, text, done, sort, audience, whole_week, starts_at, ends_at, documents!inner(status)")
+      .eq("member_id", target.member.id)
+      .eq("documents.status", "published")
+      .neq("kind", "lesson")
+      .gte("date", dayKey(mondayOf(range.from)))
+      .lte("date", range.toKey);
+    if (filter.kind) query = query.eq("kind", filter.kind);
+    const { data, error } = await query.order("date").order("sort").limit(201);
+    if (error) throw new Error("Could not read plan items");
+    const rows = ((data ?? []) as unknown as PlanItemInput[]).filter((r) => r.whole_week || r.date >= range.fromKey);
+    items = shapePlanItems(rows);
+  }
+
+  const [timetable, overrides] = await Promise.all([
+    fetchTimetable(ctx.supabase, target.member.id),
+    fetchHoursOverrides(ctx.supabase, target.member.id, range.fromKey, range.toKey),
+  ]);
+  const schoolDays = shapeSchoolDays(range.fromKey, range.toKey, timetable, overrides);
+  const empty = items.items.length === 0 && schoolDays.length === 0;
+  return {
+    member: target.member.name,
+    items: items.items,
+    school_days: schoolDays,
+    ...(empty ? { note: NO_ACCESS_NOTE } : {}),
+    ...(items.truncated ? { truncated: true } : {}),
+    ...(range.clamped ? { range_limited_to: range.toKey } : {}),
+  };
 }
 
 function formatEvent(event: { title: string; start: string; end: string; allDay: boolean; location?: string }) {

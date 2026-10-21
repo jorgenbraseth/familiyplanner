@@ -1,21 +1,17 @@
 import "server-only";
 import { addDays, dateInTimeZone, dayKey, formatDayHeading, formatTime, isoWeekOf, mondayOf, startOfDay } from "../dates";
 import { t } from "../i18n";
-import { formatWeekday } from "../plan-view";
+import { filterByAudience, formatWeekday, mergeEntries, schoolEventEntry, type AudienceView, type EventEntry } from "../plan-view";
 import type { Member } from "../members";
+import { loadSchoolEvents } from "../school";
 import { groupByDay, type CalendarEvent } from "./events";
 import { getEvents } from "./google";
 
 // Server-side view models for calendar screens. Times are formatted here so server and browser
 // render the same text.
 
-export type EventView = {
-  id: string;
-  memberId: string;
-  title: string;
-  timeLabel: string;
-  location?: string;
-};
+/** One line of a day list: a Google Calendar event or a school event from the ukeplan (`school`). */
+export type EventView = EventEntry;
 
 export type DayView = { key: string; heading: string; isToday: boolean; events: EventView[] };
 
@@ -25,6 +21,13 @@ export type WeekView = {
   days: DayView[];
   failedNames: string[];
 };
+
+/** Minutes after midnight the event starts on this day; -1 for all-day events and ones that began earlier. */
+function sortKey(event: CalendarEvent, dayStart: number): number {
+  const start = new Date(event.start).getTime();
+  if (event.allDay || start <= dayStart) return -1;
+  return Math.round((start - dayStart) / 60_000);
+}
 
 function timeLabel(event: CalendarEvent, dayStart: number, dayEnd: number): string {
   if (event.allDay) return t.calendar.allDay;
@@ -42,21 +45,37 @@ export function parseWeekOffset(value: string | string[] | undefined): number {
   return Number.isInteger(n) ? Math.max(-52, Math.min(52, n)) : 0;
 }
 
+export type LoadWeekOptions = {
+  /** Kids' headings: "Mandag" without the date. */
+  weekdayOnly?: boolean;
+  /**
+   * Also interleave published ukeplan events of these members with their calendar events: `kid` shows audience
+   * child/both, `all` every audience (parents' Familien page).
+   */
+  schoolEvents?: { view: Exclude<AudienceView, "parent">; memberIds: string[] };
+};
+
 /** One ISO week (Monday–Sunday, Copenhagen) of events for the given members. */
 export async function loadWeek(
   members: Member[],
   weekOffset = 0,
   now = new Date(),
-  /** Kids' headings: "Mandag" without the date. */
-  weekdayOnly = false,
+  options: LoadWeekOptions = {},
 ): Promise<WeekView> {
+  const { weekdayOnly = false, schoolEvents } = options;
   const today = dateInTimeZone(now);
   const monday = addDays(mondayOf(today), weekOffset * 7);
-  const { events, failedMemberIds } = await getEvents(
-    members.map((m) => ({ memberId: m.id, calendarId: m.calendar_id })),
-    startOfDay(monday),
-    startOfDay(addDays(monday, 7)),
-  );
+  const [{ events, failedMemberIds }, planEvents] = await Promise.all([
+    getEvents(
+      members.map((m) => ({ memberId: m.id, calendarId: m.calendar_id })),
+      startOfDay(monday),
+      startOfDay(addDays(monday, 7)),
+    ),
+    schoolEvents
+      ? loadSchoolEvents(schoolEvents.memberIds, dayKey(monday), dayKey(addDays(monday, 6)))
+      : Promise.resolve([]),
+  ]);
+  const schoolItems = schoolEvents ? filterByAudience(planEvents, schoolEvents.view) : [];
   const todayKey = dayKey(today);
   const days = groupByDay(events, monday, 7).map(({ date, key, events: dayEvents }) => {
     const dayStart = startOfDay(date).getTime();
@@ -65,13 +84,17 @@ export async function loadWeek(
       key,
       heading: weekdayOnly ? formatWeekday(date) : formatDayHeading(date),
       isToday: key === todayKey,
-      events: dayEvents.map((e) => ({
-        id: `${e.memberId}:${e.id}`,
-        memberId: e.memberId,
-        title: e.title,
-        timeLabel: timeLabel(e, dayStart, dayEnd),
-        location: e.location,
-      })),
+      events: mergeEntries<EventView>(
+        dayEvents.map((e) => ({
+          id: `${e.memberId}:${e.id}`,
+          memberId: e.memberId,
+          title: e.title,
+          timeLabel: timeLabel(e, dayStart, dayEnd),
+          sortKey: sortKey(e, dayStart),
+          location: e.location,
+        })),
+        schoolItems.filter((i) => i.date === key).map((i) => schoolEventEntry(i, t.calendar.allDay)),
+      ),
     };
   });
   return {

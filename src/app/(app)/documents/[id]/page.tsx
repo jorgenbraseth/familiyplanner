@@ -9,14 +9,20 @@ import {
 } from "@/lib/dates";
 import { allowedItemDays } from "@/lib/documents";
 import { locale, t } from "@/lib/i18n";
-import type { DocumentRow, PlanItemRow, SchoolDayRow } from "@/lib/plan";
+import type {
+  DocumentRow,
+  PlanAudience,
+  PlanItemRow,
+  TimetableDayRow,
+  TimetablePeriodRow,
+} from "@/lib/plan";
 import { createClient } from "@/lib/supabase/server";
 import { publishDocument } from "../actions";
 import { StatusBadge } from "../status-badge";
 import { DeleteDocumentButton } from "./delete-document-button";
 import { ItemForm } from "./item-form";
 import { ProcessButton } from "./process-button";
-import { SchoolDayForm } from "./school-day-form";
+import { PeriodForm, TimetableDayForm } from "./timetable-forms";
 
 // The server actions used on this page (re-reading the document) run with this limit.
 export const maxDuration = 120;
@@ -32,10 +38,57 @@ type ItemRow = Pick<
   | "subject"
   | "text"
   | "sort"
-  | "period"
+  | "audience"
+  | "whole_week"
   | "starts_at"
   | "ends_at"
 >;
+type TimetableDay = Pick<TimetableDayRow, "weekday" | "starts_at" | "ends_at">;
+type TimetablePeriod = Pick<
+  TimetablePeriodRow,
+  "id" | "weekday" | "period" | "starts_at" | "ends_at" | "subject" | "sort"
+>;
+
+const AUDIENCE_STYLES: Record<PlanAudience, string> = {
+  child: "bg-primary text-on-primary",
+  parent: "bg-accent text-on-accent",
+  both: "bg-chip text-chip-ink",
+};
+
+function timeRange(start: string | null, end: string | null): string {
+  if (start && end) return `${start.slice(0, 5)}–${end.slice(0, 5)}`;
+  return (start ?? end)?.slice(0, 5) ?? "";
+}
+
+function ItemCard({
+  item,
+  documentId,
+  days,
+}: {
+  item: ItemRow;
+  documentId: string;
+  days: string[];
+}) {
+  const time =
+    item.kind === "event" ? timeRange(item.starts_at, item.ends_at) : "";
+  return (
+    <li className="card space-y-2 p-3">
+      <p className="flex flex-wrap items-center gap-2 text-sm font-extrabold">
+        <span>{t.documents.kinds[item.kind]}</span>
+        <span
+          className={`inline-block rounded-full px-3 py-1 text-xs font-extrabold ${AUDIENCE_STYLES[item.audience]}`}
+        >
+          {t.documents.audiences[item.audience]}
+        </span>
+        {time && <span className="text-muted">{time}</span>}
+        {item.kind === "lesson" && (
+          <span className="text-muted">{t.documents.legacyLesson}</span>
+        )}
+      </p>
+      <ItemForm item={item} documentId={documentId} days={days} />
+    </li>
+  );
+}
 
 export default async function DocumentPage({
   params,
@@ -57,39 +110,86 @@ export default async function DocumentPage({
   if (!data) notFound();
   const doc = data as unknown as DocumentWithChild;
 
-  const [{ data: itemData }, { data: dayData }, { data: signed }] =
-    await Promise.all([
-      supabase
-        .from("plan_items")
-        .select(
-          "id, date, kind, subject, text, sort, period, starts_at, ends_at",
-        )
-        .eq("document_id", doc.id)
-        .order("date")
-        .order("sort"),
-      supabase
-        .from("school_days")
-        .select("date, starts_at, ends_at")
-        .eq("document_id", doc.id),
-      supabase.storage.from("documents").createSignedUrl(doc.file_path, 600),
-    ]);
-  const items = (itemData ?? []) as ItemRow[];
+  const isTimeplan = doc.type === "timeplan";
+  const [
+    { data: itemData },
+    { data: tDayData },
+    { data: tPeriodData },
+    { data: signed },
+    { data: previous },
+  ] = await Promise.all([
+    isTimeplan
+      ? Promise.resolve({ data: [] })
+      : supabase
+          .from("plan_items")
+          .select(
+            "id, date, kind, subject, text, sort, audience, whole_week, starts_at, ends_at",
+          )
+          .eq("document_id", doc.id)
+          .order("date")
+          .order("sort"),
+    isTimeplan
+      ? supabase
+          .from("timetable_days")
+          .select("weekday, starts_at, ends_at")
+          .eq("document_id", doc.id)
+      : Promise.resolve({ data: [] }),
+    isTimeplan
+      ? supabase
+          .from("timetable_periods")
+          .select("id, weekday, period, starts_at, ends_at, subject, sort")
+          .eq("document_id", doc.id)
+      : Promise.resolve({ data: [] }),
+    supabase.storage.from("documents").createSignedUrl(doc.file_path, 600),
+    // Another published timeplan for the same child: this one replaces it when published.
+    isTimeplan && doc.status !== "published"
+      ? supabase
+          .from("documents")
+          .select("id")
+          .eq("member_id", doc.member_id)
+          .eq("type", "timeplan")
+          .eq("status", "published")
+          .neq("id", doc.id)
+          .limit(1)
+      : Promise.resolve({ data: [] }),
+  ]);
   const fileUrl = signed?.signedUrl ?? null;
+  const replacesPrevious = ((previous ?? []) as unknown[]).length > 0;
 
-  const days = allowedItemDays(doc.iso_year as number, doc.iso_week as number);
-  const schoolDays = new Map(
-    (
-      (dayData ?? []) as Pick<SchoolDayRow, "date" | "starts_at" | "ends_at">[]
-    ).map((d) => [d.date, d]),
+  // Ukeplan: whole-week items first, then Monday to Friday and any other day that has items.
+  const items = (itemData ?? []) as ItemRow[];
+  const days =
+    doc.iso_week !== null && doc.iso_year !== null
+      ? allowedItemDays(doc.iso_year, doc.iso_week)
+      : [];
+  const wholeWeekItems = items.filter((i) => i.whole_week);
+  const groups = new Map<string, ItemRow[]>(
+    days.slice(0, 5).map((d) => [d, []]),
   );
-  // Every weekday of the document's week, plus any other day that has items or school times.
-  const weekdays = days.slice(0, 5); // Monday to Friday of the document's week
-  const groups = new Map<string, ItemRow[]>(weekdays.map((d) => [d, []]));
-  for (const d of schoolDays.keys()) if (!groups.has(d)) groups.set(d, []);
   for (const item of items)
-    groups.set(item.date, [...(groups.get(item.date) ?? []), item]);
+    if (!item.whole_week)
+      groups.set(item.date, [...(groups.get(item.date) ?? []), item]);
   const orderedGroups = [...groups.entries()].sort(([a], [b]) =>
     a < b ? -1 : a > b ? 1 : 0,
+  );
+
+  // Timeplan: Monday to Friday, plus Saturday/Sunday only when they have something.
+  const timetableDays = new Map(
+    ((tDayData ?? []) as TimetableDay[]).map((d) => [d.weekday, d]),
+  );
+  const periods = (tPeriodData ?? []) as TimetablePeriod[];
+  const periodsByDay = new Map<number, TimetablePeriod[]>();
+  for (const p of periods)
+    periodsByDay.set(p.weekday, [...(periodsByDay.get(p.weekday) ?? []), p]);
+  for (const list of periodsByDay.values())
+    list.sort(
+      (a, b) =>
+        (a.period ?? 99) - (b.period ?? 99) ||
+        (a.starts_at ?? "99:99").localeCompare(b.starts_at ?? "99:99") ||
+        a.sort - b.sort,
+    );
+  const weekdays = [1, 2, 3, 4, 5, 6, 7].filter(
+    (w) => w <= 5 || timetableDays.has(w) || periodsByDay.has(w),
   );
 
   const created = new Intl.DateTimeFormat(locale, {
@@ -124,7 +224,9 @@ export default async function DocumentPage({
         </div>
         <p className="text-sm text-muted">
           {t.documents.types[doc.type]} ·{" "}
-          {doc.iso_week !== null && doc.iso_year !== null ? t.documents.week(doc.iso_week, doc.iso_year) : ""} ·{" "}
+          {doc.iso_week !== null && doc.iso_year !== null
+            ? `${t.documents.week(doc.iso_week, doc.iso_year)} · `
+            : ""}
           {t.documents.created(created)}
         </p>
       </header>
@@ -176,46 +278,106 @@ export default async function DocumentPage({
         </p>
       )}
 
-      {showItems && (
+      {showItems && isTimeplan && (
         <section className="space-y-4">
-          <h2 className="text-xl font-extrabold">{t.documents.items}</h2>
-          {items.length === 0 && schoolDays.size === 0 && (
-            <p className="text-sm text-muted">{t.documents.noItems}</p>
+          <h2 className="text-xl font-extrabold">{t.documents.timetable}</h2>
+          <p className="text-sm text-muted">{t.documents.timeplanIntro}</p>
+          {replacesPrevious && (
+            <p className="rounded-xl bg-warning-soft p-3 text-sm font-bold text-on-warning-soft">
+              {t.documents.replacesPrevious}
+            </p>
           )}
-          {orderedGroups.map(([date, dayItems]) => {
-            const schoolDay = schoolDays.get(date);
+          {weekdays.map((weekday) => {
+            const day = timetableDays.get(weekday);
+            const dayPeriods = periodsByDay.get(weekday) ?? [];
             return (
-              <div key={date} className="space-y-2">
-                <h3 className="font-display text-base font-extrabold capitalize">
-                  {formatDayHeading(parseDayKey(date))}
+              <div key={weekday} className="space-y-2">
+                <h3 className="font-display text-base font-extrabold">
+                  {t.documents.weekdays[weekday - 1]}
                 </h3>
                 <div className="card p-3">
-                  <SchoolDayForm
-                    key={`${schoolDay?.starts_at}-${schoolDay?.ends_at}`}
+                  <TimetableDayForm
+                    key={`${day?.starts_at}-${day?.ends_at}`}
                     documentId={doc.id}
-                    date={date}
-                    startsAt={schoolDay?.starts_at ?? null}
-                    endsAt={schoolDay?.ends_at ?? null}
+                    weekday={weekday}
+                    startsAt={day?.starts_at ?? null}
+                    endsAt={day?.ends_at ?? null}
                   />
                 </div>
+                {dayPeriods.length === 0 && (
+                  <p className="text-sm text-muted">{t.documents.noPeriods}</p>
+                )}
                 <ul className="space-y-3">
-                  {dayItems.map((item) => (
-                    <li key={item.id} className="card space-y-2 p-3">
-                      {item.kind === "lesson" && (
-                        <p className="text-sm font-extrabold">
-                          {t.documents.lessonLabel(item.period)}
-                          {item.starts_at &&
-                            ` ${item.starts_at.slice(0, 5)}${item.ends_at ? `–${item.ends_at.slice(0, 5)}` : ""}`}
-                          {item.subject && ` ${item.subject}`}
-                        </p>
-                      )}
-                      <ItemForm item={item} documentId={doc.id} days={days} />
+                  {dayPeriods.map((p) => (
+                    <li key={p.id} className="card space-y-2 p-3">
+                      <p className="text-sm font-extrabold">
+                        {t.documents.periodLine(
+                          p.period,
+                          timeRange(p.starts_at, p.ends_at),
+                          p.subject,
+                        )}
+                      </p>
+                      <PeriodForm
+                        key={p.id}
+                        documentId={doc.id}
+                        weekday={weekday}
+                        period={p}
+                      />
                     </li>
                   ))}
                 </ul>
+                <details className="rounded-2xl border-2 border-dashed border-line p-3">
+                  <summary className="min-h-11 cursor-pointer font-display text-base font-extrabold">
+                    {t.documents.addPeriod}
+                  </summary>
+                  <div className="pt-2">
+                    <PeriodForm documentId={doc.id} weekday={weekday} />
+                  </div>
+                </details>
               </div>
             );
           })}
+        </section>
+      )}
+
+      {showItems && !isTimeplan && (
+        <section className="space-y-4">
+          <h2 className="text-xl font-extrabold">{t.documents.ukeplanItems}</h2>
+          {items.length === 0 && (
+            <p className="text-sm text-muted">{t.documents.noItems}</p>
+          )}
+          <div className="space-y-2">
+            <h3 className="font-display text-base font-extrabold">
+              {t.documents.wholeWeek}
+            </h3>
+            <ul className="space-y-3">
+              {wholeWeekItems.map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  documentId={doc.id}
+                  days={days}
+                />
+              ))}
+            </ul>
+          </div>
+          {orderedGroups.map(([date, dayItems]) => (
+            <div key={date} className="space-y-2">
+              <h3 className="font-display text-base font-extrabold capitalize">
+                {formatDayHeading(parseDayKey(date))}
+              </h3>
+              <ul className="space-y-3">
+                {dayItems.map((item) => (
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    documentId={doc.id}
+                    days={days}
+                  />
+                ))}
+              </ul>
+            </div>
+          ))}
           <div className="space-y-2 rounded-2xl border-2 border-dashed border-line p-3">
             <h3 className="font-display text-base font-extrabold">
               {t.documents.addItem}
@@ -223,7 +385,7 @@ export default async function DocumentPage({
             <ItemForm
               documentId={doc.id}
               days={days}
-              defaultDate={days.includes(today) ? today : days[0]}
+              defaultDay={days.includes(today) ? today : days[0]}
             />
           </div>
         </section>
@@ -236,7 +398,16 @@ export default async function DocumentPage({
             <button type="submit" className="btn btn-primary w-full sm:w-auto">
               {t.documents.publish}
             </button>
-            <p className="text-xs text-muted">{t.documents.publishHelp}</p>
+            <p className="text-xs text-muted">
+              {isTimeplan
+                ? t.documents.publishTimeplanHelp
+                : t.documents.publishHelp}
+            </p>
+            {isTimeplan && replacesPrevious && (
+              <p className="text-xs font-bold text-muted">
+                {t.documents.replacesPrevious}
+              </p>
+            )}
           </form>
         )}
         {(doc.status === "review" || doc.status === "failed") && (

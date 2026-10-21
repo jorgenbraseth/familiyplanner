@@ -16,7 +16,14 @@ export default async function FamilyPage({ searchParams }: PageProps<"/family">)
   const { data, error } = await supabase.from("members").select(MEMBER_COLUMNS).order("created_at");
   if (error) throw new Error("Could not read members");
   const members = data as Member[];
-  const week = await loadWeek(members, offset, new Date(), kidView);
+  // Kids (and "Se som barn") see only their own school events, for audience child/both; parents see every
+  // event of their children.
+  const week = await loadWeek(members, offset, new Date(), {
+    weekdayOnly: kidView,
+    schoolEvents: kidView
+      ? { view: "kid", memberIds: [viewing.id] }
+      : { view: "all", memberIds: members.filter((m) => m.role === "child").map((m) => m.id) },
+  });
 
   return (
     <>

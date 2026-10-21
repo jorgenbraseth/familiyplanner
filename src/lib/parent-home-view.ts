@@ -56,8 +56,8 @@ export type SchoolEnd =
   | { kind: "time"; time: string };
 
 /**
- * When school ends today. `hours` is today's school_days row of a published plan (if any); `lessonsToday` counts
- * today's lessons. No row and no lessons: no school. A school day without a known end time: unknown.
+ * When school ends today. `hours` is today's school hours from the timetable (or an old per-date override), if any; `lessonsToday` counts
+ * today's timetable periods. No row and no lessons: no school. A school day without a known end time: unknown.
  */
 export function schoolEndSummary(
   hours: { starts_at: string | null; ends_at: string | null } | undefined,

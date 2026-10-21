@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { decideStar } from "@/app/(app)/stars/actions";
 import { ParentGiveStars } from "@/components/parent-give-stars";
-import { dateInTimeZone, formatDayHeading } from "@/lib/dates";
+import { dateInTimeZone, formatDayHeading, isoWeekOf, parseDayKey } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import type { ParentHome } from "@/lib/parent-home";
 import { uploadHref } from "@/lib/parent-home-view";
-import { formatWeekday } from "@/lib/plan-view";
+import { formatSchoolHours, formatWeekday } from "@/lib/plan-view";
 
 const cardTitle = "text-xl font-extrabold";
 
@@ -119,6 +119,47 @@ export function ParentHomeCards({ data }: { data: ParentHome }) {
                     </li>
                   ))}
                 </ul>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="card space-y-3 p-4" aria-labelledby="notes-title">
+        <h2 id="notes-title" className={cardTitle}>{t.parentHome.notesTitle}</h2>
+        <ul className="divide-y-2 divide-line">
+          {children.map(({ child, notes }) => (
+            <li key={child.id} className="space-y-2 py-3 first:pt-0 last:pb-0">
+              <h3 className="flex items-center gap-2 text-lg font-extrabold">
+                <Dot colour={child.colour} />
+                <span className="min-w-0 break-words">{child.name}</span>
+              </h3>
+              {notes.length === 0 ? (
+                <p className="text-base text-muted">{t.parentHome.notesNone}</p>
+              ) : (
+                notes.map((week) => (
+                  <div key={week.mondayKey} className="space-y-1">
+                    <h4 className="text-sm font-bold text-muted">{t.parentHome.notesWeek(isoWeekOf(week.monday).isoWeek)}</h4>
+                    <ul className="space-y-1">
+                      {week.entries.map((item) => {
+                        const time = item.kind === "event" ? formatSchoolHours(item.starts_at, item.ends_at) : null;
+                        return (
+                          <li key={item.id} className="text-base">
+                            <span className="block text-xs capitalize text-muted">
+                              {[item.whole_week ? t.parentHome.notesWholeWeek : formatDayHeading(parseDayKey(item.date)), time]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </span>
+                            <span className="break-words">
+                              {item.subject && <span className="font-extrabold">{item.subject} </span>}
+                              {item.text}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))
               )}
             </li>
           ))}

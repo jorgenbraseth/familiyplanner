@@ -1,28 +1,44 @@
 import { addDays, dayKey, mondayOfIsoWeek, parseDayKey } from "../dates";
-import {
-  type ExtractedDay,
-  type ExtractedItem,
-  type Extraction,
-  type PlanItemKind,
-} from "../plan";
+import type { PlanAudience } from "../plan";
 import { ExtractionError } from "./errors";
-import { extractionSchema } from "./schema";
+import { timeplanSchema, ukeplanSchema } from "./schema";
 
 export const MAX_ITEMS = 300;
+export const MAX_PERIODS = 200;
 const MAX_TEXT = 1000;
 const MAX_SUBJECT = 100;
 
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
+/** What extraction produces for a ukeplan item. Times are "HH:MM". */
+export type UkeplanItem = {
+  /** "YYYY-MM-DD". Whole-week items: the Monday of the week. */
+  date: string;
+  whole_week: boolean;
+  kind: "homework" | "event" | "message";
+  subject: string | null;
+  text: string;
+  audience: PlanAudience;
+  starts_at: string | null;
+  ends_at: string | null;
+};
+export type UkeplanExtraction = { items: UkeplanItem[] };
+
+export type TimeplanDay = { weekday: number; starts_at: string | null; ends_at: string | null };
+export type TimeplanPeriod = {
+  weekday: number;
+  period: number | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  subject: string;
+};
+export type TimeplanExtraction = { days: TimeplanDay[]; periods: TimeplanPeriod[] };
+
 function isRealDate(key: string): boolean {
   if (!DAY_KEY.test(key)) return false;
   const { year, month, day } = parseDayKey(key);
   const d = new Date(Date.UTC(year, month - 1, day));
-  return (
-    d.getUTCFullYear() === year &&
-    d.getUTCMonth() === month - 1 &&
-    d.getUTCDate() === day
-  );
+  return d.getUTCFullYear() === year && d.getUTCMonth() === month - 1 && d.getUTCDate() === day;
 }
 
 /** Accepts "8:15", "8.15", "08.15", "08:15:00"; returns "HH:MM" or null when it is not a time of day. */
@@ -36,126 +52,132 @@ export function normalizeTime(value: string | null | undefined): string | null {
   return `${String(hours).padStart(2, "0")}:${match[2]}`;
 }
 
+/** Both times, or neither when the end isn't after the start. */
+function timePair(start: string | null | undefined, end: string | null | undefined) {
+  let starts = normalizeTime(start);
+  let ends = normalizeTime(end);
+  if (starts && ends && ends <= starts) starts = ends = null;
+  return { starts, ends };
+}
+
 function normalizePeriod(value: number | null): number | null {
-  if (value === null || !Number.isInteger(value) || value < 1 || value > 15)
-    return null;
+  if (value === null || !Number.isInteger(value) || value < 1 || value > 15) return null;
   return value;
 }
 
-/**
- * Validates Claude's output and turns it into plan items for one ISO week.
- * Dates must fall between Monday of the week and a week after Sunday (homework can be due next week).
- */
-export function normalizeExtraction(
-  raw: unknown,
-  isoYear: number,
-  isoWeek: number,
-): Extraction {
-  const parsed = extractionSchema.safeParse(raw);
+function validWeekday(value: number): boolean {
+  return Number.isInteger(value) && value >= 1 && value <= 7;
+}
+
+const cmp = <T extends string | number>(a: T, b: T) => (a < b ? -1 : a > b ? 1 : 0);
+
+/** Validates Claude's output for a timeplan: weekdays 1..7, periods 1..15, HH:MM times, one row per weekday. */
+export function normalizeTimeplan(raw: unknown): TimeplanExtraction {
+  const parsed = timeplanSchema.safeParse(raw);
   if (!parsed.success)
-    throw new ExtractionError(
-      "bad_result",
-      "The extraction result had an unexpected shape.",
-    );
+    throw new ExtractionError("bad_result", "The extraction result had an unexpected shape.");
 
-  const monday = mondayOfIsoWeek(isoYear, isoWeek);
-  const first = dayKey(monday);
-  const last = dayKey(addDays(monday, 13));
-
-  const candidates: ExtractedItem[] = [];
-  const dayMap = new Map<string, ExtractedDay>();
+  const dayMap = new Map<number, TimeplanDay>();
   for (const day of parsed.data.days) {
-    const date = day.date.trim();
-    if (!isRealDate(date) || date < first || date > last) continue;
-    let starts = normalizeTime(day.school_start);
-    let ends = normalizeTime(day.school_end);
-    if (starts && ends && ends <= starts) starts = ends = null;
-    if (starts || ends) {
-      const known = dayMap.get(date);
-      dayMap.set(date, {
-        date,
-        starts_at: known?.starts_at ?? starts,
-        ends_at: known?.ends_at ?? ends,
-      });
-    }
-    for (const item of day.items) {
-      const lesson = item.kind === "lesson";
-      let startsAt = lesson ? normalizeTime(item.start) : null;
-      let endsAt = lesson ? normalizeTime(item.end) : null;
-      if (startsAt && endsAt && endsAt <= startsAt) startsAt = endsAt = null;
-      candidates.push({
-        date,
-        // Interim: extraction still produces the old kinds; map them onto the new ones.
-        kind: item.kind === "bring" || item.kind === "note" ? "message" : item.kind,
-        subject: item.subject,
-        text: item.text,
-        period: lesson ? normalizePeriod(item.period) : null,
-        starts_at: startsAt,
-        ends_at: endsAt,
-        audience: item.kind === "bring" ? "child" : "both",
-        whole_week: false,
-      });
-    }
-  }
-  const notes = parsed.data.notes?.trim();
-  if (notes)
-    candidates.push({
-      date: first,
-      kind: "message",
-      subject: null,
-      text: notes,
-      period: null,
-      starts_at: null,
-      ends_at: null,
-      audience: "both",
-      whole_week: false,
+    if (!validWeekday(day.weekday)) continue;
+    const { starts, ends } = timePair(day.starts_at, day.ends_at);
+    if (!starts && !ends) continue;
+    const known = dayMap.get(day.weekday);
+    dayMap.set(day.weekday, {
+      weekday: day.weekday,
+      starts_at: known?.starts_at ?? starts,
+      ends_at: known?.ends_at ?? ends,
     });
+  }
 
   const seen = new Set<string>();
-  const items: ExtractedItem[] = [];
-  for (const c of candidates) {
-    const text = c.text.trim().slice(0, MAX_TEXT).trim();
-    if (!text) continue;
-    const subject = c.subject?.trim().slice(0, MAX_SUBJECT).trim() || null;
-    const key = JSON.stringify([
-      c.date,
-      c.kind,
-      subject,
-      text,
-      c.period,
-      c.starts_at,
-      c.ends_at,
-      c.audience,
-    ]);
+  const periods: TimeplanPeriod[] = [];
+  for (const p of parsed.data.periods) {
+    if (!validWeekday(p.weekday)) continue;
+    const subject = p.subject.trim().slice(0, MAX_SUBJECT).trim();
+    if (!subject) continue;
+    const period = normalizePeriod(p.period);
+    const { starts, ends } = timePair(p.starts_at, p.ends_at);
+    const key = JSON.stringify([p.weekday, period, starts, ends, subject]);
     if (seen.has(key)) continue;
     seen.add(key);
-    items.push({
-      date: c.date,
-      kind: c.kind,
-      subject,
-      text,
-      period: c.period,
-      starts_at: c.starts_at,
-      ends_at: c.ends_at,
-      audience: c.audience,
-      whole_week: c.whole_week,
-    });
+    periods.push({ weekday: p.weekday, period, starts_at: starts, ends_at: ends, subject });
   }
-
-  const KIND_ORDER: PlanItemKind[] = ["lesson", "homework", "message", "event"];
-  const order = (kind: PlanItemKind) => KIND_ORDER.indexOf(kind);
-  const cmp = <T extends string | number>(a: T, b: T) =>
-    a < b ? -1 : a > b ? 1 : 0;
-  // Array.prototype.sort is stable, so items keep their document order otherwise.
-  // Lessons go by period, then start time; lessons without either keep document order after the numbered ones.
-  items.sort(
+  // Stable sort: periods without a number keep document order after the numbered ones.
+  periods.sort(
     (a, b) =>
-      cmp(a.date, b.date) ||
-      cmp(order(a.kind), order(b.kind)) ||
-      cmp(a.audience === "child" ? 0 : 1, b.audience === "child" ? 0 : 1) ||
+      cmp(a.weekday, b.weekday) ||
       cmp(a.period ?? 99, b.period ?? 99) ||
       cmp(a.starts_at ?? "99:99", b.starts_at ?? "99:99"),
   );
-  const days = [...dayMap.values()].sort((a, b) => cmp(a.date, b.date));
-  return { items: items.slice(0, MAX_ITEMS), days };
+  const days = [...dayMap.values()].sort((a, b) => cmp(a.weekday, b.weekday));
+  return { days, periods: periods.slice(0, MAX_PERIODS) };
+}
+
+const KIND_ORDER = ["homework", "event", "message"] as const;
+
+/**
+ * Validates Claude's output for a ukeplan of one ISO week. Items without a date are whole-week items
+ * (date = Monday). Homework and events may sit in the week or the week after; messages only in the week.
+ */
+export function normalizeUkeplan(raw: unknown, isoYear: number, isoWeek: number): UkeplanExtraction {
+  const parsed = ukeplanSchema.safeParse(raw);
+  if (!parsed.success)
+    throw new ExtractionError("bad_result", "The extraction result had an unexpected shape.");
+
+  const monday = mondayOfIsoWeek(isoYear, isoWeek);
+  const first = dayKey(monday);
+  const lastOfWeek = dayKey(addDays(monday, 6));
+  const lastOfNext = dayKey(addDays(monday, 13));
+
+  const seen = new Set<string>();
+  const items: UkeplanItem[] = [];
+  for (const raw of parsed.data.items) {
+    const text = raw.text.trim().slice(0, MAX_TEXT).trim();
+    if (!text) continue;
+    const subject = raw.subject?.trim().slice(0, MAX_SUBJECT).trim() || null;
+
+    const rawDate = raw.date?.trim() ?? "";
+    const wholeWeek = rawDate === "";
+    let date = first;
+    if (!wholeWeek) {
+      const last = raw.kind === "message" ? lastOfWeek : lastOfNext;
+      if (!isRealDate(rawDate) || rawDate < first || rawDate > last) continue;
+      date = rawDate;
+    }
+
+    let startsAt: string | null = null;
+    let endsAt: string | null = null;
+    if (raw.kind === "event") {
+      const { starts, ends } = timePair(raw.starts_at, raw.ends_at);
+      startsAt = starts;
+      endsAt = ends;
+    }
+    const audience: PlanAudience = raw.audience ?? (raw.kind === "homework" ? "child" : "both");
+
+    const key = JSON.stringify([date, wholeWeek, raw.kind, subject, text, audience, startsAt, endsAt]);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    items.push({
+      date,
+      whole_week: wholeWeek,
+      kind: raw.kind,
+      subject,
+      text,
+      audience,
+      starts_at: startsAt,
+      ends_at: endsAt,
+    });
+  }
+
+  // Array.prototype.sort is stable, so items keep their document order otherwise.
+  items.sort(
+    (a, b) =>
+      cmp(a.whole_week ? 0 : 1, b.whole_week ? 0 : 1) ||
+      cmp(a.date, b.date) ||
+      cmp(KIND_ORDER.indexOf(a.kind), KIND_ORDER.indexOf(b.kind)) ||
+      cmp(a.audience === "child" ? 0 : 1, b.audience === "child" ? 0 : 1) ||
+      cmp(a.starts_at ?? "99:99", b.starts_at ?? "99:99"),
+  );
+  return { items: items.slice(0, MAX_ITEMS) };
 }

@@ -1,11 +1,11 @@
 import "server-only";
-import { dateInTimeZone, dayKey } from "./dates";
+import { dateInTimeZone } from "./dates";
 import type { Member } from "./members";
 import { MEMBER_COLUMNS } from "./members";
 import { schoolEndSummary, uploadWeekFor, type SchoolEnd } from "./parent-home-view";
 import type { PlanItemRow } from "./plan";
-import { todayView } from "./plan-view";
-import { loadSchoolHours, loadSchoolWeek } from "./school";
+import { parentNoteWeeks, todayView, type ParentNoteWeek } from "./plan-view";
+import { loadParentNoteItems, loadSchoolWeek } from "./school";
 import { loadAllChildStars, type ChildStars } from "./star-data";
 import type { StarRow } from "./stars";
 import { createClient } from "./supabase/server";
@@ -23,6 +23,8 @@ export type ParentHomeChild = {
   nextSchoolDay: CalendarDate;
   homeworkTomorrow: boolean;
   schoolEnd: SchoolEnd;
+  /** Parent/both messages and events of this and next week, newest week first ("Beskjeder til foreldre"). */
+  notes: ParentNoteWeek[];
 };
 
 export type ParentHome = {
@@ -40,9 +42,8 @@ export async function loadParentHome(now = new Date()): Promise<ParentHome> {
   const starRows = await loadAllChildStars(kids);
   const children = await Promise.all(
     starRows.map(async ({ child, active }): Promise<ParentHomeChild> => {
-      const school = await loadSchoolWeek(child.id, 0, now);
-      const hours = (await loadSchoolHours(child.id, school.monday)).get(dayKey(school.today));
-      const view = todayView(school.items, school.today);
+      const [school, noteItems] = await Promise.all([loadSchoolWeek(child.id, 0, now), loadParentNoteItems(child.id, now)]);
+      const view = todayView(school.items, school.today, school.timetable, school.hoursOverrides, "parent");
       return {
         child,
         stars: active,
@@ -50,7 +51,8 @@ export async function loadParentHome(now = new Date()): Promise<ParentHome> {
         homework: view.homeworkDue,
         nextSchoolDay: view.nextSchoolDay,
         homeworkTomorrow: isTomorrow(school.today, view.nextSchoolDay),
-        schoolEnd: schoolEndSummary(hours, view.lessons.length),
+        schoolEnd: schoolEndSummary(view.hours, view.periods.length),
+        notes: parentNoteWeeks(noteItems),
       };
     }),
   );
