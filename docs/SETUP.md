@@ -111,7 +111,7 @@ The workflow `.github/workflows/supabase.yml` ("Supabase migrations") runs `supa
 
 | Secret | Where to find it |
 | --- | --- |
-| `SUPABASE_ACCESS_TOKEN` | supabase.com → **Account → Access Tokens** → create a **scoped** token, limited to this project, with **Read** on *Project Settings*, *API Keys* and *API Key Secrets* (what `supabase link` needs; `db push` uses the database password, not the token). Access can't be edited later: delete and recreate the token to change it. |
+| `SUPABASE_ACCESS_TOKEN` | supabase.com → **Account → Access Tokens** → create a **scoped** token, limited to this project, with **Read** on *Project Settings*, *API Keys*, *API Key Secrets* and *Connection Pooling* (what `supabase link` needs; without *Connection Pooling* it can't set up the IPv4 pooler connection and `db push` fails with "IPv6 is not supported on your current network", since GitHub runners have no IPv6; `db push` itself uses the database password, not the token). Access can't be edited later: delete and recreate the token to change it. |
 | `SUPABASE_PROJECT_ID` | the project ref: the `xxxx` in `https://xxxx.supabase.co`, also **Project Settings → General** |
 | `SUPABASE_DB_PASSWORD` | the database password from step 2.1 (lost it? reset under **Project Settings → Database**) |
 
