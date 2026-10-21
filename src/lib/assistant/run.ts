@@ -9,6 +9,21 @@ export type AssistantRun = { answer: string; toolsUsed: string[] };
 
 export class AssistantAiError extends Error {}
 
+/** `api_400 invalid_request_error: message`. API validation messages describe the request shape, not user content. */
+function describeApiError(error: InstanceType<typeof Anthropic.APIError>): string {
+  let detail = "";
+  const body: unknown = error.error;
+  if (typeof body === "object" && body !== null) {
+    const inner: unknown = (body as { error?: unknown }).error;
+    if (typeof inner === "object" && inner !== null) {
+      const { type, message } = inner as { type?: unknown; message?: unknown };
+      const parts = [typeof type === "string" ? type : "", typeof message === "string" ? message : ""].filter(Boolean);
+      if (parts.length > 0) detail = ` ${parts.length === 2 ? `${parts[0]}: ${parts[1]}` : parts[0]}`;
+    }
+  }
+  return `api_${error.status ?? "unknown"}${detail}`.slice(0, 300);
+}
+
 /** Runs the manual tool loop against Claude and returns the spoken answer. Throws AssistantAiError on AI failures. */
 export async function runAssistant(params: {
   model: string;
@@ -64,7 +79,7 @@ export async function runAssistant(params: {
     if (error instanceof AssistantAiError) throw error;
     if (error instanceof Anthropic.RateLimitError) throw new AssistantAiError("rate_limit");
     if (error instanceof Anthropic.APIConnectionError) throw new AssistantAiError("connection");
-    if (error instanceof Anthropic.APIError) throw new AssistantAiError(`api_${error.status ?? "unknown"}`);
+    if (error instanceof Anthropic.APIError) throw new AssistantAiError(describeApiError(error));
     throw error;
   }
 }
