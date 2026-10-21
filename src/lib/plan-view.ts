@@ -167,6 +167,50 @@ export function periodLine(row: Timetable["periods"][number]): PeriodLine {
   };
 }
 
+/**
+ * Subjects of a timetable period that are a break (lunch, recess, fruit time...), not a lesson. Whole words
+ * only, lowercase: "mat" is a break on its own or with other break words ("Mat og lek") but "Mat og helse" and
+ * "Matematikk" are school subjects. Classified at render time, nothing is stored.
+ */
+export const BREAK_WORDS: readonly string[] = [
+  "friminutt",
+  "friminutter",
+  "storefri",
+  "storefriminutt",
+  "langfri",
+  "langfriminutt",
+  "fri",
+  "lunsj",
+  "lunch",
+  "matpause",
+  "mattid",
+  "mat",
+  "spising",
+  "spise",
+  "eting",
+  "pause",
+  "pausen",
+  "frukt",
+  "fruktpause",
+  "uteleik",
+  "utetid",
+  "lek",
+  "leik",
+];
+
+const BREAK_WORD_SET = new Set(BREAK_WORDS);
+
+/** True when every word of the subject (ignoring "og" and punctuation) is a break word, e.g. "Lunsj", "Mat og lek". */
+export function isBreakSubject(subject: string | null | undefined): boolean {
+  if (!subject) return false;
+  const words = subject
+    .trim()
+    .toLowerCase()
+    .split(/[\s,/+&.:;()\-–]+/)
+    .filter((w) => w && w !== "og");
+  return words.length > 0 && words.every((w) => BREAK_WORD_SET.has(w));
+}
+
 /** "HH:MM" of minutes after midnight. */
 function hmOfMinutes(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
@@ -177,7 +221,8 @@ function hmOfMinutes(minutes: number): string {
  *  - `divider`: a time marker; an entry on the timeline has one before (its start) and one after (its end);
  *  - `gap`: nothing happens between the divider before and the one after. It is drawn at a fixed small height,
  *    never scaled by its length; `school` is true inside school hours (labelled "friminutt");
- *  - `period` / `event`: the cards. `showTime` is true when the card has to show its own time: entries that
+ *  - `period` / `pause` / `event`: the cards (`pause` is a timetable period whose subject is a break, see
+ *    `isBreakSubject`; it has dividers like a period). `showTime` is true when the card has to show its own time: entries that
  *    overlap an earlier one (no dividers) and events without a known end. All-day events are `event` with
  *    `showTime` true (their label is "Hele dagen").
  */
@@ -185,6 +230,7 @@ export type TimelineEntry =
   | { type: "divider"; time: string }
   | { type: "gap"; school: boolean }
   | { type: "period"; line: PeriodLine; showTime: boolean }
+  | { type: "pause"; line: PeriodLine; showTime: boolean }
   | { type: "event"; event: EventEntry; showTime: boolean };
 
 export type PeriodTimelineEntry = TimelineEntry;
@@ -261,7 +307,11 @@ export function dayTimeline(
   const hoursEnd = minutesOf(hours?.ends_at);
   const divider = (time: string) => out.push({ type: "divider", time });
   const push = (item: TimelineItem, showTime: boolean) =>
-    out.push(item.card.type === "period" ? { type: "period", line: item.card.line, showTime } : { type: "event", event: item.card.event, showTime });
+    out.push(
+      item.card.type === "period"
+        ? { type: isBreakSubject(item.card.line.title) ? "pause" : "period", line: item.card.line, showTime }
+        : { type: "event", event: item.card.event, showTime },
+    );
 
   let latestEnd: number | null = null;
   type PendingEnd = { str: string; min: number; kind: "period" | "event" };
@@ -294,6 +344,15 @@ export function dayTimeline(
   }
   if (pending) divider(pending.str);
   return out;
+}
+
+/** Which legend chips a timeline needs: one per kind of card that is present. */
+export function timelineLegend(entries: readonly TimelineEntry[]): { school: boolean; pause: boolean; appointments: boolean } {
+  return {
+    school: entries.some((e) => e.type === "period"),
+    pause: entries.some((e) => e.type === "pause"),
+    appointments: entries.some((e) => e.type === "event"),
+  };
 }
 
 /** The periods of a day as a timeline (see `dayTimeline`) without events. */

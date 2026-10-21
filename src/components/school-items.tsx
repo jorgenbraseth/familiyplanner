@@ -68,9 +68,9 @@ export function SchoolPeriods({ periods }: { periods: PeriodLine[] }) {
 }
 
 /**
- * The kids' "Min dag": school periods (green, with the period number) and other entries (orange) in one timeline
+ * The kids' "Min dag": school periods (green), pauses (blue-grey) and other entries (orange) in one timeline
  * (see `dayTimeline`): dividers show the times, and a fixed-height dashed gap shows empty time ("friminutt" inside
- * school hours). Cards only show their own time when they have no dividers (overlapping or all-day entries).
+ * school hours, tinted like a pause). Cards only show their own time when they have no dividers (overlapping or all-day entries).
  */
 export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
   return (
@@ -90,7 +90,9 @@ export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
           return (
             <li
               key={`g${i}`}
-              className="flex h-8 items-center justify-center rounded-xl border-2 border-dashed border-line text-xs font-bold text-muted"
+              className={`flex h-8 items-center justify-center rounded-xl border-2 border-dashed text-xs font-bold ${
+                entry.school ? "border-pause-line bg-pause-soft/50 text-on-pause-soft" : "border-line text-muted"
+              }`}
             >
               {entry.school ? t.start.breakLabel : null}
             </li>
@@ -108,17 +110,14 @@ export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
             </li>
           );
         }
+        const pause = entry.type === "pause";
         return (
           <li
             key={entry.line.id}
-            className="flex min-h-12 items-center gap-3 rounded-2xl border-2 border-line bg-school-soft px-3 py-2 text-lg text-on-school-soft"
+            className={`flex min-h-12 items-center gap-3 rounded-2xl border-2 border-line px-3 py-2 text-lg ${
+              pause ? "bg-pause-soft text-on-pause-soft" : "bg-school-soft text-on-school-soft"
+            }`}
           >
-            <span
-              aria-hidden
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface text-base font-extrabold text-on-school-soft"
-            >
-              {entry.line.period ?? "·"}
-            </span>
             <span className="min-w-0 flex-1 break-words font-semibold">{entry.line.title}</span>
             {entry.showTime && entry.line.time && <span className="shrink-0 text-base font-extrabold">{entry.line.time}</span>}
           </li>

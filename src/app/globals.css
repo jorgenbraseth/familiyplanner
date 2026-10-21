@@ -22,6 +22,9 @@
   --chip-ink: #5c4e3c;
   --school-soft: #e1f0dc;
   --on-school-soft: #1f5a2a;
+  --pause-soft: #dfeaf2;
+  --on-pause-soft: #24506b;
+  --pause-line: #9db9cc;
   --event-soft: #fdebd3;
   --on-event-soft: #8a4b0f;
   --card-shadow: 0 2px 8px rgb(120 90 40 / 0.08);
@@ -49,6 +52,9 @@
     --chip-ink: #e5dcc8;
     --school-soft: #243a26;
     --on-school-soft: #b9e4bf;
+    --pause-soft: #22333f;
+    --on-pause-soft: #b7d6ea;
+    --pause-line: #4a6678;
     --event-soft: #3a2c18;
     --on-event-soft: #f4c38a;
     --card-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
@@ -76,6 +82,9 @@
   --color-chip-ink: var(--chip-ink);
   --color-school-soft: var(--school-soft);
   --color-on-school-soft: var(--on-school-soft);
+  --color-pause-soft: var(--pause-soft);
+  --color-on-pause-soft: var(--on-pause-soft);
+  --color-pause-line: var(--pause-line);
   --color-event-soft: var(--event-soft);
   --color-on-event-soft: var(--on-event-soft);
   --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;

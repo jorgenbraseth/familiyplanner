@@ -347,7 +347,7 @@ describe("myDayEntries", () => {
     entries.map((e) =>
       e.type === "event"
         ? `e:${e.event.id}${e.showTime ? "*" : ""}`
-        : e.type === "period"
+        : e.type === "period" || e.type === "pause"
           ? `${e.line.id}${e.showTime ? "*" : ""}`
           : e.type === "gap"
             ? e.school ? "gap:school" : "gap"
