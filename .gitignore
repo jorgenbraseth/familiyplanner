@@ -13,3 +13,6 @@ supabase/.temp/
 *.pdf
 *-key.json
 service-account*.json
+*.pem
+*.tsbuildinfo
+next-env.d.ts
