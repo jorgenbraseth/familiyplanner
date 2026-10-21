@@ -4,11 +4,12 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getEvents } from "../calendar/google";
-import { addDays, dayKey, formatDayHeading, formatTime, mondayOf, startOfDay } from "../dates";
+import { addDays, dateInTimeZone, dayKey, formatDayHeading, formatTime, mondayOf, startOfDay } from "../dates";
 import type { Member } from "../members";
 import { REWARD_COLUMNS, STAR_COLUMNS, TRACK_COLUMNS } from "../star-data";
 import { trackProgress, type RewardRow, type StarRow, type StarTrackRow } from "../stars";
 import { validateRange } from "./range";
+import { NEXT_SEARCH_DAYS, findNextOccurrence, type SchoolEventInput } from "./next-occurrence";
 import { fetchHoursOverrides, fetchTimetable } from "../timetable";
 import {
   NO_ACCESS_NOTE,
@@ -26,7 +27,8 @@ import {
 // member read the school, star and routine data of the others); parent-only rows stay invisible to children.
 
 /** `members` is the family list, read with the same user-scoped client. */
-export type ToolContext = { supabase: SupabaseClient; me: Member; members: Member[] };
+/** `now` is the current instant (defaults to the real clock; tests pass a fixed one). */
+export type ToolContext = { supabase: SupabaseClient; me: Member; members: Member[]; now?: Date };
 
 const nullableName = z.string().max(80).nullable();
 const dayString = z.string().max(10);
@@ -46,6 +48,8 @@ const timetableInput = z.object({
   subject: z.string().max(60).nullable(),
   member_name: nullableName,
 });
+
+const findNextInput = z.object({ subject: z.string().min(1).max(60), member_name: nullableName });
 
 const memberProperty = {
   anyOf: [{ type: "string" }, { type: "null" }],
@@ -73,7 +77,7 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
   {
     name: "get_timetable",
     description:
-      "School hours and lessons (timetable) of one child, of all children or of anyone, for a day range of at most 31 days. Use it for questions like which children have a subject tomorrow. Pass a subject to get only the lessons whose subject name contains that text (for example mat for matematikk).",
+      "School hours and lessons (timetable) of one child, of all children or of anyone, for a day range of at most 31 days (ranges longer than a week are fine). Use it for questions about a given day or period, such as which children have a subject tomorrow. For \"next\" questions use find_next instead. Pass a subject to get only the lessons of that subject: common names and abbreviations are understood (gymnastikk finds Kroppsøving, matte finds Matematikk). Each lesson has past true when it is already over, and each day says when it is (i dag, i morgen, på torsdag).",
     input_schema: {
       type: "object",
       properties: {
@@ -83,6 +87,20 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
         member_name: memberProperty,
       },
       required: ["from", "to", "subject", "member_name"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "find_next",
+    description:
+      "Finds the NEXT upcoming occurrence of a subject or keyword (gymnastikk, matte, svømming, foreldremøte...) for one person, for all children or for everyone, searching forward from the current moment for 21 days: school lessons (timetable), ukeplan events and calendar events. Anything that already started or ended today is skipped. Use it for any question like \"when is the next...\" or \"who has ... next\". It returns per person the first upcoming occurrence with date, weekday, time and a ready-made relative day (when), or next null with the days searched.",
+    input_schema: {
+      type: "object",
+      properties: {
+        subject: { type: "string", description: "Subject or keyword to look for, as the person said it, for example gymnastikk." },
+        member_name: memberProperty,
+      },
+      required: ["subject", "member_name"],
       additionalProperties: false,
     },
   },
@@ -198,7 +216,7 @@ async function getTimetable(ctx: ToolContext, raw: unknown): Promise<unknown> {
       fetchTimetable(ctx.supabase, member.id),
       fetchHoursOverrides(ctx.supabase, member.id, range.fromKey, range.toKey),
     ]);
-    const allDays = shapeSchoolDays(range.fromKey, range.toKey, timetable, overrides);
+    const allDays = shapeSchoolDays(range.fromKey, range.toKey, timetable, overrides, ctx.now ?? new Date());
     const days = filterSchoolDaysBySubject(allDays, input.subject);
     const hasSubject = input.subject !== null && input.subject.trim() !== "";
     results.push({
@@ -210,6 +228,62 @@ async function getTimetable(ctx: ToolContext, raw: unknown): Promise<unknown> {
   }
   const wrapped = wrapResults(target, results);
   return range.clamped ? { ...(wrapped as object), range_limited_to: range.toKey } : wrapped;
+}
+
+async function findNext(ctx: ToolContext, raw: unknown): Promise<unknown> {
+  const input = findNextInput.parse(raw);
+  const target = targets(ctx, input.member_name);
+  if ("error" in target) return { error: target.error };
+
+  const now = ctx.now ?? new Date();
+  const today = dateInTimeZone(now);
+  const fromKey = dayKey(today);
+  const toKey = dayKey(addDays(today, NEXT_SEARCH_DAYS));
+
+  const withCalendar = target.members.filter((m) => m.calendar_id);
+  const calendar =
+    withCalendar.length === 0
+      ? { events: [], failedMemberIds: [] as string[] }
+      : await getEvents(
+          withCalendar.map((m) => ({ memberId: m.id, calendarId: m.calendar_id })),
+          startOfDay(today),
+          startOfDay(addDays(today, NEXT_SEARCH_DAYS + 1)),
+        );
+
+  const results: Record<string, unknown>[] = [];
+  for (const member of target.members) {
+    const [timetable, overrides, events] = await Promise.all([
+      fetchTimetable(ctx.supabase, member.id),
+      fetchHoursOverrides(ctx.supabase, member.id, fromKey, toKey),
+      ctx.supabase
+        .from("plan_items")
+        .select("date, subject, text, starts_at, ends_at, whole_week, documents!inner(status)")
+        .eq("member_id", member.id)
+        .eq("documents.status", "published")
+        .eq("kind", "event")
+        .gte("date", fromKey)
+        .lte("date", toKey)
+        .order("date")
+        .limit(201),
+    ]);
+    if (events.error) throw new Error("Could not read plan items");
+    const found = findNextOccurrence({
+      now,
+      query: input.subject,
+      timetable,
+      overrides,
+      schoolEvents: (events.data ?? []) as unknown as SchoolEventInput[],
+      calendarEvents: calendar.events.filter((e) => e.memberId === member.id),
+    });
+    const failed = calendar.failedMemberIds.includes(member.id);
+    results.push({
+      member: member.name,
+      subject: input.subject,
+      ...found,
+      ...(failed ? { note: "The calendar could not be read right now, so calendar events are missing." } : {}),
+    });
+  }
+  return { now_is: `${fromKey} ${formatTime(now)}`, ...(wrapResults(target, results) as object) };
 }
 
 function formatEvent(event: { title: string; start: string; end: string; allDay: boolean; location?: string }) {
@@ -310,6 +384,7 @@ export async function runTool(ctx: ToolContext, name: string, input: unknown): P
     let result: unknown;
     if (name === "get_plan_items") result = await getPlanItems(ctx, input);
     else if (name === "get_timetable") result = await getTimetable(ctx, input);
+    else if (name === "find_next") result = await findNext(ctx, input);
     else if (name === "get_calendar") result = await getCalendar(ctx, input);
     else if (name === "get_stars") result = await getStars(ctx, input);
     else return { content: JSON.stringify({ error: "Unknown tool." }), isError: true };

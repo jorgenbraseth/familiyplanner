@@ -1,9 +1,10 @@
 // Result shaping and member lookup for the assistant's tools. Pure: no server access.
 
-import { addDays, dayKey, parseDayKey } from "../dates";
+import { addDays, dateInTimeZone, dayKey, parseDayKey } from "../dates";
 import type { PlanAudience, PlanItemKind } from "../plan";
-import { formatSchoolHours, hoursForDate, periodsForDate, type SchoolHours, type Timetable } from "../plan-view";
-import { weekdayName } from "./range";
+import { formatSchoolHours, hoursForDate, minutesOf, periodsForDate, type SchoolHours, type Timetable } from "../plan-view";
+import { minutesNowCopenhagen, relativeDayLabel, weekdayName } from "./range";
+import { matchesSubject } from "./subject-match";
 
 export const MAX_PLAN_ITEMS = 200;
 export const NO_ACCESS_NOTE = "no access or nothing found";
@@ -75,7 +76,10 @@ export type SchoolDayResult = {
   date: string;
   weekday: string;
   school_hours: string | null;
-  periods: { period: number | null; time: string | null; subject: string }[];
+  /** Only when the current time is known: "i dag", "i morgen", "på torsdag"... */
+  when?: string;
+  /** Lessons in school order. `past` (only when the current time is known) is true for lessons already over (earlier days, or ended earlier today). */
+  periods: { period: number | null; time: string | null; subject: string; past?: boolean }[];
 };
 
 /** School hours and periods for each day of an inclusive range that has any (from the timetable + date overrides). */
@@ -84,8 +88,11 @@ export function shapeSchoolDays(
   toKey: string,
   timetable: Timetable,
   overrides?: ReadonlyMap<string, SchoolHours>,
+  now?: Date,
 ): SchoolDayResult[] {
   const result: SchoolDayResult[] = [];
+  const todayKey = now ? dayKey(dateInTimeZone(now)) : null;
+  const nowMinutes = now ? minutesNowCopenhagen(now) : 0;
   for (let key = fromKey, guard = 0; key <= toKey && guard < 62; guard++) {
     const hours = hoursForDate(key, timetable, overrides);
     const periods = periodsForDate(key, timetable);
@@ -94,7 +101,19 @@ export function shapeSchoolDays(
         date: key,
         weekday: weekdayName(key),
         school_hours: formatSchoolHours(hours?.starts_at, hours?.ends_at),
-        periods: periods.map((p) => ({ period: p.period, time: p.time, subject: p.title })),
+        ...(todayKey ? { when: relativeDayLabel(todayKey, key) } : {}),
+        periods: periods.map((p) => ({
+          period: p.period,
+          time: p.time,
+          subject: p.title,
+          ...(todayKey
+            ? {
+                past:
+                  key < todayKey ||
+                  (key === todayKey && (minutesOf(p.endsAt ?? p.startsAt) ?? Number.POSITIVE_INFINITY) <= nowMinutes),
+              }
+            : {}),
+        })),
       });
     }
     key = dayKey(addDays(parseDayKey(key), 1));
@@ -152,11 +171,10 @@ export function resolveTargets<M extends NamedMember>(members: readonly M[], me:
   return "error" in found ? found : { members: [found.member], group: false };
 }
 
-/** Keeps only the periods whose subject contains `subject` (case-insensitive) and drops days left without any. */
+/** Keeps only the periods whose subject matches `subject` (aliases such as gym/kroppsøving, see matchesSubject) and drops days left without any. */
 export function filterSchoolDaysBySubject(days: readonly SchoolDayResult[], subject: string | null): SchoolDayResult[] {
-  const wanted = subject === null ? "" : fold(subject);
-  if (!wanted) return [...days];
+  if (subject === null || subject.trim() === "") return [...days];
   return days
-    .map((d) => ({ ...d, periods: d.periods.filter((p) => fold(p.subject).includes(wanted)) }))
+    .map((d) => ({ ...d, periods: d.periods.filter((p) => matchesSubject(subject, p.subject)) }))
     .filter((d) => d.periods.length > 0);
 }

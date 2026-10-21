@@ -140,15 +140,43 @@ describe("resolveTargets", () => {
   });
 });
 
+describe("shapeSchoolDays past flags", () => {
+  const tt = {
+    days: [{ weekday: 3, starts_at: "08:15", ends_at: "14:00" }],
+    periods: [
+      { id: "a", weekday: 3, period: 1, starts_at: "08:15", ends_at: "09:00", subject: "Kroppsøving", sort: 1 },
+      { id: "b", weekday: 3, period: 2, starts_at: "12:00", ends_at: "12:45", subject: "Norsk", sort: 2 },
+    ],
+  };
+  it("marks lessons that ended earlier today and says when the day is", () => {
+    const now = new Date("2026-10-21T08:00:00Z"); // 10:00 in Copenhagen
+    const [day] = shapeSchoolDays("2026-10-21", "2026-10-21", tt, undefined, now);
+    expect(day.when).toBe("i dag");
+    expect(day.periods.map((p) => p.past)).toEqual([true, false]);
+  });
+  it("marks everything on an earlier day, nothing on a later one, and adds no flags without a clock", () => {
+    const now = new Date("2026-10-22T08:00:00Z");
+    expect(shapeSchoolDays("2026-10-21", "2026-10-21", tt, undefined, now)[0].periods.every((p) => p.past)).toBe(true);
+    expect(shapeSchoolDays("2026-10-28", "2026-10-28", tt, undefined, now)[0].periods.some((p) => p.past)).toBe(false);
+    expect(shapeSchoolDays("2026-10-21", "2026-10-21", tt)[0].periods[0]).not.toHaveProperty("past");
+  });
+});
+
 describe("filterSchoolDaysBySubject", () => {
   const days = [
     { date: "2026-10-22", weekday: "torsdag", school_hours: "08:15–14:00", periods: [{ period: 1, time: null, subject: "Matematikk" }, { period: 2, time: null, subject: "Norsk" }] },
     { date: "2026-10-23", weekday: "fredag", school_hours: null, periods: [{ period: 1, time: null, subject: "Gym" }] },
   ];
   it("keeps matching periods and drops days without a match", () => {
-    const r = filterSchoolDaysBySubject(days, "mat");
+    const r = filterSchoolDaysBySubject(days, "matte");
     expect(r).toHaveLength(1);
     expect(r[0].periods.map((p) => p.subject)).toEqual(["Matematikk"]);
+  });
+  it("understands subject aliases and keeps mat apart from matematikk", () => {
+    expect(filterSchoolDaysBySubject(days, "gymnastikk").map((d) => d.date)).toEqual(["2026-10-23"]);
+    expect(filterSchoolDaysBySubject(days, "mat")).toEqual([]);
+    const pe = [{ date: "2026-10-22", weekday: "torsdag", school_hours: null, periods: [{ period: 1, time: null, subject: "KRØ" }] }];
+    expect(filterSchoolDaysBySubject(pe, "gym")).toHaveLength(1);
   });
   it("returns everything without a subject", () => {
     expect(filterSchoolDaysBySubject(days, null)).toEqual(days);
