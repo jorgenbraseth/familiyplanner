@@ -107,7 +107,7 @@ export async function processDocument(rawId: string): Promise<ProcessDocumentRes
   const supabase = await createClient();
   const { data, error: loadError } = await supabase
     .from("documents")
-    .select("id, member_id, iso_week, iso_year, file_path, mime_type, status, members(name)")
+    .select("id, member_id, iso_week, iso_year, file_path, mime_type, status, members!documents_member_id_fkey(name)")
     .eq("id", id)
     .maybeSingle();
   if (loadError) {
