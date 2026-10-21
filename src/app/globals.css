@@ -1,63 +1,71 @@
 @import "tailwindcss";
 
-/* "Skogtur" (forest picnic) theme. Dark mode redefines the same variables. */
+/* "Kalenderblad" theme (from the calendar app icon: red top bar, blue buttons, yellow stars). Dark mode redefines the same variables. */
 :root {
-  --background: #fbf8ef;
-  --surface: #fffdf7;
-  --line: #ede4cf;
-  --ink: #3b3226;
-  --muted: #8c7f6a;
-  --heading: #6d597a;
-  --primary: #3fa34d;
-  --primary-strong: #2d7a38;
+  --background: #f4f5f9;
+  --surface: #ffffff;
+  --line: #dfe2ec;
+  --ink: #1e2a44;
+  --muted: #66708a;
+  --heading: #b5443f;
+  --brand: #c24e49;
+  --on-brand: #ffffff;
+  --primary: #1672bd;
+  --primary-strong: #0f5a98;
   --on-primary: #ffffff;
-  --accent: #f4a259;
-  --on-accent: #4a2a06;
-  --danger: #e15554;
-  --danger-soft: #fbe3e3;
-  --on-danger-soft: #9e2f2e;
-  --warning-soft: #fdebd3;
-  --on-warning-soft: #8a4b0f;
-  --chip: #f3ecdd;
-  --chip-ink: #5c4e3c;
-  --school-soft: #e1f0dc;
-  --on-school-soft: #1f5a2a;
-  --pause-soft: #dfeaf2;
-  --on-pause-soft: #24506b;
-  --pause-line: #9db9cc;
-  --event-soft: #fdebd3;
-  --on-event-soft: #8a4b0f;
-  --card-shadow: 0 2px 8px rgb(120 90 40 / 0.08);
+  --accent: #f6b41c;
+  --on-accent: #4a3000;
+  --danger: #e23a55;
+  --danger-soft: #fde4e8;
+  --on-danger-soft: #9b1c33;
+  --warning-soft: #fff1d1;
+  --on-warning-soft: #8a5a00;
+  --chip: #eceef5;
+  --chip-ink: #3c4660;
+  --school-soft: #e4f4d8;
+  --on-school-soft: #2c6a17;
+  --school-line: #7bc043;
+  --pause-soft: #eee6fd;
+  --on-pause-soft: #5a32b8;
+  --pause-line: #b79cf2;
+  --event-soft: #fff0dc;
+  --on-event-soft: #9a4a06;
+  --event-line: #f7801f;
+  --card-shadow: 0 2px 10px rgb(30 42 68 / 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #1e1b16;
-    --surface: #2a261f;
-    --line: #3a342a;
-    --ink: #f1ebdd;
-    --muted: #a89d88;
-    --heading: #c9b6d6;
-    --primary: #5bbe68;
-    --primary-strong: #3fa34d;
-    --on-primary: #10210f;
-    --accent: #f4a259;
-    --on-accent: #2a1803;
-    --danger: #ef6f6e;
-    --danger-soft: #3b2222;
-    --on-danger-soft: #f7b5b4;
-    --warning-soft: #3a2c18;
-    --on-warning-soft: #f4c38a;
-    --chip: #3a342a;
-    --chip-ink: #e5dcc8;
-    --school-soft: #243a26;
-    --on-school-soft: #b9e4bf;
-    --pause-soft: #22333f;
-    --on-pause-soft: #b7d6ea;
-    --pause-line: #4a6678;
-    --event-soft: #3a2c18;
-    --on-event-soft: #f4c38a;
-    --card-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
+    --background: #121826;
+    --surface: #1b2335;
+    --line: #2b3550;
+    --ink: #eef1f8;
+    --muted: #9aa3bd;
+    --heading: #f08a80;
+    --brand: #c24e49;
+    --on-brand: #ffffff;
+    --primary: #4aa8f0;
+    --primary-strong: #2b8ad6;
+    --on-primary: #06213a;
+    --accent: #f6c044;
+    --on-accent: #3a2600;
+    --danger: #f26a7e;
+    --danger-soft: #3d1d27;
+    --on-danger-soft: #f9b3be;
+    --warning-soft: #3a2d12;
+    --on-warning-soft: #f6cf7a;
+    --chip: #263049;
+    --chip-ink: #d6dbea;
+    --school-soft: #1f3420;
+    --on-school-soft: #b5e39a;
+    --school-line: #5f9c33;
+    --pause-soft: #2a2246;
+    --on-pause-soft: #cdb8fb;
+    --pause-line: #6e55b8;
+    --event-soft: #3a2814;
+    --on-event-soft: #f9c08a;
+    --event-line: #c9661a;
+    --card-shadow: 0 2px 10px rgb(0 0 0 / 0.35);
   }
 }
 
@@ -68,6 +76,8 @@
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-heading: var(--heading);
+  --color-brand: var(--brand);
+  --color-on-brand: var(--on-brand);
   --color-primary: var(--primary);
   --color-primary-strong: var(--primary-strong);
   --color-on-primary: var(--on-primary);
@@ -82,9 +92,11 @@
   --color-chip-ink: var(--chip-ink);
   --color-school-soft: var(--school-soft);
   --color-on-school-soft: var(--on-school-soft);
+  --color-school-line: var(--school-line);
   --color-pause-soft: var(--pause-soft);
   --color-on-pause-soft: var(--on-pause-soft);
   --color-pause-line: var(--pause-line);
+  --color-event-line: var(--event-line);
   --color-event-soft: var(--event-soft);
   --color-on-event-soft: var(--on-event-soft);
   --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
@@ -110,6 +122,9 @@
 }
 
 @layer components {
+  header :focus-visible {
+    outline-color: var(--on-brand);
+  }
   .card {
     border: 2px solid var(--line);
     background: var(--surface);
@@ -189,7 +204,7 @@
   }
   .tick:checked::after {
     content: "✓";
-    color: #fff;
+    color: var(--on-primary);
     font-weight: 800;
     font-size: 1.1rem;
     line-height: 1;

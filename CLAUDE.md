@@ -47,6 +47,7 @@ For every task: plan the work with Opus (the main session), then hand it off to 
 - **Uploads go browser → Supabase Storage directly**, then a server action processes the file (avoids body-size limits). Path: `<member_id>/<document_id>.<ext>`.
 - **Claude extraction** uses structured outputs (`client.messages.parse` + `zodOutputFormat`, `src/lib/extraction/`); forced `tool_choice` is rejected by current models (Sonnet 5.5). Validate and normalize the result before writing `plan_items`. Documents go to `review` status; only parents publish.
 - **Schema changes** are new files in `supabase/migrations/` (never edit an applied migration).
+- **Colour scheme "Kalenderblad"** (from the calendar app icon): red top bar (`brand`), blue buttons (`primary`), yellow stars (`accent`), green school / purple pause / orange event rows with a coloured left line (`*-line` tokens). All colours are tokens in `src/app/globals.css`; don't hard-code colours.
 - **UI strings** live in one module (`src/lib/i18n.ts`). The UI is Norwegian bokmål and every family member is Norwegian (owner: no Danish members), so don't add Danish variants. Dates/times in `Europe/Copenhagen`, weeks are ISO weeks.
 - Mobile first: kids use phones; parents approve stars from their phone.
 

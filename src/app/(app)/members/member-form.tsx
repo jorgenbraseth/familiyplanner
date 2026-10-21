@@ -7,12 +7,16 @@ import { saveMember, type SaveMemberState } from "./actions";
 
 const initial: SaveMemberState = { ok: false };
 
+/** Suggested member colours (Kalenderblad); any other stored colour stays valid, the picker still allows free choice. */
+const COLOUR_CHOICES = ["#6bb33a", "#29a3f0", "#f5b41c", "#9d6bf0", "#f7801f", "#e5484d"];
+
 const input =
   "field";
 const label = "block space-y-1 text-sm font-bold";
 
 export function MemberForm({ member }: { member?: Member }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const colourRef = useRef<HTMLInputElement>(null);
   const [state, formAction, pending] = useActionState(
     async (prev: SaveMemberState, formData: FormData) => {
       const result = await saveMember(prev, formData);
@@ -61,15 +65,32 @@ export function MemberForm({ member }: { member?: Member }) {
           {t.members.fields.calendarIdHelp}
         </span>
       </label>
-      <label className={label}>
-        <span>{t.members.fields.colour}</span>
-        <input
-          type="color"
-          name="colour"
-          defaultValue={member?.colour ?? "#2563eb"}
-          className="block h-11 w-20 rounded-xl border-2 border-line bg-surface p-1"
-        />
-      </label>
+      <div className={label}>
+        <label className="block space-y-1">
+          <span>{t.members.fields.colour}</span>
+          <input
+            ref={colourRef}
+            type="color"
+            name="colour"
+            defaultValue={member?.colour ?? COLOUR_CHOICES[1]}
+            className="block h-11 w-20 rounded-xl border-2 border-line bg-surface p-1"
+          />
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {COLOUR_CHOICES.map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-label={c}
+              onClick={() => {
+                if (colourRef.current) colourRef.current.value = c;
+              }}
+              className="size-9 rounded-full border-2 border-line"
+              style={{ backgroundColor: c }}
+            />
+          ))}
+        </div>
+      </div>
       <label className={label}>
         <span>{t.members.fields.locale}</span>
         <select name="locale" defaultValue={member?.locale ?? "nb-NO"} className={input}>

@@ -20,7 +20,13 @@ export const metadata: Metadata = {
   title: t.appName,
   description: t.appDescription,
   robots: { index: false, follow: false },
-  icons: { apple: "/icons/apple-touch-icon.png" },
+  // The .ico comes from src/app/favicon.ico (file convention); the PNG is declared here because Next did not emit a link for src/app/icon.png next to it.
+  icons: {
+    icon: [
+      { url: "/icon.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/icons/apple-touch-icon.png",
+  },
   appleWebApp: { capable: true, title: "Planlegger", statusBarStyle: "default" },
   // Next emits only the unprefixed mobile-web-app-capable; older iOS versions look for the Apple one.
   other: { "apple-mobile-web-app-capable": "yes" },
@@ -30,7 +36,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#3FA34D",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#c24e49" },
+    { media: "(prefers-color-scheme: dark)", color: "#121826" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
