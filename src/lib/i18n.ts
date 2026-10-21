@@ -348,7 +348,7 @@ export const t = {
     close: "Lukk",
     myDay: "Min dag",
     schoolHours: (hours: string) => `Skolen ${hours}`,
-    breakBetween: (from: string, to: string) => `${from} · friminutt · ${to}`,
+    breakLabel: "friminutt",
     legendSchool: "Skole",
     legendAppointments: "Avtaler",
     nothingToday: "Ingen skole eller avtaler i dag.",
