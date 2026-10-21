@@ -369,6 +369,7 @@ export const t = {
     failed: (names: string) => `Klarte ikke å hente alt for ${names}.`,
     schoolLabel: "Skole",
     eventLabel: "Avtale",
+    allDay: "Hele dagen",
   },
   parentHome: {
     giveTitle: "Gi stjerne",
