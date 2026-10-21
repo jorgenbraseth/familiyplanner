@@ -70,7 +70,7 @@ The consent screen now lives in **Google Auth Platform** (menu → APIs & Servic
 2. **Authentication → URL configuration:**
    - Site URL: `https://planner.braseth.family`
    - Redirect URLs: `https://planner.braseth.family/**` and `http://localhost:3000/**`
-3. Optional: disable email/password sign-up (only Google is used).
+3. Keep **Authentication → Sign In / Providers → "Allow new users to sign up" ON**. Every family member's first Google sign-in creates their Supabase user, so turning it off blocks them with `signup_disabled`. The `members` allowlist decides who gets in. To stop email/password logins, turn off the **Email** provider instead.
 
 **Family Link (kids' accounts).** The kids use Google accounts supervised with Family Link. The first time a child signs in, a parent may have to allow the app in the Family Link app (the child's settings, under the controls for their Google account / sign-in with Google), and children under 13 may see a "ask your parent" approval screen. Exact menus differ by version, so test this on the first sign-in and approve from the parent's phone if it asks.
 
