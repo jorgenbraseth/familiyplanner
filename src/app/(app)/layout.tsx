@@ -1,3 +1,4 @@
+import { AssistantButton } from "@/components/assistant-button";
 import { NavLink } from "@/components/nav-link";
 import { signOut } from "@/app/auth/actions";
 import { t } from "@/lib/i18n";
@@ -47,7 +48,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           </nav>
         </header>
       </div>
-      <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 p-4">{children}</main>
+      <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 p-4 pb-28">{children}</main>
+      {/* The assistant answers as the signed-in member, so it is not part of a "Se som barn" preview. */}
+      {!previewing && <AssistantButton locale={me.locale} />}
     </>
   );
 }

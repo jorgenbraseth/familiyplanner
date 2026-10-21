@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireParent } from "@/lib/auth";
 import { t } from "@/lib/i18n";
 import { MEMBER_COLUMNS, type Member } from "@/lib/members";
@@ -14,7 +15,12 @@ export default async function MembersPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-extrabold">{t.members.title}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-extrabold">{t.members.title}</h1>
+        <Link href="/assistant-log" className="btn btn-secondary">
+          {t.assistant.log.nav}
+        </Link>
+      </div>
       <ul className="space-y-3">
         {members.map((member) => (
           <li key={member.id} className="card p-3">
