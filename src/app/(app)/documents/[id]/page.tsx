@@ -25,7 +25,7 @@ export default async function DocumentPage({ params }: PageProps<"/documents/[id
 
   const { data, error } = await supabase
     .from("documents")
-    .select("*, members(name, colour)")
+    .select("*, members!documents_member_id_fkey(name, colour)")
     .eq("id", id)
     .maybeSingle();
   if (error) {

@@ -14,7 +14,9 @@ export default async function DocumentsPage() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("documents")
-    .select("id, type, iso_week, iso_year, status, members(name, colour)")
+    // documents has two FKs to members (member_id, uploaded_by); without the explicit hint the
+    // embed is ambiguous (PostgREST PGRST201). The result key stays "members".
+    .select("id, type, iso_week, iso_year, status, members!documents_member_id_fkey(name, colour)")
     .order("created_at", { ascending: false });
   if (error) throw new Error("Could not read documents");
   const documents = data as unknown as ListedDocument[];
