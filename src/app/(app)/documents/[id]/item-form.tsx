@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useRef, useState } from "react";
 import { formatDayHeading, parseDayKey } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { PLAN_AUDIENCES, type PlanAudience, type PlanItemKind, type PlanItemRow } from "@/lib/plan";
@@ -34,10 +34,14 @@ export function ItemForm({
   defaultAudience?: PlanAudience;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [kind, setKind] = useState<PlanItemKind>(item?.kind ?? "homework");
   const [state, formAction, pending] = useActionState(
     async (prev: SaveItemState, formData: FormData) => {
       const result = await saveItem(prev, formData);
-      if (result.ok && !item) formRef.current?.reset();
+      if (result.ok && !item) {
+        formRef.current?.reset();
+        setKind("homework");
+      }
       return result;
     },
     initial,
@@ -70,10 +74,15 @@ export function ItemForm({
           </label>
           <label className={`${label} flex-1`}>
             <span>{t.documents.fields.kind}</span>
-            <select name="kind" defaultValue={item?.kind ?? "homework"} className={input}>
-              {kinds.map((kind) => (
-                <option key={kind} value={kind}>
-                  {t.documents.kinds[kind]}
+            <select
+              name="kind"
+              defaultValue={item?.kind ?? "homework"}
+              onChange={(e) => setKind(e.target.value as PlanItemKind)}
+              className={input}
+            >
+              {kinds.map((k) => (
+                <option key={k} value={k}>
+                  {t.documents.kinds[k]}
                 </option>
               ))}
             </select>
@@ -105,6 +114,8 @@ export function ItemForm({
             />
           </label>
         </div>
+        {/* Times only mean something on events; homework never has one. */}
+        {kind === "event" && (
         <div className="space-y-1">
           <p className="text-sm font-bold">{t.documents.eventTime}</p>
           <div className="flex gap-3">
@@ -130,6 +141,7 @@ export function ItemForm({
             </label>
           </div>
         </div>
+        )}
         <label className={label}>
           <span>{t.documents.fields.text}</span>
           <textarea

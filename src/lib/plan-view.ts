@@ -29,10 +29,15 @@ const KIND_ORDER: Record<PlanItemKind, number> = { lesson: 0, homework: 1, messa
 
 export type DayItems = { key: string; date: CalendarDate; items: PlanItemRow[] };
 
+/** Sort time of an item: only events have a time of day (homework rows saved with one are ignored). */
+function itemTime(item: Pick<PlanItemRow, "kind" | "starts_at">): string {
+  return item.kind === "event" ? (item.starts_at ?? "") : "";
+}
+
 function compareItems(a: PlanItemRow, b: PlanItemRow): number {
   return (
     KIND_ORDER[a.kind] - KIND_ORDER[b.kind] ||
-    (a.starts_at ?? "").localeCompare(b.starts_at ?? "") ||
+    itemTime(a).localeCompare(itemTime(b)) ||
     Number(a.audience !== "child") - Number(b.audience !== "child") ||
     a.sort - b.sort
   );
@@ -582,7 +587,7 @@ export function parentNoteWeeks(items: readonly PlanItemRow[]): ParentNoteWeek[]
           Number(b.whole_week) - Number(a.whole_week) ||
           a.date.localeCompare(b.date) ||
           KIND_ORDER[a.kind] - KIND_ORDER[b.kind] ||
-          (a.starts_at ?? "").localeCompare(b.starts_at ?? "") ||
+          itemTime(a).localeCompare(itemTime(b)) ||
           a.sort - b.sort,
       ),
     }));
