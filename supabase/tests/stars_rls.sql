@@ -83,10 +83,10 @@ do $$
 declare n int;
 begin
   perform pg_temp.act_as('star.child.a@example.com', 'authenticated');
-  select count(*) into n from public.star_tracks;
+  select count(*) into n from public.star_tracks where member_id = (select v from ids where k = 'a');
   if n <> 1 then raise exception 'child A should see 1 track, saw %', n; end if;
   select count(*) into n from public.star_tracks where id = (select v from ids where k = 'tb');
-  if n <> 0 then raise exception 'child A saw sibling track'; end if;
+  if n = 0 then raise exception 'child A should read sibling track'; end if;
   begin
     insert into public.star_tracks (member_id, name) values ((select v from ids where k = 'a'), 'Mine');
     raise exception 'child created a track';
@@ -175,14 +175,14 @@ begin
   delete from public.stars;
   get diagnostics n = row_count;
   if n <> 0 then raise exception 'child deleted % stars', n; end if;
-  select count(*) into n from public.stars;
+  select count(*) into n from public.stars where member_id = (select v from ids where k = 'a');
   if n <> 8 then raise exception 'child A should see 8 stars, saw %', n; end if;
   perform pg_temp.done();
 
-  -- child B sees none of A's stars
+  -- child B reads A's stars (family-wide reads) but sees only A's, not more
   perform pg_temp.act_as('star.child.b@example.com', 'authenticated');
   select count(*) into n from public.stars;
-  if n <> 0 then raise exception 'child B saw % stars', n; end if;
+  if n <> 8 then raise exception 'child B should read A''s 8 stars, saw %', n; end if;
   perform pg_temp.done();
 
   -- parent: direct approved star (even with requested_by = parent)
@@ -321,10 +321,10 @@ begin
 
   -- child reads own rewards only, can't insert/update/delete
   perform pg_temp.act_as('star.child.a@example.com', 'authenticated');
-  select count(*) into n from public.rewards;
+  select count(*) into n from public.rewards where track_id = ta;
   if n <> 2 then raise exception 'child A should see 2 rewards, saw %', n; end if;
   select count(*) into n from public.rewards where track_id = tb;
-  if n <> 0 then raise exception 'child A saw sibling rewards'; end if;
+  if n = 0 then raise exception 'child A should read sibling rewards'; end if;
   begin
     insert into public.rewards (track_id, at_count, kind) values (ta, 15, 'small');
     raise exception 'child inserted reward';

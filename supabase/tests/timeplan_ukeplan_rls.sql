@@ -163,10 +163,15 @@ begin
   if n <> 1 then raise exception 'exactly one item should be done, got %', n; end if;
   perform pg_temp.done();
 
-  -- sibling sees nothing
+  -- sibling reads the child/both items (family-wide reads), never the parent-only ones, and changes none
   perform pg_temp.act_as('plan.child.b@example.com', 'authenticated');
   select count(*) into n from public.plan_items;
-  if n <> 0 then raise exception 'child B saw % items of A', n; end if;
+  if n <> 6 then raise exception 'child B should read 6 items of A, saw %', n; end if;
+  select count(*) into n from public.plan_items where audience = 'parent';
+  if n <> 0 then raise exception 'child B saw parent-only items'; end if;
+  update public.plan_items set done = false;
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'child B updated % items of A', n; end if;
   perform pg_temp.done();
 end $$;
 
@@ -252,9 +257,9 @@ begin
   perform pg_temp.done();
 
   perform pg_temp.act_as('plan.child.a@example.com', 'authenticated');
-  select count(*) into n from public.timetable_days;
+  select count(*) into n from public.timetable_days where member_id = (select v from ids where k = 'a');
   if n <> 2 then raise exception 'child A should see 2 days, saw %', n; end if;
-  select count(*) into n from public.timetable_periods;
+  select count(*) into n from public.timetable_periods where member_id = (select v from ids where k = 'a');
   if n <> 3 then raise exception 'child A should see 3 periods, saw %', n; end if;
   begin
     insert into public.timetable_days (document_id, member_id, weekday) values (tp, a, 5);
@@ -279,9 +284,9 @@ begin
 
   perform pg_temp.act_as('plan.child.b@example.com', 'authenticated');
   select count(*) into n from public.timetable_days;
-  if n <> 0 then raise exception 'child B saw % days of A', n; end if;
+  if n <> 2 then raise exception 'child B should read the 2 days of A, saw %', n; end if;
   select count(*) into n from public.timetable_periods;
-  if n <> 0 then raise exception 'child B saw % periods of A', n; end if;
+  if n <> 3 then raise exception 'child B should read the 3 periods of A, saw %', n; end if;
   perform pg_temp.done();
 
   perform pg_temp.act_as('stranger@example.com', 'authenticated');
@@ -366,8 +371,8 @@ begin
   perform pg_temp.done();
 
   perform pg_temp.act_as('plan.child.b@example.com', 'authenticated');
-  if public.active_timeplan_document(a) is not null then
-    raise exception 'child B resolved A''s timeplan';
+  if public.active_timeplan_document(a) is null then
+    raise exception 'child B should resolve A''s timeplan (family-wide reads)';
   end if;
   perform pg_temp.done();
 end $$;

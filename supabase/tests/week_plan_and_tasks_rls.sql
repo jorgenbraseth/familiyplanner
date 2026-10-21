@@ -74,10 +74,10 @@ do $$
 declare n int;
 begin
   perform pg_temp.act_as('task.child.a@example.com', 'authenticated');
-  select count(*) into n from public.star_tasks;
+  select count(*) into n from public.star_tasks where member_id = (select v from ids where k = 'a') or member_id is null;
   if n <> 2 then raise exception 'child A should see 2 tasks, saw %', n; end if;
   select count(*) into n from public.star_tasks where member_id = (select v from ids where k = 'b');
-  if n <> 0 then raise exception 'child A saw sibling tasks'; end if;
+  if n = 0 then raise exception 'child A should read sibling tasks'; end if;
   begin
     insert into public.star_tasks (member_id, name, stars) values ((select v from ids where k = 'a'), 'Mine', 10);
     raise exception 'child created a task';
@@ -251,7 +251,7 @@ begin
   perform pg_temp.done();
 
   perform pg_temp.act_as('task.child.a@example.com', 'authenticated');
-  select count(*) into n from public.school_days;
+  select count(*) into n from public.school_days where member_id = (select v from ids where k = 'a');
   if n <> 2 then raise exception 'child A should see 2 school days, saw %', n; end if;
   begin
     insert into public.school_days (document_id, member_id, date) values (da, a, '2026-10-29');
@@ -268,7 +268,7 @@ begin
 
   perform pg_temp.act_as('task.child.b@example.com', 'authenticated');
   select count(*) into n from public.school_days;
-  if n <> 0 then raise exception 'child B saw % school days of A', n; end if;
+  if n = 0 then raise exception 'child B should read the school days of A'; end if;
   perform pg_temp.done();
 
   perform pg_temp.act_as('jorgen.braseth@gmail.com', 'anon');

@@ -15,7 +15,8 @@ export type Member = {
 
 export const MEMBER_COLUMNS = "id, name, email, role, calendar_id, colour, locale";
 
-export const LOCALES = ["nb-NO", "da-DK"] as const;
+// Every family member is Norwegian: speech and answers are always bokmål.
+export const LOCALES = ["nb-NO"] as const;
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();

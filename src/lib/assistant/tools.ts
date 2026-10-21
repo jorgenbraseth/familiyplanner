@@ -5,17 +5,28 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getEvents } from "../calendar/google";
 import { addDays, dayKey, formatDayHeading, formatTime, mondayOf, startOfDay } from "../dates";
-import { MEMBER_COLUMNS, type Member } from "../members";
+import type { Member } from "../members";
 import { REWARD_COLUMNS, STAR_COLUMNS, TRACK_COLUMNS } from "../star-data";
 import { trackProgress, type RewardRow, type StarRow, type StarTrackRow } from "../stars";
 import { validateRange } from "./range";
 import { fetchHoursOverrides, fetchTimetable } from "../timetable";
-import { NO_ACCESS_NOTE, PLAN_KIND_NAMES, normalizeKind, resolveMember, shapePlanItems, shapeSchoolDays, type PlanItemInput } from "./shape";
+import {
+  NO_ACCESS_NOTE,
+  PLAN_KIND_NAMES,
+  filterSchoolDaysBySubject,
+  normalizeKind,
+  resolveTargets,
+  shapePlanItems,
+  shapeSchoolDays,
+  type PlanItemInput,
+} from "./shape";
 
 // Every tool runs with the signed-in user's Supabase client: RLS decides what it can read.
-// Never pass the admin client in here.
+// Never pass the admin client in here. Everyone in the family may ask about anyone in the family (RLS lets every
+// member read the school, star and routine data of the others); parent-only rows stay invisible to children.
 
-export type ToolContext = { supabase: SupabaseClient; me: Member };
+/** `members` is the family list, read with the same user-scoped client. */
+export type ToolContext = { supabase: SupabaseClient; me: Member; members: Member[] };
 
 const nullableName = z.string().max(80).nullable();
 const dayString = z.string().max(10);
@@ -29,10 +40,17 @@ const planInput = z.object({
 });
 const calendarInput = z.object({ from: dayString, to: dayString, member_name: nullableName });
 const starsInput = z.object({ member_name: nullableName });
+const timetableInput = z.object({
+  from: dayString,
+  to: dayString,
+  subject: z.string().max(60).nullable(),
+  member_name: nullableName,
+});
 
 const memberProperty = {
   anyOf: [{ type: "string" }, { type: "null" }],
-  description: "First name of the family member, or null for the person asking.",
+  description:
+    'Who it is about: the first name (or id) of any family member, "children" for all the children, "everyone" for the whole family, or null for the person asking.',
 } as const;
 
 export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
@@ -53,8 +71,24 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "get_timetable",
+    description:
+      "School hours and lessons (timetable) of one child, of all children or of anyone, for a day range of at most 31 days. Use it for questions like which children have a subject tomorrow. Pass a subject to get only the lessons whose subject name contains that text (for example mat for matematikk).",
+    input_schema: {
+      type: "object",
+      properties: {
+        from: { type: "string", description: "First day, YYYY-MM-DD." },
+        to: { type: "string", description: "Last day (inclusive), YYYY-MM-DD." },
+        subject: { anyOf: [{ type: "string" }, { type: "null" }], description: "Only lessons with this text in the subject name, or null for all lessons." },
+        member_name: memberProperty,
+      },
+      required: ["from", "to", "subject", "member_name"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "get_calendar",
-    description: "Calendar events for a day range of at most 31 days. Times are Europe/Copenhagen.",
+    description: "Calendar events of any family member (or all children, or everyone) for a day range of at most 31 days. Times are Europe/Copenhagen.",
     input_schema: {
       type: "object",
       properties: {
@@ -68,7 +102,7 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
   },
   {
     name: "get_stars",
-    description: "Star track progress: approved and pending stars, next milestone and rewards.",
+    description: "Star status of any family member (or all children): active track, approved and pending stars, goal, next milestone and reward.",
     input_schema: {
       type: "object",
       properties: { member_name: memberProperty },
@@ -80,36 +114,36 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
 
 export const TOOL_NAMES = TOOL_DEFINITIONS.map((tool) => tool.name);
 
-async function readMembers(ctx: ToolContext): Promise<Member[]> {
-  const { data, error } = await ctx.supabase.from("members").select(MEMBER_COLUMNS);
-  if (error) throw new Error("Could not read members");
-  return (data ?? []) as Member[];
+type Targets = { members: Member[]; group: boolean };
+
+function targets(ctx: ToolContext, name: string | null): Targets | { error: string } {
+  const found = resolveTargets(ctx.members, ctx.me, name);
+  if ("error" in found) return found;
+  if (found.members.length === 0) return { error: "No family member matches." };
+  return found;
 }
 
-async function targetMember(ctx: ToolContext, name: string | null): Promise<{ member: Member } | { error: string }> {
-  if (name === null || name.trim() === "") return { member: ctx.me };
-  return resolveMember(await readMembers(ctx), name);
+/** One result for a single member, or `{ results }` listing every member for a group. */
+function wrapResults(t: Targets, results: Record<string, unknown>[]): unknown {
+  return t.group || results.length > 1 ? { results } : results[0];
 }
 
-async function getPlanItems(ctx: ToolContext, raw: unknown): Promise<unknown> {
-  const input = planInput.parse(raw);
-  const range = validateRange(input.from, input.to);
-  if (!range.ok) return { error: range.error };
-  const target = await targetMember(ctx, input.member_name);
-  if ("error" in target) return { error: target.error };
-
-  const filter = normalizeKind(input.kind);
-  if ("error" in filter) return { error: filter.error };
-
+async function planItemsFor(
+  ctx: ToolContext,
+  member: Member,
+  range: Extract<ReturnType<typeof validateRange>, { ok: true }>,
+  filter: { kind: (typeof PLAN_KIND_NAMES)[number] | null; timetableOnly: boolean },
+): Promise<Record<string, unknown>> {
   // Whole-week items are dated on the Monday of their week, so the query starts at the Monday of `from` and
   // day items before `from` are dropped again.
-  // Children only get audience child/both (RLS); a parent asking about a child gets everything.
+  // Children only get audience child/both (RLS); a parent asking gets everything. Always filtered to one member
+  // explicitly, because RLS lets everyone read the whole family.
   let items: ReturnType<typeof shapePlanItems> = { items: [] };
   if (!filter.timetableOnly) {
     let query = ctx.supabase
       .from("plan_items")
       .select("date, kind, subject, text, done, sort, audience, whole_week, starts_at, ends_at, documents!inner(status)")
-      .eq("member_id", target.member.id)
+      .eq("member_id", member.id)
       .eq("documents.status", "published")
       .neq("kind", "lesson")
       .gte("date", dayKey(mondayOf(range.from)))
@@ -122,19 +156,60 @@ async function getPlanItems(ctx: ToolContext, raw: unknown): Promise<unknown> {
   }
 
   const [timetable, overrides] = await Promise.all([
-    fetchTimetable(ctx.supabase, target.member.id),
-    fetchHoursOverrides(ctx.supabase, target.member.id, range.fromKey, range.toKey),
+    fetchTimetable(ctx.supabase, member.id),
+    fetchHoursOverrides(ctx.supabase, member.id, range.fromKey, range.toKey),
   ]);
   const schoolDays = shapeSchoolDays(range.fromKey, range.toKey, timetable, overrides);
   const empty = items.items.length === 0 && schoolDays.length === 0;
   return {
-    member: target.member.name,
+    member: member.name,
     items: items.items,
     school_days: schoolDays,
     ...(empty ? { note: NO_ACCESS_NOTE } : {}),
     ...(items.truncated ? { truncated: true } : {}),
-    ...(range.clamped ? { range_limited_to: range.toKey } : {}),
   };
+}
+
+async function getPlanItems(ctx: ToolContext, raw: unknown): Promise<unknown> {
+  const input = planInput.parse(raw);
+  const range = validateRange(input.from, input.to);
+  if (!range.ok) return { error: range.error };
+  const target = targets(ctx, input.member_name);
+  if ("error" in target) return { error: target.error };
+  const filter = normalizeKind(input.kind);
+  if ("error" in filter) return { error: filter.error };
+
+  const results = [];
+  for (const member of target.members) results.push(await planItemsFor(ctx, member, range, filter));
+  const wrapped = wrapResults(target, results);
+  return range.clamped ? { ...(wrapped as object), range_limited_to: range.toKey } : wrapped;
+}
+
+async function getTimetable(ctx: ToolContext, raw: unknown): Promise<unknown> {
+  const input = timetableInput.parse(raw);
+  const range = validateRange(input.from, input.to);
+  if (!range.ok) return { error: range.error };
+  const target = targets(ctx, input.member_name);
+  if ("error" in target) return { error: target.error };
+
+  const results: Record<string, unknown>[] = [];
+  for (const member of target.members) {
+    const [timetable, overrides] = await Promise.all([
+      fetchTimetable(ctx.supabase, member.id),
+      fetchHoursOverrides(ctx.supabase, member.id, range.fromKey, range.toKey),
+    ]);
+    const allDays = shapeSchoolDays(range.fromKey, range.toKey, timetable, overrides);
+    const days = filterSchoolDaysBySubject(allDays, input.subject);
+    const hasSubject = input.subject !== null && input.subject.trim() !== "";
+    results.push({
+      member: member.name,
+      ...(hasSubject ? { subject: input.subject, has_subject: days.length > 0 } : {}),
+      school_days: days,
+      ...(allDays.length === 0 ? { note: "no timetable or school day found" } : {}),
+    });
+  }
+  const wrapped = wrapResults(target, results);
+  return range.clamped ? { ...(wrapped as object), range_limited_to: range.toKey } : wrapped;
 }
 
 function formatEvent(event: { title: string; start: string; end: string; allDay: boolean; location?: string }) {
@@ -158,42 +233,43 @@ async function getCalendar(ctx: ToolContext, raw: unknown): Promise<unknown> {
   const input = calendarInput.parse(raw);
   const range = validateRange(input.from, input.to);
   if (!range.ok) return { error: range.error };
-  const target = await targetMember(ctx, input.member_name);
+  const target = targets(ctx, input.member_name);
   if ("error" in target) return { error: target.error };
-  if (!target.member.calendar_id) return { member: target.member.name, events: [], note: "no calendar connected" };
 
-  const result = await getEvents(
-    [{ memberId: target.member.id, calendarId: target.member.calendar_id }],
-    startOfDay(range.from),
-    startOfDay(addDays(range.to, 1)),
-  );
-  if (result.failedMemberIds.length > 0) return { error: "The calendar could not be read right now." };
-  const events = result.events.slice(0, 100).map(formatEvent);
-  return {
-    member: target.member.name,
-    events,
-    ...(events.length === 0 ? { note: "no events found" } : {}),
-    ...(range.clamped ? { range_limited_to: range.toKey } : {}),
-  };
+  // Any family member may ask about any other member's calendar: calendar ids come from the members table (readable by the family).
+  const withCalendar = target.members.filter((m) => m.calendar_id);
+  const result =
+    withCalendar.length === 0
+      ? { events: [], failedMemberIds: [] as string[] }
+      : await getEvents(
+          withCalendar.map((m) => ({ memberId: m.id, calendarId: m.calendar_id })),
+          startOfDay(range.from),
+          startOfDay(addDays(range.to, 1)),
+        );
+  const results = target.members.map((member): Record<string, unknown> => {
+    if (!member.calendar_id) return { member: member.name, events: [], note: "no calendar connected" };
+    if (result.failedMemberIds.includes(member.id)) return { member: member.name, error: "The calendar could not be read right now." };
+    const events = result.events.filter((e) => e.memberId === member.id).slice(0, 100).map(formatEvent);
+    return { member: member.name, events, ...(events.length === 0 ? { note: "no events found" } : {}) };
+  });
+  if (target.members.length === 1 && "error" in results[0]) return { error: results[0].error };
+  const wrapped = wrapResults(target, results);
+  return range.clamped ? { ...(wrapped as object), range_limited_to: range.toKey } : wrapped;
 }
 
-async function getStars(ctx: ToolContext, raw: unknown): Promise<unknown> {
-  const input = starsInput.parse(raw);
-  const target = await targetMember(ctx, input.member_name);
-  if ("error" in target) return { error: target.error };
-
+async function starsFor(ctx: ToolContext, member: Member): Promise<Record<string, unknown>> {
   const { data: trackData, error } = await ctx.supabase
     .from("star_tracks")
     .select(TRACK_COLUMNS)
-    .eq("member_id", target.member.id)
+    .eq("member_id", member.id)
     .eq("status", "active")
     .maybeSingle();
   if (error) throw new Error("Could not read the star track");
-  if (!trackData) return { member: target.member.name, tracks: [], note: NO_ACCESS_NOTE };
+  if (!trackData) return { member: member.name, tracks: [], note: "no active star track" };
   const track = trackData as StarTrackRow;
 
   const [stars, rewards] = await Promise.all([
-    ctx.supabase.from("stars").select(STAR_COLUMNS).eq("track_id", track.id),
+    ctx.supabase.from("stars").select(STAR_COLUMNS).eq("track_id", track.id).eq("member_id", member.id),
     ctx.supabase.from("rewards").select(REWARD_COLUMNS).eq("track_id", track.id),
   ]);
   if (stars.error || rewards.error) throw new Error("Could not read the stars");
@@ -201,7 +277,7 @@ async function getStars(ctx: ToolContext, raw: unknown): Promise<unknown> {
   const nextReward =
     progress.nextMilestone === null ? null : progress.nextMilestone >= track.goal ? track.big_reward : track.small_reward;
   return {
-    member: target.member.name,
+    member: member.name,
     tracks: [
       {
         track: track.name,
@@ -217,6 +293,15 @@ async function getStars(ctx: ToolContext, raw: unknown): Promise<unknown> {
   };
 }
 
+async function getStars(ctx: ToolContext, raw: unknown): Promise<unknown> {
+  const input = starsInput.parse(raw);
+  const target = targets(ctx, input.member_name);
+  if ("error" in target) return { error: target.error };
+  const results = [];
+  for (const member of target.members) results.push(await starsFor(ctx, member));
+  return wrapResults(target, results);
+}
+
 export type ToolOutcome = { content: string; isError: boolean };
 
 /** Runs one tool. Input is validated with zod; failures come back as an error result for Claude, never thrown. */
@@ -224,6 +309,7 @@ export async function runTool(ctx: ToolContext, name: string, input: unknown): P
   try {
     let result: unknown;
     if (name === "get_plan_items") result = await getPlanItems(ctx, input);
+    else if (name === "get_timetable") result = await getTimetable(ctx, input);
     else if (name === "get_calendar") result = await getCalendar(ctx, input);
     else if (name === "get_stars") result = await getStars(ctx, input);
     else return { content: JSON.stringify({ error: "Unknown tool." }), isError: true };

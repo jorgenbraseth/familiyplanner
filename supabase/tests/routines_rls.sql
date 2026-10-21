@@ -97,14 +97,14 @@ do $$
 declare n int; rows int;
 begin
   perform pg_temp.act_as('routine.child.a@example.com', 'authenticated');
-  select count(*) into n from public.routine_items;
+  select count(*) into n from public.routine_items where member_id = (select v from ids where k = 'a');
   if n <> 17 then raise exception 'child A should see 17 items, saw %', n; end if;
   select count(*) into n from public.routine_items where member_id = (select v from ids where k = 'b');
-  if n <> 0 then raise exception 'child A saw sibling items'; end if;
-  select count(*) into n from public.routine_settings;
+  if n = 0 then raise exception 'child A should read sibling items'; end if;
+  select count(*) into n from public.routine_settings where member_id = (select v from ids where k = 'a');
   if n <> 2 then raise exception 'child A should see 2 settings, saw %', n; end if;
   select count(*) into n from public.routine_settings where member_id = (select v from ids where k = 'b');
-  if n <> 0 then raise exception 'child A saw sibling settings'; end if;
+  if n = 0 then raise exception 'child A should read sibling settings'; end if;
 
   update public.routine_items set name = 'Hacked' where id = (select v from ids where k = 'i1');
   get diagnostics rows = row_count;
@@ -182,7 +182,7 @@ begin
 
   perform pg_temp.act_as('routine.child.b@example.com', 'authenticated');
   select count(*) into n from public.routine_checks;
-  if n <> 0 then raise exception 'child B saw A''s checks'; end if;
+  if n = 0 then raise exception 'child B should read A''s checks'; end if;
   perform pg_temp.done();
 
   perform pg_temp.act_as('routine.child.a@example.com', 'authenticated');

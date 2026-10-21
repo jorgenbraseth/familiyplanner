@@ -537,7 +537,7 @@ export const t = {
     you: "deg",
     saved: "Lagret.",
     roles: { parent: "Forelder", child: "Barn" },
-    locales: { "nb-NO": "Norsk", "da-DK": "Dansk" },
+    locales: { "nb-NO": "Norsk" },
     fields: {
       name: "Navn",
       email: "Google-e-post",

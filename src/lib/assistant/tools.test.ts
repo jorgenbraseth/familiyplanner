@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { TOOL_DEFINITIONS } from "./tools";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Member } from "../members";
+import { runTool, TOOL_DEFINITIONS, TOOL_NAMES } from "./tools";
 
 function findProblems(node: unknown, path: string, out: string[]) {
   if (Array.isArray(node)) {
@@ -23,5 +25,51 @@ describe("tool definitions", () => {
       findProblems(tool.input_schema, `${tool.name}.input_schema`, problems);
       expect(problems).toEqual([]);
     }
+  });
+});
+
+const member = (id: string, name: string, role: "parent" | "child"): Member => ({
+  id,
+  name,
+  email: `${id}@example.com`,
+  role,
+  calendar_id: null,
+  colour: "#2563eb",
+  locale: "nb-NO",
+});
+const kari = member("p1", "Kari Berg", "parent");
+const mia = member("c1", "Mia", "child");
+const emil = member("c2", "Emil", "child");
+// No tool below should reach the database: a client that throws on any use proves it.
+const noDb = new Proxy({}, { get: () => () => { throw new Error("database used"); } }) as unknown as SupabaseClient;
+const ctx = { supabase: noDb, me: mia, members: [kari, mia, emil] };
+
+describe("family-wide tools", () => {
+  it("offers a member argument on every tool, and a timetable tool", () => {
+    expect(TOOL_NAMES).toContain("get_timetable");
+    for (const tool of TOOL_DEFINITIONS) {
+      expect(JSON.stringify(tool.input_schema)).toContain("member_name");
+    }
+  });
+
+  it("answers an unknown family member with an error instead of falling back to the asker", async () => {
+    for (const name of ["get_stars", "get_calendar", "get_plan_items", "get_timetable"]) {
+      const outcome = await runTool(ctx, name, { from: "2026-10-22", to: "2026-10-22", kind: null, subject: null, member_name: "Zed" });
+      expect(outcome.isError).toBe(true);
+      expect(outcome.content).toContain("No family member with that name.");
+    }
+  });
+
+  it("rejects an invalid date range before resolving anyone", async () => {
+    const outcome = await runTool(ctx, "get_timetable", { from: "2026-10-23", to: "2026-10-22", subject: "mat", member_name: "children" });
+    expect(outcome.isError).toBe(true);
+  });
+
+  it("answers a calendar question about a group without calendars with a note per member, no database needed", async () => {
+    const outcome = await runTool(ctx, "get_calendar", { from: "2026-10-22", to: "2026-10-22", member_name: "kids" });
+    expect(outcome.isError).toBe(false);
+    const result = JSON.parse(outcome.content) as { results: { member: string; note: string }[] };
+    expect(result.results.map((r) => r.member)).toEqual(["Mia", "Emil"]);
+    expect(result.results.every((r) => r.note === "no calendar connected")).toBe(true);
   });
 });
