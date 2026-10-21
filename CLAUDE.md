@@ -43,7 +43,7 @@ For every task: plan the work with Opus (the main session), then hand it off to 
 - **Allowlist:** a signed-in Google user whose email isn't in `members` is signed out and shown a "not invited" page. Compare emails lowercased.
 - **Children's data:** no real PDFs, photos or calendar data in git, fixtures or logs. Use made-up test data.
 - **Uploads go browser → Supabase Storage directly**, then a server action processes the file (avoids body-size limits). Path: `<member_id>/<document_id>.<ext>`.
-- **Claude extraction** uses a forced tool call with a JSON schema; validate the result (e.g. zod) before writing `plan_items`. Documents go to `review` status; only parents publish.
+- **Claude extraction** uses structured outputs (`client.messages.parse` + `zodOutputFormat`, `src/lib/extraction/`); forced `tool_choice` is rejected by current models (Sonnet 5.5). Validate and normalize the result before writing `plan_items`. Documents go to `review` status; only parents publish.
 - **Schema changes** are new files in `supabase/migrations/` (never edit an applied migration).
 - **UI strings** live in one module (e.g. `src/lib/i18n.ts`) so the language (Norwegian/Danish) can be switched in one place. Dates/times in `Europe/Copenhagen`, weeks are ISO weeks.
 - Mobile first: kids use phones; parents approve stars from their phone.
