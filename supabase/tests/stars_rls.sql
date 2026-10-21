@@ -163,16 +163,10 @@ begin
   exception when check_violation then null;
   end;
 
-  -- requests 3..5 are fine (5 in all), the 6th is over the limit
-  for i in 3..5 loop
+  -- no daily limit: a child can make many requests in one day (8 in all)
+  for i in 3..8 loop
     insert into public.stars (track_id, member_id, reason, requested_by) values (ta, a, 'Star ' || i, a);
   end loop;
-  begin
-    insert into public.stars (track_id, member_id, reason, requested_by) values (ta, a, 'Star 6', a);
-    raise exception 'sixth request accepted';
-  exception when check_violation then
-    if sqlerrm <> 'star_daily_limit' then raise exception 'wrong error: %', sqlerrm; end if;
-  end;
 
   -- no update / delete
   update public.stars set status = 'approved';
@@ -182,7 +176,7 @@ begin
   get diagnostics n = row_count;
   if n <> 0 then raise exception 'child deleted % stars', n; end if;
   select count(*) into n from public.stars;
-  if n <> 5 then raise exception 'child A should see 5 stars, saw %', n; end if;
+  if n <> 8 then raise exception 'child A should see 8 stars, saw %', n; end if;
   perform pg_temp.done();
 
   -- child B sees none of A's stars
@@ -191,7 +185,7 @@ begin
   if n <> 0 then raise exception 'child B saw % stars', n; end if;
   perform pg_temp.done();
 
-  -- parent: direct approved star is not limited by the daily limit (even with requested_by = parent)
+  -- parent: direct approved star (even with requested_by = parent)
   perform pg_temp.act_as('jorgen.braseth@gmail.com', 'authenticated');
   for i in 1..6 loop
     insert into public.stars (track_id, member_id, reason, status, requested_by)

@@ -15,21 +15,19 @@ export function SchoolWeekPlan({
   documents: SchoolDocument[];
   readOnly?: boolean;
 }) {
-  const hasAnything = days.some((d) => d.hours || d.lessons.length + d.homework.length + d.bring.length + d.notes.length > 0);
-  if (!hasAnything) return <p className="card p-4 text-lg">{t.school.weekPlanEmpty}</p>;
+  // The caller has already dropped empty days (weekPlan with hideEmpty), so no days means an empty week.
+  if (days.length === 0) return <p className="card p-4 text-lg">{t.school.weekPlanEmpty}</p>;
   return (
     <div className="space-y-4">
       <ol className="space-y-4">
         {days.map((day) => {
           const isToday = day.key === todayKey;
-          const empty = !day.hours && day.lessons.length + day.homework.length + day.bring.length + day.notes.length === 0;
           return (
             <li key={day.key} className={`card space-y-3 p-3 ${isToday ? "border-accent bg-warning-soft" : ""}`}>
               <div>
                 <h2 className={`text-2xl font-extrabold ${isToday ? "text-on-warning-soft" : ""}`}>{formatWeekday(day.date)}</h2>
                 {day.hours && <p className="text-base font-semibold text-muted">{t.school.schoolHours(day.hours)}</p>}
               </div>
-              {empty && <p className="text-base text-muted">{t.school.dayEmpty}</p>}
               {day.lessons.length > 0 && (
                 <ul className="divide-y-2 divide-line rounded-xl bg-surface px-3">
                   {day.lessons.map((lesson) => {

@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  STAR_DAILY_LIMIT,
   approvedTotal,
   celebratingReward,
   justReachedMilestone,
   milestonesOf,
-  requestsLeftToday,
   rewardTextAt,
   starIcons,
   trackProgress,
+  visibleToChild,
   type RewardRow,
   type StarRow,
   type StarStatus,
@@ -194,20 +193,6 @@ describe("justReachedMilestone", () => {
   });
 });
 
-describe("daily limit", () => {
-  it("is 5, matching the database function", () => {
-    expect(STAR_DAILY_LIMIT).toBe(5);
-  });
-
-  it("counts requests left", () => {
-    expect(requestsLeftToday(0)).toBe(5);
-    expect(requestsLeftToday(2)).toBe(3);
-    expect(requestsLeftToday(5)).toBe(0);
-    expect(requestsLeftToday(9)).toBe(0);
-    expect(requestsLeftToday(-1)).toBe(5);
-  });
-});
-
 describe("rewardTextAt", () => {
   it("gives the big reward at the goal and the small one before it", () => {
     const rewards = { goal: 30, small_reward: "Ice cream", big_reward: "Cinema" };
@@ -242,5 +227,17 @@ describe("approvedTotal, starIcons and celebratingReward", () => {
     expect(celebratingReward({ approved: 6, rewardsOwed: owed }, 3)?.atCount).toBe(5);
     expect(celebratingReward({ approved: 8, rewardsOwed: owed }, 3)).toBeNull();
     expect(celebratingReward({ approved: 4, rewardsOwed: [] }, 3)).toBeNull();
+  });
+});
+
+describe("visibleToChild", () => {
+  it("hides declined stars and keeps pending and approved ones in order", () => {
+    const rows = [
+      { id: "a", status: "approved" as StarStatus },
+      { id: "b", status: "declined" as StarStatus },
+      { id: "c", status: "pending" as StarStatus },
+    ];
+    expect(visibleToChild(rows).map((r) => r.id)).toEqual(["a", "c"]);
+    expect(visibleToChild([])).toEqual([]);
   });
 });

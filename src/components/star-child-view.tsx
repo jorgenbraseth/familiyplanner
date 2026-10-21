@@ -10,11 +10,9 @@ const HISTORY_LIMIT = 15;
 /** The child's /stars screen. Also used by a parent previewing (`previewing` disables requests). */
 export function StarChildView({
   data,
-  left,
   previewing,
 }: {
   data: ChildStars | null;
-  left: number;
   previewing: boolean;
 }) {
   if (!data) {
@@ -79,7 +77,7 @@ export function StarChildView({
           </ul>
         </section>
       )}
-      <RequestStarForm tasks={tasks} left={left} previewing={previewing} />
+      <RequestStarForm tasks={tasks} previewing={previewing} />
       <section className="card space-y-2 p-4">
         <h2 className="text-xl font-extrabold">{t.stars.historyTitle}</h2>
         <StarHistory stars={stars.slice(0, HISTORY_LIMIT)} empty={t.stars.historyEmpty} />

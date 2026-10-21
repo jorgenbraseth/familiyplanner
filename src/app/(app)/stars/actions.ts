@@ -31,7 +31,6 @@ function refresh() {
 
 function dbError(action: string, error: { code?: string; message?: string }): string {
   console.error(`${action} failed`, error.code);
-  if (error.message === "star_daily_limit") return t.stars.errors.dailyLimit;
   if (error.code === "42501") return t.stars.errors.notAllowed;
   return t.stars.errors.failed;
 }

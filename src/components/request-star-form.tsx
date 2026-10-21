@@ -10,26 +10,18 @@ const initial: StarActionState = { ok: false };
 /** "Hva har du gjort?": one big button per task (one tap requests its stars); free text is the small fallback. */
 export function RequestStarForm({
   tasks,
-  left,
   previewing,
 }: {
   tasks: StarTaskRow[];
-  left: number;
   previewing: boolean;
 }) {
   const [state, formAction, pending] = useActionState(requestStar, initial);
-  const disabled = previewing || left <= 0 || pending;
+  const disabled = previewing || pending;
 
   return (
     <section className="card space-y-3 p-4">
       <h2 className="text-xl font-extrabold">{t.stars.request.title}</h2>
-      {previewing ? (
-        <p className="text-sm font-semibold text-muted">{t.stars.request.readOnly}</p>
-      ) : (
-        <p className="text-sm font-bold text-muted">
-          {left > 0 ? t.stars.request.leftToday(left) : t.stars.request.noneLeft}
-        </p>
-      )}
+      {previewing && <p className="text-sm font-semibold text-muted">{t.stars.request.readOnly}</p>}
       {tasks.length > 0 ? (
         <form action={formAction} className="space-y-2">
           <p className="text-sm font-bold">{t.stars.request.tasksLabel}</p>

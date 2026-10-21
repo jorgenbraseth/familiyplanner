@@ -13,17 +13,16 @@ import { formatWeekday, todayView } from "@/lib/plan-view";
 import { loadRoutineToday } from "@/lib/routine-data";
 import { currentSlot } from "@/lib/routines";
 import { loadSchoolHours, loadSchoolWeek } from "@/lib/school";
-import { loadChildStars, loadRequestsLeftToday } from "@/lib/star-data";
+import { loadChildStars } from "@/lib/star-data";
 import { isTomorrow, slotView } from "@/lib/start-view";
 
 /** The children's start page (also shown when a parent previews a child). */
 export async function StartView({ member, previewing }: { member: Member; previewing: boolean }) {
   const now = new Date();
-  const [school, routines, stars, left, week] = await Promise.all([
+  const [school, routines, stars, week] = await Promise.all([
     loadSchoolWeek(member.id, 0, now),
     loadRoutineToday(member.id, now),
     loadChildStars(member.id),
-    loadRequestsLeftToday(member.id, now),
     loadWeek([member], 0, now, true),
   ]);
   const hours = (await loadSchoolHours(member.id, school.monday)).get(dayKey(school.today));
@@ -50,7 +49,7 @@ export async function StartView({ member, previewing }: { member: Member; previe
           </Link>
         )}
         <div className="md:ml-auto">
-          <StartStarSheet tasks={stars?.tasks ?? []} left={left} previewing={previewing} />
+          <StartStarSheet tasks={stars?.tasks ?? []} previewing={previewing} />
         </div>
       </header>
       {previewing && <Notice>{t.preview.readOnly}</Notice>}

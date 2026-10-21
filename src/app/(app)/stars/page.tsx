@@ -2,7 +2,7 @@ import { StarChildView } from "@/components/star-child-view";
 import { getCurrentMember } from "@/lib/auth";
 import { t } from "@/lib/i18n";
 import { MEMBER_COLUMNS, type Member } from "@/lib/members";
-import { loadAllChildStars, loadChildStars, loadRequestsLeftToday } from "@/lib/star-data";
+import { loadAllChildStars, loadChildStars } from "@/lib/star-data";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/view-as";
 import { StarParentView } from "./parent-view";
@@ -12,11 +12,11 @@ export default async function StarsPage() {
   const { viewing, previewing } = await getViewer();
 
   if (viewing.role === "child") {
-    const [data, left] = await Promise.all([loadChildStars(viewing.id), loadRequestsLeftToday(viewing.id)]);
+    const data = await loadChildStars(viewing.id);
     return (
       <>
         <h1 className="text-3xl font-extrabold">{t.stars.title}</h1>
-        <StarChildView data={data} left={left} previewing={previewing} />
+        <StarChildView data={data} previewing={previewing} />
       </>
     );
   }

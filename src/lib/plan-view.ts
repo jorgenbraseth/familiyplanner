@@ -110,9 +110,20 @@ export type WeekPlanDay = {
   notes: PlanItemRow[];
 };
 
+/** Whether a day has nothing at all: no school hours, lessons, homework, things to bring or notes. */
+export function isWeekPlanDayEmpty(day: Pick<WeekPlanDay, "hours" | "lessons" | "homework" | "bring" | "notes">): boolean {
+  return !day.hours && day.lessons.length + day.homework.length + day.bring.length + day.notes.length === 0;
+}
+
+/** Drops the days for which `isEmpty` is true (kids' week views show no empty weekdays). */
+export function withoutEmptyDays<T>(days: T[], isEmpty: (day: T) => boolean): T[] {
+  return days.filter((d) => !isEmpty(d));
+}
+
 /**
- * The "Ukeplan" cards: Monday–Friday always, Saturday/Sunday only when they have items, and
- * (current week only) no days before today. `schoolDays` maps "YYYY-MM-DD" to the school hours.
+ * The "Ukeplan" cards: Monday–Friday always (unless `hideEmpty`, which drops every day with nothing on it),
+ * Saturday/Sunday only when they have items, and (current week only) no days before today.
+ * `schoolDays` maps "YYYY-MM-DD" to the school hours.
  */
 export function weekPlan(
   items: PlanItemRow[],
@@ -120,9 +131,10 @@ export function weekPlan(
   monday: CalendarDate,
   todayKey: string,
   weekOffset: number,
+  hideEmpty = false,
 ): WeekPlanDay[] {
   const days = groupItemsByDay(items, monday, 7).filter((d, i) => i < 5 || d.items.length > 0);
-  return visibleDays(days, todayKey, weekOffset).map((d) => {
+  const planned = visibleDays(days, todayKey, weekOffset).map((d) => {
     const of = (kind: PlanItemKind) => d.items.filter((i) => i.kind === kind);
     const hours = schoolDays.get(d.key);
     return {
@@ -135,4 +147,5 @@ export function weekPlan(
       notes: of("note"),
     };
   });
+  return hideEmpty ? withoutEmptyDays(planned, isWeekPlanDayEmpty) : planned;
 }

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { t } from "@/lib/i18n";
 import {
   DOCUMENT_TYPES,
+  type DocumentType,
   MAX_UPLOAD_BYTES,
   isAcceptedMimeType,
 } from "@/lib/plan";
@@ -18,10 +19,14 @@ type Phase = "idle" | "uploading" | "reading";
 
 export function UploadForm({
   kids,
+  defaultChildId,
+  defaultType,
   defaultWeek,
   defaultYear,
 }: {
   kids: { id: string; name: string }[];
+  defaultChildId?: string;
+  defaultType: DocumentType;
   defaultWeek: number;
   defaultYear: number;
 }) {
@@ -94,7 +99,7 @@ export function UploadForm({
           <select
             name="member_id"
             required
-            defaultValue={kids[0]?.id}
+            defaultValue={defaultChildId ?? kids[0]?.id}
             className={input}
           >
             {kids.map((child) => (
@@ -106,7 +111,7 @@ export function UploadForm({
         </label>
         <label className={label}>
           <span>{t.documents.fields.type}</span>
-          <select name="type" defaultValue="week_schedule" className={input}>
+          <select name="type" defaultValue={defaultType} className={input}>
             {DOCUMENT_TYPES.map((type) => (
               <option key={type} value={type}>
                 {t.documents.types[type]}

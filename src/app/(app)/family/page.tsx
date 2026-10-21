@@ -26,6 +26,7 @@ export default async function FamilyPage({ searchParams }: PageProps<"/family">)
       <FamilyCalendar
         days={visibleDays(week.days, week.todayKey, offset)}
         onlyMemberId={kidView ? viewing.id : undefined}
+        hideEmptyDays={kidView}
         members={members.map((m) => ({ id: m.id, name: m.name, colour: m.colour }))}
       />
     </>

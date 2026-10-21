@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireParent } from "@/lib/auth";
 import { isoWeekNow } from "@/lib/dates";
 import { t } from "@/lib/i18n";
+import { parseUploadDefaults } from "@/lib/parent-home-view";
 import { MEMBER_COLUMNS, type Member } from "@/lib/members";
 import { createClient } from "@/lib/supabase/server";
 import { UploadForm } from "./upload-form";
@@ -9,7 +10,7 @@ import { UploadForm } from "./upload-form";
 // The upload form's server actions (createDocument, processDocument) run with this limit.
 export const maxDuration = 120;
 
-export default async function NewDocumentPage() {
+export default async function NewDocumentPage({ searchParams }: PageProps<"/documents/new">) {
   await requireParent();
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -19,7 +20,7 @@ export default async function NewDocumentPage() {
     .order("created_at");
   if (error) throw new Error("Could not read members");
   const children = (data as Member[]).map((m) => ({ id: m.id, name: m.name }));
-  const { isoYear, isoWeek } = isoWeekNow();
+  const defaults = parseUploadDefaults(await searchParams, children.map((c) => c.id), isoWeekNow());
 
   return (
     <>
@@ -35,8 +36,10 @@ export default async function NewDocumentPage() {
       ) : (
         <UploadForm
           kids={children}
-          defaultWeek={isoWeek}
-          defaultYear={isoYear}
+          defaultChildId={defaults.childId}
+          defaultType={defaults.type}
+          defaultWeek={defaults.week}
+          defaultYear={defaults.year}
         />
       )}
     </>

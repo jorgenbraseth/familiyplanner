@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { dayKey } from "./dates";
 import type { PlanItemKind, PlanItemRow } from "./plan";
-import { formatSchoolHours, formatWeekday, groupItemsByDay, nextSchoolDay, todayView, visibleDays, weekPlan } from "./plan-view";
+import { formatSchoolHours, formatWeekday, groupItemsByDay, isWeekPlanDayEmpty, nextSchoolDay, todayView, visibleDays, weekPlan, withoutEmptyDays } from "./plan-view";
 
 let n = 0;
 function item(date: string, kind: PlanItemKind, sort = 0, text = "Test"): PlanItemRow {
@@ -136,5 +136,29 @@ describe("weekPlan", () => {
   it("hides past days in the current week", () => {
     const days = weekPlan(items, hours, monday, "2026-10-22", 0);
     expect(days.map((d) => d.key)).toEqual(["2026-10-22", "2026-10-23", "2026-10-24"]);
+  });
+});
+
+describe("empty days", () => {
+  const empty = { hours: null, lessons: [], homework: [], bring: [], notes: [] };
+
+  it("is empty only when there are no hours and no items", () => {
+    expect(isWeekPlanDayEmpty(empty)).toBe(true);
+    expect(isWeekPlanDayEmpty({ ...empty, hours: "08:15–14:00" })).toBe(false);
+    expect(isWeekPlanDayEmpty({ ...empty, homework: [item("2026-10-20", "homework")] })).toBe(false);
+    expect(isWeekPlanDayEmpty({ ...empty, notes: [item("2026-10-20", "note")] })).toBe(false);
+  });
+
+  it("weekPlan can drop empty days, and gives nothing for an empty week", () => {
+    const items = [item("2026-10-21", "homework", 0, "Les")];
+    const hours = new Map([["2026-10-23", { starts_at: null, ends_at: "13:00:00" }]]);
+    expect(weekPlan(items, hours, monday, "2026-10-19", 1, true).map((d) => d.key)).toEqual(["2026-10-21", "2026-10-23"]);
+    expect(weekPlan(items, hours, monday, "2026-10-19", 1).map((d) => d.key)).toHaveLength(5);
+    expect(weekPlan([], new Map(), monday, "2026-10-19", 1, true)).toEqual([]);
+  });
+
+  it("withoutEmptyDays keeps the order of the days that have something", () => {
+    const days = [{ key: "a", n: 0 }, { key: "b", n: 2 }, { key: "c", n: 1 }];
+    expect(withoutEmptyDays(days, (d) => d.n === 0).map((d) => d.key)).toEqual(["b", "c"]);
   });
 });

@@ -36,6 +36,7 @@ export const t = {
   family: {
     title: "Familien",
     showWho: "Vis",
+    weekEmpty: "Ingenting på kalenderen denne uken.",
   },
   calendar: {
     untitled: "(uten tittel)",
@@ -151,8 +152,7 @@ export const t = {
     homeworkEmptyTomorrow: "Ingen lekser til i morgen 🎉",
     homeworkEmptyFor: (day: string) => `Ingen lekser til ${day} 🎉`,
     weekPlanTitle: "Ukeplan",
-    weekPlanEmpty: "Ingenting på ukeplanen ennå.",
-    dayEmpty: "Ingenting på planen.",
+    weekPlanEmpty: "Ingenting på ukeplanen denne uken.",
     schoolHours: (hours: string) => `Skolen ${hours}`,
     periodLabel: (period: number) => `${period}. time`,
     freeLesson: "Time",
@@ -187,8 +187,6 @@ export const t = {
       otherLabel: "Noe annet (1 stjerne)",
       otherPlaceholder: "Skriv hva du har gjort",
       send: "Send",
-      leftToday: (n: number) => `${n} igjen i dag`,
-      noneLeft: "Du har brukt alle for i dag. Prøv igjen i morgen!",
       sent: "Sendt! Venter på at en voksen sjekker.",
       readOnly: "Å be om stjerne er avslått mens du forhåndsviser.",
     },
@@ -257,7 +255,6 @@ export const t = {
       notFound: "Fant ikke barnet eller banen.",
     },
     errors: {
-      dailyLimit: "Du har brukt alle stjernene for i dag. Prøv igjen i morgen!",
       notAllowed: "Du har ikke lov til å gjøre dette.",
       failed: "Noe gikk galt. Prøv igjen.",
       noTrack: "Det finnes ingen aktiv stjernebane.",
@@ -320,6 +317,27 @@ export const t = {
     homeworkFor: (day: string) => `Lekser til ${day}`,
     homeworkEmptyTomorrow: "Ingen lekser til i morgen 🎉",
     homeworkEmptyFor: (day: string) => `Ingen lekser til ${day} 🎉`,
+  },
+  // Parents' home page (replaces the parents' Meg page).
+  parentHome: {
+    giveTitle: "Gi stjerne",
+    noTasks: "Ingen oppgaver på banen ennå.",
+    other: "Noe annet …",
+    newTrack: "Lag stjernebane",
+    gave: (child: string, amount: number) => `Ga ${child} +${amount} ⭐`,
+    gaveFailed: "Klarte ikke å gi stjernen. Prøv igjen.",
+    pendingTitle: "Venter på godkjenning",
+    uploadTitle: "Last opp ukeplan",
+    uploadFor: (name: string, week: number) => `${name} · uke ${week}`,
+    homeworkTitle: "Lekser i dag",
+    homeworkNone: "Ingen lekser",
+    homeworkDone: "Ferdig",
+    homeworkNotDone: "Ikke ferdig",
+    endTitle: "Skolen slutter",
+    endNone: "Ingen skole i dag",
+    endUnknown: "Ukjent",
+    calendarTitle: "I dag",
+    noChildren: "Det er ingen barn i appen ennå. Legg dem til under Medlemmer.",
   },
   // Morning/evening routines ("Morgenstell" / "Kveldstell") and the parents' routine editor.
   routines: {

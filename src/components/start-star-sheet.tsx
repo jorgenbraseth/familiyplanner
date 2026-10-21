@@ -8,11 +8,9 @@ import type { StarTaskRow } from "@/lib/stars";
 /** "Registrer stjerne": a button that opens a bottom sheet with the child's star tasks (and "Annet"). */
 export function StartStarSheet({
   tasks,
-  left,
   previewing,
 }: {
   tasks: StarTaskRow[];
-  left: number;
   previewing: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -36,7 +34,7 @@ export function StartStarSheet({
         <span aria-hidden className="mr-2">★</span>
         {t.start.registerStar}
       </button>
-      {open && <Sheet onClose={close} tasks={tasks} left={left} previewing={previewing} />}
+      {open && <Sheet onClose={close} tasks={tasks} previewing={previewing} />}
     </>
   );
 }
@@ -44,12 +42,10 @@ export function StartStarSheet({
 function Sheet({
   onClose,
   tasks,
-  left,
   previewing,
 }: {
   onClose: () => void;
   tasks: StarTaskRow[];
-  left: number;
   previewing: boolean;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -92,7 +88,7 @@ function Sheet({
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          <RequestStarForm tasks={tasks} left={left} previewing={previewing} />
+          <RequestStarForm tasks={tasks} previewing={previewing} />
         </div>
       </div>
     </div>

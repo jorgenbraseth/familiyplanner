@@ -19,7 +19,7 @@ export default async function WeekPlanPage({ searchParams }: PageProps<"/ukeplan
   const sunday = dayKey(addDays(school.monday, 6));
   // loadSchoolWeek also returns the Monday after, which belongs to the next week.
   const items = school.items.filter((i) => i.date <= sunday);
-  const days = weekPlan(items, hours, school.monday, todayKey, offset);
+  const days = weekPlan(items, hours, school.monday, todayKey, offset, true);
   const usedIds = new Set(items.map((i) => i.document_id));
   const documents = school.documents.filter((d) => usedIds.has(d.id));
 
