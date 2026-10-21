@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MASTER = os.path.join(ROOT, "design", "app-icon.png")
-BG = (0xFB, 0xF8, 0xEF, 255)  # app background, also the maskable/apple backing
+BG = (0xF4, 0xF5, 0xF9, 255)  # app background, also the maskable/apple backing
 
 
 def build_master(src, out, tol=5, size=1024):
@@ -65,6 +65,7 @@ def main():
     render(master, 512, 0.04).save(os.path.join(icons, "icon-512.png"))
     render(master, 512, 0.10, BG).save(os.path.join(icons, "maskable-512.png"))  # content in central 80%
     render(master, 180, 0.10, BG).convert("RGB").save(os.path.join(icons, "apple-touch-icon.png"))
+    render(master, 192, 0.04).save(os.path.join(ROOT, "src", "app", "icon.png"))  # sharp PNG favicon
     big = render(master, 256, 0.04)
     big.save(os.path.join(ROOT, "src", "app", "favicon.ico"), sizes=[(16, 16), (32, 32), (48, 48)])
 

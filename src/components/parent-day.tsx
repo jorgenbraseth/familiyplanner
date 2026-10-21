@@ -14,8 +14,8 @@ const LANE_MIN = "4.25rem";
 const GUTTER = "2.5rem";
 
 const KIND = {
-  school: "bg-school-soft text-on-school-soft",
-  event: "bg-event-soft text-on-event-soft",
+  school: "border-l-4 border-school-line bg-school-soft text-on-school-soft",
+  event: "border-l-4 border-event-line bg-event-soft text-on-event-soft",
 } as const;
 
 /**

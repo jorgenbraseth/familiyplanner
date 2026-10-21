@@ -83,7 +83,7 @@ export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
           return (
             <li
               key={event.id}
-              className="flex min-h-12 items-center gap-3 rounded-2xl border-2 border-line bg-event-soft px-3 py-2 text-lg text-on-event-soft"
+              className="flex min-h-12 items-center gap-3 rounded-2xl border-2 border-line border-l-[6px] border-l-event-line bg-event-soft px-3 py-2 text-lg text-on-event-soft"
             >
               {entry.showTime && <span className="w-24 shrink-0 text-base font-extrabold">{event.timeLabel}</span>}
               <span className="min-w-0 flex-1 break-words font-semibold">{event.title}</span>
@@ -94,8 +94,10 @@ export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
         return (
           <li
             key={entry.line.id}
-            className={`flex min-h-12 items-center gap-3 rounded-2xl border-2 border-line px-3 py-2 text-lg ${
-              pause ? "bg-pause-soft text-on-pause-soft" : "bg-school-soft text-on-school-soft"
+            className={`flex min-h-12 items-center gap-3 rounded-2xl border-2 border-l-[6px] border-line px-3 py-2 text-lg ${
+              pause
+                ? "border-l-pause-line bg-pause-soft text-on-pause-soft"
+                : "border-l-school-line bg-school-soft text-on-school-soft"
             }`}
           >
             <span className="min-w-0 flex-1 break-words font-semibold">{entry.line.title}</span>
@@ -116,9 +118,9 @@ export function TimelineLegend({ legend, label }: { legend: { school: boolean; p
   if (!legend.school && !legend.pause && !legend.appointments) return null;
   return (
     <ul className="flex flex-wrap gap-2 text-sm font-bold" aria-label={label}>
-      {legend.school && <LegendChip className="bg-school-soft text-on-school-soft">{t.start.legendSchool}</LegendChip>}
-      {legend.pause && <LegendChip className="bg-pause-soft text-on-pause-soft">{t.start.legendPause}</LegendChip>}
-      {legend.appointments && <LegendChip className="bg-event-soft text-on-event-soft">{t.start.legendAppointments}</LegendChip>}
+      {legend.school && <LegendChip className="border-l-[6px] border-l-school-line bg-school-soft text-on-school-soft">{t.start.legendSchool}</LegendChip>}
+      {legend.pause && <LegendChip className="border-l-[6px] border-l-pause-line bg-pause-soft text-on-pause-soft">{t.start.legendPause}</LegendChip>}
+      {legend.appointments && <LegendChip className="border-l-[6px] border-l-event-line bg-event-soft text-on-event-soft">{t.start.legendAppointments}</LegendChip>}
     </ul>
   );
 }

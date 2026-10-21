@@ -1,7 +1,7 @@
 // Service worker: shows push notifications, opens the app when one is tapped, and shows an offline page
 // when a page cannot be loaded. Nothing else is cached: pages, API, auth and Supabase responses hold
 // personal data and always come from the network.
-const CACHE_VERSION = "v2";
+const CACHE_VERSION = "v3";
 const CACHE_NAME = "planner-offline-" + CACHE_VERSION;
 const OFFLINE_URL = "/offline.html";
 
