@@ -137,6 +137,14 @@ export const t = {
     markDone: (text: string) => `Merk som ferdig: ${text}`,
     saveFailed: "Klarte ikke å lagre. Prøv igjen.",
   },
+  // Star tracks, requests, approvals and rewards (src/app/(app)/stars).
+  stars: {
+    nav: "Stjerner",
+  },
+  // Push notifications and app install.
+  push: {
+    enable: "Slå på varsler",
+  },
   members: {
     title: "Medlemmer",
     add: "Legg til medlem",
