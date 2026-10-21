@@ -33,7 +33,7 @@ const member = (id: string, name: string, role: "parent" | "child"): Member => (
   name,
   email: `${id}@example.com`,
   role,
-  calendar_id: null,
+  calendar_ids: [],
   colour: "#2563eb",
   locale: "nb-NO",
 });

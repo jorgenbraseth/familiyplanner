@@ -7,6 +7,8 @@ import { addDays, dayKey, parseDayKey, startOfDay, type CalendarDate } from "../
 export type CalendarEvent = {
   id: string;
   memberId: string;
+  /** The Google calendar it came from (server side only; shared calendars give the same event to several members). */
+  calendarId?: string;
   title: string;
   /** ISO instants. For all-day events: start of the first day / end of the last day (exclusive). */
   start: string;
@@ -64,14 +66,14 @@ export function normalizeGoogleEvent(
   return null;
 }
 
-export type DayEvents = { date: CalendarDate; key: string; events: CalendarEvent[] };
+export type DayEvents<T extends CalendarEvent = CalendarEvent> = { date: CalendarDate; key: string; events: T[] };
 
 /**
  * Puts events on every day (in the family's time zone) they overlap, from `first` for `days` days.
  * Within a day: all-day events first, then by start time, then by title.
  */
-export function groupByDay(events: CalendarEvent[], first: CalendarDate, days: number): DayEvents[] {
-  const result: DayEvents[] = [];
+export function groupByDay<T extends CalendarEvent>(events: T[], first: CalendarDate, days: number): DayEvents<T>[] {
+  const result: DayEvents<T>[] = [];
   for (let i = 0; i < days; i++) {
     const date = addDays(first, i);
     const dayStart = startOfDay(date).getTime();
@@ -89,6 +91,74 @@ export function groupByDay(events: CalendarEvent[], first: CalendarDate, days: n
         a.title.localeCompare(b.title),
     );
     result.push({ date, key: dayKey(date), events: onDay });
+  }
+  return result;
+}
+
+export type MemberCalendars = { memberId: string; calendarIds: readonly string[] };
+
+/** What fetching one calendar gave: its raw Google items, or a failure. */
+export type CalendarFetch = { ok: true; items: readonly unknown[] } | { ok: false };
+
+/** Every calendar id once, in first-seen order (a calendar shared by two kids is fetched once). */
+export function distinctCalendarIds(members: readonly MemberCalendars[]): string[] {
+  return [...new Set(members.flatMap((m) => m.calendarIds).filter((id) => id !== ""))];
+}
+
+/**
+ * Each member's events from the fetched calendars: the member gets every event of all their calendars (a shared
+ * calendar gives the same event to each member it belongs to), deduped per member by calendar and event id, and
+ * by event id alone across that member's calendars. A member is in `failedMemberIds` when any of their calendars failed.
+ */
+export function assembleEvents(
+  members: readonly MemberCalendars[],
+  fetched: ReadonlyMap<string, CalendarFetch>,
+  untitled: string,
+): { events: CalendarEvent[]; failedMemberIds: string[] } {
+  const events: CalendarEvent[] = [];
+  const failedMemberIds: string[] = [];
+  for (const member of members) {
+    const seen = new Set<string>();
+    let failed = false;
+    for (const calendarId of new Set(member.calendarIds)) {
+      const result = fetched.get(calendarId);
+      if (!result || !result.ok) {
+        failed = true;
+        continue;
+      }
+      for (const raw of result.items) {
+        const event = normalizeGoogleEvent(raw, member.memberId, untitled);
+        if (!event || seen.has(event.id)) continue;
+        seen.add(event.id);
+        events.push({ ...event, calendarId });
+      }
+    }
+    if (failed) failedMemberIds.push(member.memberId);
+  }
+  return { events, failedMemberIds };
+}
+
+/** An event for one or more members: `memberIds` lists everyone it applies to (first = `memberId`). */
+export type SharedEvent = CalendarEvent & { memberIds: string[] };
+
+/**
+ * Folds the per-member copies of one event (same calendar and event id: a shared calendar) into a single entry
+ * that lists all its members, for lists that mix members. Order follows the first copy. Events without a
+ * calendar id are never merged.
+ */
+export function mergeSharedEvents(events: readonly CalendarEvent[]): SharedEvent[] {
+  const byKey = new Map<string, SharedEvent>();
+  const result: SharedEvent[] = [];
+  for (const event of events) {
+    const key = event.calendarId === undefined ? null : `${event.calendarId}\n${event.id}`;
+    const existing = key === null ? undefined : byKey.get(key);
+    if (existing) {
+      if (!existing.memberIds.includes(event.memberId)) existing.memberIds.push(event.memberId);
+      continue;
+    }
+    const shared: SharedEvent = { ...event, memberIds: [event.memberId] };
+    if (key !== null) byKey.set(key, shared);
+    result.push(shared);
   }
   return result;
 }

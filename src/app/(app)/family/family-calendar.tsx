@@ -32,7 +32,7 @@ export function FamilyCalendar({
       return next;
     });
 
-  const filtered = days.map((day) => ({ ...day, events: day.events.filter((e) => !hidden.has(e.memberId)) }));
+  const filtered = days.map((day) => ({ ...day, events: day.events.filter((e) => (e.memberIds ?? [e.memberId]).some((id) => !hidden.has(id))) }));
   const visibleDays = hideEmptyDays ? withoutEmptyDays(filtered, (day) => day.events.length === 0) : filtered;
 
   return (

@@ -4,7 +4,7 @@ import { t } from "../i18n";
 import { filterByAudience, formatWeekday, mergeEntries, schoolEventEntry, type AudienceView, type EventEntry } from "../plan-view";
 import type { Member } from "../members";
 import { loadSchoolEvents } from "../school";
-import { groupByDay, type CalendarEvent } from "./events";
+import { groupByDay, mergeSharedEvents, type CalendarEvent } from "./events";
 import { getEvents } from "./google";
 
 // Server-side view models for calendar screens. Times are formatted here so server and browser
@@ -74,7 +74,7 @@ export async function loadWeek(
   const monday = addDays(mondayOf(today), weekOffset * 7);
   const [{ events, failedMemberIds }, planEvents] = await Promise.all([
     getEvents(
-      members.map((m) => ({ memberId: m.id, calendarId: m.calendar_id })),
+      members.map((m) => ({ memberId: m.id, calendarIds: m.calendar_ids })),
       startOfDay(monday),
       startOfDay(addDays(monday, 7)),
     ),
@@ -84,7 +84,7 @@ export async function loadWeek(
   ]);
   const schoolItems = schoolEvents ? filterByAudience(planEvents, schoolEvents.view) : [];
   const todayKey = dayKey(today);
-  const days = groupByDay(events, monday, 7).map(({ date, key, events: dayEvents }) => {
+  const days = groupByDay(mergeSharedEvents(events), monday, 7).map(({ date, key, events: dayEvents }) => {
     const dayStart = startOfDay(date).getTime();
     const dayEnd = startOfDay(addDays(date, 1)).getTime();
     return {
@@ -95,6 +95,7 @@ export async function loadWeek(
         dayEvents.map((e) => ({
           id: `${e.memberId}:${e.id}`,
           memberId: e.memberId,
+          ...(e.memberIds.length > 1 ? { memberIds: e.memberIds } : {}),
           title: e.title,
           timeLabel: timeLabel(e, dayStart, dayEnd),
           sortKey: sortKey(e, dayStart),

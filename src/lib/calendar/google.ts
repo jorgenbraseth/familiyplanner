@@ -3,7 +3,13 @@ import { JWT } from "google-auth-library";
 import { unstable_cache } from "next/cache";
 import { z } from "zod";
 import { t } from "../i18n";
-import { googleEventsResponseSchema, normalizeGoogleEvent, type CalendarEvent } from "./events";
+import {
+  assembleEvents,
+  distinctCalendarIds,
+  googleEventsResponseSchema,
+  type CalendarEvent,
+  type CalendarFetch,
+} from "./events";
 
 // Reads members' calendars with the service account they shared them with (docs/SETUP.md 3B).
 
@@ -65,29 +71,27 @@ async function fetchEvents(calendarId: string, timeMin: string, timeMax: string)
 // Cached ~5 minutes per calendar and range. Errors aren't cached (they throw).
 const cachedEvents = unstable_cache(fetchEvents, ["google-calendar-events"], { revalidate: 300 });
 
-export type MemberCalendar = { memberId: string; calendarId: string | null };
+export type MemberCalendar = { memberId: string; calendarIds: readonly string[] };
 export type CalendarResult = { events: CalendarEvent[]; failedMemberIds: string[] };
 
-/** Events for each member's calendar between two instants. A failing calendar doesn't fail the rest. */
+/**
+ * Events for each member's calendars between two instants. Each distinct calendar is fetched once (a calendar
+ * shared by two kids gives both the event), a failing calendar doesn't fail the rest, and a member whose calendar
+ * failed is in `failedMemberIds` (their other calendars' events are still returned).
+ */
 export async function getEvents(members: MemberCalendar[], from: Date, to: Date): Promise<CalendarResult> {
-  const withCalendar = members.filter((m): m is { memberId: string; calendarId: string } => !!m.calendarId);
-  const results = await Promise.allSettled(
-    withCalendar.map((m) => cachedEvents(m.calendarId, from.toISOString(), to.toISOString())),
-  );
+  const ids = distinctCalendarIds(members);
+  const results = await Promise.allSettled(ids.map((id) => cachedEvents(id, from.toISOString(), to.toISOString())));
 
-  const events: CalendarEvent[] = [];
-  const failedMemberIds: string[] = [];
+  const fetched = new Map<string, CalendarFetch>();
   results.forEach((result, i) => {
-    const { memberId } = withCalendar[i];
-    if (result.status === "rejected") {
-      console.error(`Calendar for member ${memberId} failed:`, result.reason instanceof Error ? result.reason.message : "unknown error");
-      failedMemberIds.push(memberId);
-      return;
-    }
-    for (const raw of result.value) {
-      const event = normalizeGoogleEvent(raw, memberId, t.calendar.untitled);
-      if (event) events.push(event);
+    if (result.status === "fulfilled") {
+      fetched.set(ids[i], { ok: true, items: result.value });
+    } else {
+      // Don't log the calendar id: it can contain personal data.
+      console.error(`Calendar ${i + 1} of ${ids.length} failed:`, result.reason instanceof Error ? result.reason.message : "unknown error");
+      fetched.set(ids[i], { ok: false });
     }
   });
-  return { events, failedMemberIds };
+  return assembleEvents(members, fetched, t.calendar.untitled);
 }

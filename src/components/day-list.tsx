@@ -20,15 +20,17 @@ export function DayList({ days, members }: { days: DayView[]; members?: MemberDo
           ) : (
             <ul className="card divide-y-2 divide-line overflow-hidden">
               {day.events.map((event) => {
-                const member = byId.get(event.memberId);
+                const people = (event.memberIds ?? [event.memberId])
+                  .map((id) => byId.get(id))
+                  .filter((m): m is MemberDot => m !== undefined);
                 return (
                   <li key={event.id} className="flex items-start gap-3 px-3 py-2">
-                    {member && (
-                      <span
-                        aria-hidden
-                        className="mt-1.5 size-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: member.colour }}
-                      />
+                    {people.length > 0 && (
+                      <span aria-hidden className="mt-1.5 flex shrink-0 gap-0.5">
+                        {people.map((m) => (
+                          <span key={m.id} className="size-2.5 rounded-full" style={{ backgroundColor: m.colour }} />
+                        ))}
+                      </span>
                     )}
                     <span className="w-24 shrink-0 text-sm tabular-nums text-muted">
                       {event.timeLabel}
@@ -42,9 +44,9 @@ export function DayList({ days, members }: { days: DayView[]; members?: MemberDo
                           </span>
                         )}
                       </span>
-                      {(member || event.location) && (
+                      {(people.length > 0 || event.location) && (
                         <span className="block truncate text-xs text-muted">
-                          {[member?.name, event.location].filter(Boolean).join(" · ")}
+                          {[people.length > 0 ? t.calendar.people(people.map((m) => m.name)) : null, event.location].filter(Boolean).join(" · ")}
                         </span>
                       )}
                     </span>

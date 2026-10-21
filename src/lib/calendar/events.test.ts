@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { groupByDay, normalizeGoogleEvent, type CalendarEvent } from "./events";
+import {
+  assembleEvents,
+  distinctCalendarIds,
+  groupByDay,
+  mergeSharedEvents,
+  normalizeGoogleEvent,
+  type CalendarEvent,
+  type CalendarFetch,
+} from "./events";
 
 describe("normalizeGoogleEvent", () => {
   it("normalizes a timed event", () => {
@@ -92,5 +100,104 @@ describe("groupByDay", () => {
   it("keeps zero-length events", () => {
     const days = groupByDay([event("reminder", "2026-10-19T08:00:00.000Z", "2026-10-19T08:00:00.000Z")], monday, 1);
     expect(days[0].events).toHaveLength(1);
+  });
+});
+
+const gEvent = (id: string, summary = id) => ({
+  id,
+  summary,
+  start: { dateTime: "2026-10-21T17:00:00+02:00" },
+  end: { dateTime: "2026-10-21T18:00:00+02:00" },
+});
+
+describe("distinctCalendarIds", () => {
+  it("lists a shared calendar once", () => {
+    expect(
+      distinctCalendarIds([
+        { memberId: "a", calendarIds: ["a@x", "both@x"] },
+        { memberId: "b", calendarIds: ["b@x", "both@x"] },
+        { memberId: "c", calendarIds: [] },
+      ]),
+    ).toEqual(["a@x", "both@x", "b@x"]);
+  });
+});
+
+describe("assembleEvents", () => {
+  const members = [
+    { memberId: "a", calendarIds: ["a@x", "both@x"] },
+    { memberId: "b", calendarIds: ["b@x", "both@x"] },
+  ];
+  const fetched = (entries: Record<string, CalendarFetch>) => new Map(Object.entries(entries));
+
+  it("gives each member their own calendars plus the shared one", () => {
+    const { events, failedMemberIds } = assembleEvents(
+      members,
+      fetched({
+        "a@x": { ok: true, items: [gEvent("a1")] },
+        "b@x": { ok: true, items: [gEvent("b1")] },
+        "both@x": { ok: true, items: [gEvent("s1", "Foreldremøte")] },
+      }),
+      "Uten tittel",
+    );
+    expect(failedMemberIds).toEqual([]);
+    expect(events.map((e) => `${e.memberId}:${e.id}`)).toEqual(["a:a1", "a:s1", "b:b1", "b:s1"]);
+    expect(events.find((e) => e.id === "s1")?.calendarId).toBe("both@x");
+  });
+
+  it("dedupes an event id that is on two of one member's calendars", () => {
+    const { events } = assembleEvents(
+      [{ memberId: "a", calendarIds: ["a@x", "both@x"] }],
+      fetched({ "a@x": { ok: true, items: [gEvent("same")] }, "both@x": { ok: true, items: [gEvent("same")] } }),
+      "Uten tittel",
+    );
+    expect(events).toHaveLength(1);
+  });
+
+  it("names every member of a failed calendar and keeps the working calendars' events", () => {
+    const { events, failedMemberIds } = assembleEvents(
+      members,
+      fetched({
+        "a@x": { ok: true, items: [gEvent("a1")] },
+        "b@x": { ok: true, items: [gEvent("b1")] },
+        "both@x": { ok: false },
+      }),
+      "Uten tittel",
+    );
+    expect(failedMemberIds).toEqual(["a", "b"]);
+    expect(events.map((e) => e.id)).toEqual(["a1", "b1"]);
+  });
+
+  it("reports only the member whose own calendar failed", () => {
+    const { failedMemberIds } = assembleEvents(
+      members,
+      fetched({ "a@x": { ok: false }, "b@x": { ok: true, items: [] }, "both@x": { ok: true, items: [] } }),
+      "Uten tittel",
+    );
+    expect(failedMemberIds).toEqual(["a"]);
+  });
+});
+
+describe("mergeSharedEvents", () => {
+  const ev = (memberId: string, id: string, calendarId?: string): CalendarEvent => ({
+    id,
+    memberId,
+    calendarId,
+    title: id,
+    start: "2026-10-21T15:00:00.000Z",
+    end: "2026-10-21T16:00:00.000Z",
+    allDay: false,
+  });
+
+  it("shows an event of a shared calendar once with all its members", () => {
+    const merged = mergeSharedEvents([ev("a", "s1", "both@x"), ev("a", "a1", "a@x"), ev("b", "s1", "both@x")]);
+    expect(merged.map((e) => [e.id, e.memberIds])).toEqual([
+      ["s1", ["a", "b"]],
+      ["a1", ["a"]],
+    ]);
+  });
+
+  it("keeps the same event id on different calendars apart, and events without a calendar id", () => {
+    expect(mergeSharedEvents([ev("a", "x", "a@x"), ev("b", "x", "b@x")])).toHaveLength(2);
+    expect(mergeSharedEvents([ev("a", "x"), ev("b", "x")])).toHaveLength(2);
   });
 });

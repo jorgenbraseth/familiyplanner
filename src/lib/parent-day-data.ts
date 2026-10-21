@@ -35,7 +35,7 @@ export async function loadParentDay(
   const members = [parent, ...children];
   const failed = new Set<string>();
 
-  const calendars = getEvents(members.map((m) => ({ memberId: m.id, calendarId: m.calendar_id })), dayStart, dayEnd)
+  const calendars = getEvents(members.map((m) => ({ memberId: m.id, calendarIds: m.calendar_ids })), dayStart, dayEnd)
     .then((r) => {
       r.failedMemberIds.forEach((id) => failed.add(id));
       return r.events as DayCalendarEvent[];

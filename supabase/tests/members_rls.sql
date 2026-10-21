@@ -155,6 +155,52 @@ begin
   end;
 end $$;
 
+
+-- 6. calendar_ids (member_calendars migration): constraint, and a child cannot change them.
+do $$
+declare n int;
+begin
+  begin
+    insert into public.members (name, email, role, calendar_ids) values ('Many', 'many@example.com', 'child', array_fill('x'::text, array[11]));
+    raise exception 'eleven calendars accepted';
+  exception when check_violation then null;
+  end;
+  begin
+    insert into public.members (name, email, role, calendar_ids) values ('Blank', 'blank@example.com', 'child', array['']);
+    raise exception 'blank calendar id accepted';
+  exception when check_violation then null;
+  end;
+  begin
+    insert into public.members (name, email, role, calendar_ids) values ('Long', 'long@example.com', 'child', array[repeat('a', 201)]);
+    raise exception 'too long calendar id accepted';
+  exception when check_violation then null;
+  end;
+  begin
+    insert into public.members (name, email, role, calendar_ids) values ('Padded', 'padded@example.com', 'child', array[' a ']);
+    raise exception 'padded calendar id accepted';
+  exception when check_violation then null;
+  end;
+  insert into public.members (name, email, role, calendar_ids)
+    values ('Two', 'two@example.com', 'child', array['kid@example.com', 'shared@example.com']);
+
+  select cardinality(calendar_ids) into n from public.members where email = 'test.child@example.com';
+  if n <> 0 then raise exception 'default calendar_ids not empty'; end if;
+
+  perform pg_temp.act_as('test.child@example.com', 'authenticated');
+  begin
+    update public.members set calendar_ids = array['mine@example.com'] where email = 'test.child@example.com';
+    raise exception 'child changed their own calendar_ids';
+  exception when insufficient_privilege then null;
+  end;
+  perform pg_temp.done();
+
+  perform pg_temp.act_as('jorgen.braseth@gmail.com', 'authenticated');
+  update public.members set calendar_ids = array['kid@example.com', 'shared@example.com'] where email = 'test.child@example.com';
+  get diagnostics n = row_count;
+  if n <> 1 then raise exception 'parent could not set calendar_ids'; end if;
+  perform pg_temp.done();
+end $$;
+
 rollback;
 
 \echo members_rls: all checks passed

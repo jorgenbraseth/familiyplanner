@@ -8,7 +8,9 @@ import {
   resolveTargets,
   shapePlanItems,
   shapeSchoolDays,
+  splitSharedCalendarEvents,
 } from "./shape";
+import type { CalendarEvent } from "../calendar/events";
 
 const members = [
   { id: "1", name: "Mia" },
@@ -181,5 +183,51 @@ describe("filterSchoolDaysBySubject", () => {
   it("returns everything without a subject", () => {
     expect(filterSchoolDaysBySubject(days, null)).toEqual(days);
     expect(filterSchoolDaysBySubject(days, "")).toEqual(days);
+  });
+});
+
+describe("splitSharedCalendarEvents", () => {
+  const kids = [
+    { id: "m", name: "Mia" },
+    { id: "e", name: "Emil" },
+  ];
+  const ev = (memberId: string, id: string, calendarId: string, start: string): CalendarEvent => ({
+    id,
+    memberId,
+    calendarId,
+    title: id,
+    start,
+    end: start,
+    allDay: false,
+  });
+
+  it("lists a shared event once, under the first member, naming the others", () => {
+    const split = splitSharedCalendarEvents(
+      [
+        ev("m", "mia-own", "m@x", "2026-10-21T16:00:00.000Z"),
+        ev("m", "shared", "both@x", "2026-10-21T15:00:00.000Z"),
+        ev("e", "shared", "both@x", "2026-10-21T15:00:00.000Z"),
+        ev("e", "emil-own", "e@x", "2026-10-21T14:00:00.000Z"),
+      ],
+      kids,
+    );
+    const mia = split.get("m")!;
+    const emil = split.get("e")!;
+    expect(mia.events.map((e) => [e.id, e.sharedWith])).toEqual([
+      ["shared", ["Emil"]],
+      ["mia-own", []],
+    ]);
+    expect(mia.sharedListedUnder).toEqual([]);
+    expect(emil.events.map((e) => e.id)).toEqual(["emil-own"]);
+    expect(emil.sharedListedUnder).toEqual(["Mia"]);
+  });
+
+  it("does not merge the same event id from different calendars", () => {
+    const split = splitSharedCalendarEvents(
+      [ev("m", "x", "m@x", "2026-10-21T15:00:00.000Z"), ev("e", "x", "e@x", "2026-10-21T15:00:00.000Z")],
+      kids,
+    );
+    expect(split.get("m")!.events).toHaveLength(1);
+    expect(split.get("e")!.events).toHaveLength(1);
   });
 });

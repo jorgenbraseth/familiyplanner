@@ -46,3 +46,9 @@ jobs:
           bash supabase/tests/migration_tasks_without_tracks.sh
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/migration_check
+      - name: Data conversion of the member-calendars migration
+        run: |
+          psql "postgresql://postgres:postgres@localhost:5432/postgres" -c "create database migration_check2"
+          bash supabase/tests/migration_member_calendars.sh
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/migration_check2
