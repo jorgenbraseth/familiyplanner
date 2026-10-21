@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useSyncExternalStore, type CSSProperties } from "react";
+import { useMemo, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { buildTracksFromEntries } from "@/lib/parent-day";
 import type { ParentDay } from "@/lib/parent-day-data";
 import { t } from "@/lib/i18n";
@@ -35,7 +35,7 @@ const readSaved = (): string => {
   }
 };
 
-export function ParentDayCard({ day }: { day: ParentDay }) {
+export function ParentDayCard({ day, isToday, switcher }: { day: ParentDay; isToday: boolean; switcher: ReactNode }) {
   // Everyone is visible on the server and first paint; the saved selection is read after hydration.
   const saved = useSyncExternalStore(subscribe, readSaved, () => "");
   const hidden = useMemo(() => {
@@ -80,7 +80,8 @@ export function ParentDayCard({ day }: { day: ParentDay }) {
 
   return (
     <section className="card space-y-3 p-4" aria-labelledby="day-title">
-      <h2 id="day-title" className="text-xl font-extrabold">{t.parentDay.title}</h2>
+      <h2 id="day-title" className="text-xl font-extrabold">{isToday ? t.parentDay.title : t.parentDay.titleOtherDay}</h2>
+      {switcher}
       {day.failedNames.length > 0 && <p className="text-sm text-muted">{t.parentDay.failed(day.failedNames.join(", "))}</p>}
       {day.members.length > 1 && (
         <div role="group" aria-label={t.parentDay.people} className="flex flex-wrap gap-2">
@@ -106,7 +107,7 @@ export function ParentDayCard({ day }: { day: ParentDay }) {
         </div>
       )}
       {tracks.empty ? (
-        <p className="text-base text-muted">{t.parentDay.empty}</p>
+        <p className="text-base text-muted">{isToday ? t.parentDay.empty : t.parentDay.emptyOtherDay}</p>
       ) : (
         <div className="isolate overflow-x-auto">
           <div className="grid gap-x-1" style={style}>
