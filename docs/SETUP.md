@@ -58,6 +58,7 @@ The consent screen now lives in **Google Auth Platform** (menu → APIs & Servic
 3. Open it → **Keys → Add key → JSON.** Download the file.
 4. Base64-encode it into one line and store it as `GOOGLE_SERVICE_ACCOUNT_KEY`:
    - macOS/Linux: `base64 -i key.json | tr -d '\n'`
+   - Windows (PowerShell, in the folder with the file): `[Convert]::ToBase64String([IO.File]::ReadAllBytes("$PWD\key.json")) | Set-Clipboard` (copies the result to the clipboard)
    Then delete the downloaded file.
 5. Note the service account's email (`calendar-reader@<project>.iam.gserviceaccount.com`).
 6. **Each family member** (or you, for the kids' accounts): Google Calendar → the calendar's **Settings and sharing → Share with specific people → add the service account email → "See all event details".**
