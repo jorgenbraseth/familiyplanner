@@ -4,10 +4,10 @@ Private family web app at https://planner.braseth.family. Read `docs/PLAN.md` (w
 
 ## Current status
 
-Phase 0 scaffold is in the repo; the Vercel project, env vars and the `planner.braseth.family` domain are set up by hand (docs/SETUP.md). Phase 1 code is written (members migration + RLS tests, Google login + allowlist, members admin, calendar views); it is done once the owner has signed in on their phone and sees the calendars. Extra features in PLAN.md are out of scope until phases 1–4 are done.
+Phase 0 scaffold is in the repo; the Vercel project, env vars and the `planner.braseth.family` domain are set up by hand (docs/SETUP.md). Phase 1 is live (Google login + allowlist, members admin, calendar views). Next step: **Phase 2**. Extra features in PLAN.md are out of scope until phases 1–4 are done.
 
 - [x] Phase 0 – Setup (Next.js + TS + Tailwind, Supabase SSR client, migrations folder, `.env.example`, Vercel config, CI). Owner still to do: Vercel project + domain (docs/SETUP.md §5–6)
-- [ ] Phase 1 – Google login + allowlist, members admin, calendars (code written; waiting on migration deploy + sign-in test)
+- [x] Phase 1 – Google login + allowlist, members admin, calendars
 - [ ] Phase 2 – Document upload, Claude extraction, parent review, child Today/Week
 - [ ] Phase 3 – Star tracks, approvals, rewards, web push, PWA
 - [ ] Phase 4 – Voice assistant (`/api/assistant`, tools, speech in/out, limits, log)
