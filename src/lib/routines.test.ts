@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { currentSlot, routineProgress } from "./routines";
+import { currentSlot, routineCollapsed, routineProgress } from "./routines";
 
 describe("currentSlot", () => {
   // 2026-10-21 is CEST (UTC+2); 2026-01-14 is CET (UTC+1).
@@ -59,5 +59,14 @@ describe("routineProgress", () => {
 
   it("an empty routine is never complete", () => {
     expect(routineProgress([], [])).toEqual({ done: 0, total: 0, complete: false });
+  });
+});
+
+describe("routineCollapsed", () => {
+  it("folds up only a finished routine that is not opened", () => {
+    expect(routineCollapsed(true, false)).toBe(true);
+    expect(routineCollapsed(true, true)).toBe(false);
+    expect(routineCollapsed(false, false)).toBe(false);
+    expect(routineCollapsed(false, true)).toBe(false);
   });
 });

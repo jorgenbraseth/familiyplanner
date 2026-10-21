@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react";
 import { toggleRoutineCheck } from "@/app/(app)/routine-actions";
 import { t } from "@/lib/i18n";
-import type { RoutineSlot } from "@/lib/routines";
+import { routineCollapsed, type RoutineSlot } from "@/lib/routines";
 
 /**
  * Morgenstell / Kveldstell: big tap chips. Ticking updates at once and reverts if saving fails.
- * Ticking the last one sends the star request (server side) and shows a small celebration.
+ * Ticking the last one sends the star request (server side). A finished routine collapses to one
+ * message (also on first render); "Vis" opens it again, and unticking an item reopens it by itself.
  */
 export function RoutineBar({
   slot,
@@ -28,16 +29,20 @@ export function RoutineBar({
 }) {
   const [checked, setChecked] = useState(() => new Set(initialChecked));
   const [failed, setFailed] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [, startTransition] = useTransition();
 
   const total = items.length;
   const done = items.filter((i) => checked.has(i.id)).length;
   const complete = total > 0 && done === total;
+  const collapsed = routineCollapsed(complete, expanded);
 
   function toggle(id: string) {
     if (readOnly) return;
     const next = !checked.has(id);
     setFailed(false);
+    // A routine that is finished again later should fold up again, not stay open.
+    if (!next) setExpanded(false);
     setChecked((prev) => {
       const copy = new Set(prev);
       if (next) copy.add(id);
@@ -74,7 +79,18 @@ export function RoutineBar({
             </span>
           )}
         </h2>
-        {total > 0 && (
+        {complete && (
+          <button
+            type="button"
+            aria-expanded={!collapsed}
+            aria-controls="routine-list"
+            onClick={() => setExpanded(!expanded)}
+            className="min-h-11 rounded-full border-2 border-line bg-surface px-4 text-base font-bold text-ink hover:bg-chip"
+          >
+            {collapsed ? t.routines.show : t.routines.hide}
+          </button>
+        )}
+        {total > 0 && !complete && (
           <span className="text-lg font-extrabold text-muted" aria-live="polite">
             {t.routines.progress(done, total)}
           </span>
@@ -87,7 +103,15 @@ export function RoutineBar({
           <p className="text-base text-muted">{t.routines.emptyHint}</p>
         </div>
       ) : (
-        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          id="routine-list"
+          aria-hidden={collapsed}
+          inert={collapsed}
+          className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${
+            collapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"
+          }`}
+        >
+        <ul className="grid min-h-0 grid-cols-1 gap-2 overflow-hidden sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => {
             const on = checked.has(item.id);
             return (
@@ -119,11 +143,15 @@ export function RoutineBar({
             );
           })}
         </ul>
+        </div>
       )}
 
       {complete && (
         <p role="status" className="rounded-2xl bg-warning-soft p-3 text-center text-xl font-extrabold text-on-warning-soft">
-          {hasStarTask ? t.routines.doneWithStar : t.routines.done}
+          {collapsed ? t.routines.doneCollapsed(slot) : hasStarTask ? t.routines.doneWithStar : t.routines.done}
+          {collapsed && hasStarTask && (
+            <span className="mt-1 block text-base font-semibold">{t.routines.starSent}</span>
+          )}
         </p>
       )}
       {failed && (

@@ -40,6 +40,7 @@ const UKEPLAN_PROMPT = `You read Norwegian school week plans ("ukeplan") and tur
 
 Item kinds:
 - homework: work to do or prepare (lekser, innleveringer, øving, "til tirsdag", tests to study for). Its date is the day it is DUE. If it is listed per weekday as "til tirsdag" (or similar), use that day. If it is for the whole week ("lekser denne uken", "ukas lekser", "ukelekse") or names no day, set date to null.
+  Homework or tasks that apply EVERY DAY ("hver dag", "daglig", "alle dager", "hver skoledag", "hjemme hver dag", "kvar dag" in nynorsk, "every day" and similar, e.g. "les 10 minutter hver dag") must NOT be one whole-week item. Emit one separate homework item per school day of the week, Monday to Friday, each with that day's date from the weekday-to-date table and the same subject and text. Skip a day only when the plan says it is free or has no school. Week-level homework that is not daily ("les en bok denne uka", "innen fredag") stays a single item as described above.
 - event: an important event in the week (tur, prøve, temadag, skolefotografering, foreldremøte, svømming). Give the day as date, or null if it spans the week. Set starts_at/ends_at only when the document gives times.
 - message: an important message or something to remember that week, including things to bring (gymtøy, matpakke, skiutstyr, "husk ...", informasjon fra læreren). Give the day as date when it is day-specific, otherwise null (whole week).
 

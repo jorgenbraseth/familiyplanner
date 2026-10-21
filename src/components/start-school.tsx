@@ -1,6 +1,6 @@
-import { SchoolEventLines, SchoolHeading, SchoolLines, SchoolPeriods } from "@/components/school-items";
+import { SchoolEventLines, SchoolHeading, SchoolLines, SchoolTimeline } from "@/components/school-items";
 import { t } from "@/lib/i18n";
-import { formatSchoolHours, type EventEntry, type TodayView } from "@/lib/plan-view";
+import { formatSchoolHours, periodTimeline, type EventEntry, type TodayView } from "@/lib/plan-view";
 
 /**
  * "Skoledagen": today's school hours and periods from the timetable, today's messages ("Husk") and today's
@@ -21,7 +21,7 @@ export function StartSchool({ view, events }: { view: TodayView; events: EventEn
         </p>
       </div>
 
-      {hasSchool && (view.periods.length === 0 ? <p className="text-base text-muted">{t.start.noLessons}</p> : <SchoolPeriods periods={view.periods} />)}
+      {hasSchool && (view.periods.length === 0 ? <p className="text-base text-muted">{t.start.noLessons}</p> : <SchoolTimeline entries={periodTimeline(view.periods, view.hours)} />)}
 
       {view.messages.length > 0 && (
         <div>

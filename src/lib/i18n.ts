@@ -350,6 +350,7 @@ export const t = {
     noSchool: "Ingen skole i dag",
     schoolHours: (hours: string) => `Skolen ${hours}`,
     noLessons: "Ingen timer på planen.",
+    breakBetween: (from: string, to: string) => `${from} · friminutt · ${to}`,
     calendarTitle: "Avtaler i dag",
     noEvents: "Ingen avtaler i dag.",
     homework: "Lekser",
@@ -363,6 +364,9 @@ export const t = {
   // Parents' home page (replaces the parents' Meg page).
   parentHome: {
     giveTitle: "Gi stjerne",
+    giveButton: "Gi stjerner",
+    giveDialogTitle: (name: string) => `Gi stjerner til ${name}`,
+    close: "Lukk",
     noTasks: "Ingen oppgaver ennå.",
     other: "Noe annet …",
     newTrack: "Lag stjernebane",
@@ -396,6 +400,10 @@ export const t = {
     checkLabel: (name: string) => `Merk som gjort: ${name}`,
     doneWithStar: "Ferdig! Stjerne sendt til godkjenning ⭐",
     done: "Ferdig! 🎉",
+    doneCollapsed: (slot: "morning" | "evening") => `${slot === "morning" ? "Morgenstell" : "Kveldstell"} er ferdig! ⭐`,
+    starSent: "Stjerne er sendt til godkjenning",
+    show: "Vis",
+    hide: "Skjul",
     saveFailed: "Klarte ikke å lagre. Prøv igjen.",
     pushTitle: "Rutine ferdig",
     pushBody: (name: string, slot: "morning" | "evening") =>

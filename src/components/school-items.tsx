@@ -1,6 +1,6 @@
 import { t } from "@/lib/i18n";
 import type { PlanItemRow } from "@/lib/plan";
-import type { EventEntry, PeriodLine } from "@/lib/plan-view";
+import type { EventEntry, PeriodLine, PeriodTimelineEntry } from "@/lib/plan-view";
 import { SchoolDoneCheckbox } from "./school-done-checkbox";
 
 export function SchoolHeading({ children }: { children: React.ReactNode }) {
@@ -65,6 +65,38 @@ export function SchoolPeriods({ periods }: { periods: PeriodLine[] }) {
       ))}
     </ol>
   );
+}
+
+/** The kids' school day: period cards with the times as slim dividers between them (see `periodTimeline`). */
+export function SchoolTimeline({ entries }: { entries: PeriodTimelineEntry[] }) {
+  return (
+    <ol className="space-y-1">
+      {entries.map((entry, i) =>
+        entry.type === "divider" ? (
+          <li key={`d${i}`} className="flex items-center gap-2 text-sm font-bold text-muted" aria-label={dividerText(entry)}>
+            <span aria-hidden className="h-0.5 flex-1 bg-line" />
+            <span aria-hidden>{dividerText(entry)}</span>
+            <span aria-hidden className="h-0.5 flex-1 bg-line" />
+          </li>
+        ) : (
+          <li key={entry.line.id} className="card flex min-h-12 items-center gap-3 px-3 py-2 text-lg">
+            <span
+              aria-hidden
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-chip text-base font-extrabold text-chip-ink"
+            >
+              {entry.line.period ?? "·"}
+            </span>
+            <span className="min-w-0 flex-1 break-words font-semibold">{entry.line.title}</span>
+          </li>
+        ),
+      )}
+    </ol>
+  );
+}
+
+function dividerText(entry: Extract<PeriodTimelineEntry, { type: "divider" }>): string {
+  const d = entry.divider;
+  return d.kind === "time" ? d.time : t.start.breakBetween(d.from, d.to);
 }
 
 /** Calendar-like lines (Google events and school events, in time order); school events get a small "Skole" label. */
