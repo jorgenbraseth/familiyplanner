@@ -543,6 +543,18 @@ export const t = {
     planPublishedTitle: "Ny ukeplan",
     planPublishedBody: (week: number) => `Ukeplanen for uke ${week} er klar.`,
   },
+  avatar: {
+    mine: "Ditt bilde",
+    change: "Endre bilde",
+    remove: "Fjern bilde",
+    saving: "Lagrer …",
+    saved: "Bildet er lagret.",
+    errors: {
+      upload: "Kunne ikke laste opp bildet. Prøv et annet bilde.",
+      notAllowed: "Du har ikke lov til å endre dette bildet.",
+      failed: "Noe gikk galt. Prøv igjen.",
+    },
+  },
   members: {
     title: "Medlemmer",
     add: "Legg til medlem",

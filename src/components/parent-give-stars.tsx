@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useOptimistic, useRef, useState, useTransition } from "react";
 import { giveStar } from "@/app/(app)/stars/actions";
+import { MemberAvatar } from "@/components/member-avatar";
 import { ModalSheet } from "@/components/modal-sheet";
 import { GiveStarForm } from "@/app/(app)/stars/give-star-form";
 import { t } from "@/lib/i18n";
@@ -16,7 +17,7 @@ export function ParentGiveStars({
   child,
   track,
 }: {
-  child: { id: string; name: string; colour: string };
+  child: { id: string; name: string; colour: string; avatarUrl?: string | null };
   /** The child's active track, or null when there is none. */
   track: { id: string; approved: number; goal: number; tasks: StarTaskRow[] } | null;
 }) {
@@ -51,7 +52,7 @@ export function ParentGiveStars({
     <li className="space-y-3 py-3 first:pt-0 last:pb-0">
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="flex min-w-0 items-center gap-2 text-lg font-extrabold">
-          <span aria-hidden className="size-3.5 shrink-0 rounded-full" style={{ backgroundColor: child.colour }} />
+          <MemberAvatar colour={child.colour} url={child.avatarUrl} size={32} />
           <span className="truncate">{child.name}</span>
         </h3>
         {track && <span className="shrink-0 text-sm font-bold text-muted">{t.stars.starCount(approved, track.goal)}</span>}

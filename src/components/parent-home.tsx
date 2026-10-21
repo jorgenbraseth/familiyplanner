@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { decideStar } from "@/app/(app)/stars/actions";
+import { MemberAvatar } from "@/components/member-avatar";
 import { ParentGiveStars } from "@/components/parent-give-stars";
 import { dateInTimeZone, formatDayHeading, isoWeekOf, parseDayKey } from "@/lib/dates";
 import { t } from "@/lib/i18n";
@@ -9,12 +10,14 @@ import { formatSchoolHours, formatWeekday } from "@/lib/plan-view";
 
 const cardTitle = "text-xl font-extrabold";
 
-function Dot({ colour }: { colour: string }) {
-  return <span aria-hidden className="size-3.5 shrink-0 rounded-full" style={{ backgroundColor: colour }} />;
+type Avatars = Record<string, string>;
+
+function Dot({ colour, url }: { colour: string; url?: string }) {
+  return <MemberAvatar colour={colour} url={url} size={url ? 28 : 14} />;
 }
 
 /** The parents' home cards for the children: give stars, pending approvals, upload, homework, notes. */
-export function ParentHomeCards({ data }: { data: ParentHome }) {
+export function ParentHomeCards({ data, avatars = {} }: { data: ParentHome; avatars?: Avatars }) {
   const { children, uploadWeek } = data;
   if (children.length === 0) return <p className="card p-4 text-muted">{t.parentHome.noChildren}</p>;
   const pending = children.flatMap((c) => c.pending.map((star) => ({ star, child: c.child })));
@@ -30,7 +33,7 @@ export function ParentHomeCards({ data }: { data: ParentHome }) {
           {children.map(({ child, stars }) => (
             <ParentGiveStars
               key={child.id}
-              child={{ id: child.id, name: child.name, colour: child.colour }}
+              child={{ id: child.id, name: child.name, colour: child.colour, avatarUrl: avatars[child.id] ?? null }}
               track={
                 stars ? { id: stars.track.id, approved: stars.progress.approved, goal: stars.progress.goal, tasks: stars.tasks } : null
               }
@@ -53,7 +56,7 @@ export function ParentHomeCards({ data }: { data: ParentHome }) {
             {pending.map(({ star, child }) => (
               <li key={star.id} className="space-y-2 rounded-xl bg-surface p-3">
                 <p className="flex items-start gap-2 break-words text-base font-bold">
-                  <span className="mt-1.5"><Dot colour={child.colour} /></span>
+                  <span className="mt-1.5"><Dot colour={child.colour} url={avatars[child.id]} /></span>
                   <span className="min-w-0 flex-1">
                     {child.name}: <span className="font-extrabold text-primary-strong">{t.stars.amount(star.amount)}</span> {star.reason}
                     <span className="block text-xs font-normal capitalize text-muted">
@@ -81,7 +84,7 @@ export function ParentHomeCards({ data }: { data: ParentHome }) {
         <div className="flex flex-wrap gap-2">
           {children.map(({ child }) => (
             <Link key={child.id} href={uploadHref(child.id, uploadWeek)} className="btn btn-secondary min-h-12 gap-2 px-4 text-base">
-              <Dot colour={child.colour} />
+              <Dot colour={child.colour} url={avatars[child.id]} />
               {t.parentHome.uploadFor(child.name, uploadWeek.isoWeek)}
             </Link>
           ))}
@@ -94,7 +97,7 @@ export function ParentHomeCards({ data }: { data: ParentHome }) {
           {children.map(({ child, homework, homeworkTomorrow, nextSchoolDay }) => (
             <li key={child.id} className="space-y-1 py-3 first:pt-0 last:pb-0">
               <h3 className="flex items-center gap-2 text-lg font-extrabold">
-                <Dot colour={child.colour} />
+                <Dot colour={child.colour} url={avatars[child.id]} />
                 <span className="min-w-0 break-words">
                   {child.name}: {(homeworkTomorrow ? t.school.homeworkTomorrow : t.school.homeworkFor(formatWeekday(nextSchoolDay).toLocaleLowerCase())).toLocaleLowerCase()}
                 </span>
@@ -131,7 +134,7 @@ export function ParentHomeCards({ data }: { data: ParentHome }) {
           {children.map(({ child, notes }) => (
             <li key={child.id} className="space-y-2 py-3 first:pt-0 last:pb-0">
               <h3 className="flex items-center gap-2 text-lg font-extrabold">
-                <Dot colour={child.colour} />
+                <Dot colour={child.colour} url={avatars[child.id]} />
                 <span className="min-w-0 break-words">{child.name}</span>
               </h3>
               {notes.length === 0 ? (
@@ -170,7 +173,7 @@ export function ParentHomeCards({ data }: { data: ParentHome }) {
 }
 
 /** "Skolen slutter": when each child's school day ends. Shown at the top of the parents' home page. */
-export function ParentSchoolEndCard({ data }: { data: ParentHome }) {
+export function ParentSchoolEndCard({ data, avatars = {} }: { data: ParentHome; avatars?: Avatars }) {
   const { children } = data;
   if (children.length === 0) return null;
 
@@ -180,7 +183,7 @@ export function ParentSchoolEndCard({ data }: { data: ParentHome }) {
       <ul className="space-y-1">
         {children.map(({ child, schoolEnd }) => (
           <li key={child.id} className="flex items-center gap-2 text-lg">
-            <Dot colour={child.colour} />
+            <Dot colour={child.colour} url={avatars[child.id]} />
             <span className="font-extrabold">{child.name}:</span>
             <span className={schoolEnd.kind === "time" ? "font-bold" : "text-muted"}>
               {schoolEnd.kind === "time" ? schoolEnd.time : schoolEnd.kind === "unknown" ? t.parentHome.endUnknown : t.parentHome.endNone}

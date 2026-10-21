@@ -6,6 +6,7 @@ import { PushCard } from "@/components/push-card";
 import { StartView } from "@/components/start-view";
 import { dateInTimeZone, daysBetween, parseDayParam } from "@/lib/dates";
 import { t } from "@/lib/i18n";
+import { loadAvatarUrls } from "@/lib/avatar-urls";
 import { loadParentDay } from "@/lib/parent-day-data";
 import { loadParentHome } from "@/lib/parent-home";
 import { getViewer } from "@/lib/view-as";
@@ -20,6 +21,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const home = await loadParentHome(now);
   // Only "Dagen" follows the selected day; "Skolen slutter" and the other cards stay on today.
   const day = await loadParentDay(member, home.children.map((c) => c.child), selected);
+  const avatars = await loadAvatarUrls([member, ...home.children.map((c) => c.child)]);
 
   return (
     <>
@@ -27,15 +29,16 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <span aria-hidden className="mr-2 text-accent">★</span>
         {t.home.greeting(member.name)}
       </h1>
-      <ParentSchoolEndCard data={home} />
+      <ParentSchoolEndCard data={home} avatars={avatars} />
       {!member.calendar_id && <Notice>{t.home.noCalendar}</Notice>}
       <ParentDayCard
         key={day.dateKey}
         day={day}
         isToday={daysBetween(today, selected) === 0}
         switcher={<DaySwitcher date={selected} today={today} />}
+        avatars={avatars}
       />
-      <ParentHomeCards data={home} />
+      <ParentHomeCards data={home} avatars={avatars} />
       <PushCard />
     </>
   );

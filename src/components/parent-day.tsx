@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { MemberAvatar } from "@/components/member-avatar";
 import { buildTracksFromEntries } from "@/lib/parent-day";
 import type { ParentDay } from "@/lib/parent-day-data";
 import { t } from "@/lib/i18n";
@@ -35,7 +36,17 @@ const readSaved = (): string => {
   }
 };
 
-export function ParentDayCard({ day, isToday, switcher }: { day: ParentDay; isToday: boolean; switcher: ReactNode }) {
+export function ParentDayCard({
+  day,
+  isToday,
+  switcher,
+  avatars = {},
+}: {
+  day: ParentDay;
+  isToday: boolean;
+  switcher: ReactNode;
+  avatars?: Record<string, string>;
+}) {
   // Everyone is visible on the server and first paint; the saved selection is read after hydration.
   const saved = useSyncExternalStore(subscribe, readSaved, () => "");
   const hidden = useMemo(() => {
@@ -99,7 +110,7 @@ export function ParentDayCard({ day, isToday, switcher }: { day: ParentDay; isTo
                   on ? "border-line bg-surface" : "border-line bg-transparent text-muted opacity-60"
                 }`}
               >
-                <span aria-hidden className="size-3 shrink-0 rounded-full" style={{ backgroundColor: m.colour, opacity: on ? 1 : 0.4 }} />
+                <span className={on ? "" : "opacity-40"}><MemberAvatar colour={m.colour} url={avatars[m.id]} size={avatars[m.id] ? 24 : 12} /></span>
                 <span className="max-w-32 truncate">{m.name}</span>
               </button>
             );
@@ -117,7 +128,7 @@ export function ParentDayCard({ day, isToday, switcher }: { day: ParentDay; isTo
                 className="flex min-w-0 items-center justify-center gap-1.5 pb-1 text-sm font-bold"
                 style={{ gridRow: 1, gridColumn: `${c.firstColumn} / span ${c.lanes}` }}
               >
-                <span aria-hidden className="size-3 shrink-0 rounded-full" style={{ backgroundColor: c.member.colour }} />
+                <MemberAvatar colour={c.member.colour} url={avatars[c.member.id]} size={avatars[c.member.id] ? 24 : 12} />
                 <span className="truncate">{c.member.name}</span>
               </div>
             ))}

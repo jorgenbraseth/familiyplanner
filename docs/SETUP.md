@@ -126,7 +126,7 @@ Until the secrets exist the workflow skips with a notice instead of failing.
 1. The first run happens when a migration lands on `main`, or start it by hand: **Actions → "Supabase migrations" → Run workflow**.
 2. Afterwards run `supabase/seed.sql` once in the SQL editor to add the first parent (section 7).
 
-The private `documents` storage bucket (and its access policies) is created by the migrations too, so there is nothing to set up under **Storage**.
+The private `documents` and `avatars` storage buckets (and their access policies) are created by the migrations too, so there is nothing to set up under **Storage**.
 
 Manual alternative: paste each file from `supabase/migrations/` (oldest first) into the SQL editor and run it.
 
