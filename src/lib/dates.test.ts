@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateInTimeZone, dayKey, isoWeekNow, isoWeekOf, mondayOf, mondayOfIsoWeek, parseDayKey, startOfDay } from "./dates";
+import { dateInTimeZone, daysBetween, parseDayParam, relativeDayLabel, dayKey, isoWeekNow, isoWeekOf, mondayOf, mondayOfIsoWeek, parseDayKey, startOfDay } from "./dates";
 
 describe("isoWeekOf", () => {
   it.each([
@@ -59,5 +59,39 @@ describe("mondayOfIsoWeek", () => {
   it("round-trips with isoWeekOf", () => {
     const monday = mondayOfIsoWeek(2027, 10);
     expect(isoWeekOf(monday)).toEqual({ isoYear: 2027, isoWeek: 10 });
+  });
+});
+
+describe("parseDayParam", () => {
+  const today = { year: 2026, month: 10, day: 21 };
+  it("accepts a real date within range", () => {
+    expect(parseDayParam("2026-10-23", today)).toEqual({ year: 2026, month: 10, day: 23 });
+    expect(parseDayParam(["2026-10-20", "x"], today)).toEqual({ year: 2026, month: 10, day: 20 });
+  });
+  it.each([undefined, "", "abc", "2026-02-30", "2026-13-01", "2026-1-5", "2027-10-21", "2026-08-01"])(
+    "falls back to today for %s",
+    (v) => expect(parseDayParam(v, today)).toEqual(today),
+  );
+  it("clamps at the limit", () => {
+    expect(parseDayParam("2026-12-20", today)).toEqual({ year: 2026, month: 12, day: 20 });
+    expect(parseDayParam("2026-12-21", today)).toEqual(today);
+  });
+});
+
+describe("daysBetween", () => {
+  it("counts days across months and DST", () => {
+    expect(daysBetween({ year: 2026, month: 10, day: 21 }, { year: 2026, month: 10, day: 25 })).toBe(4);
+    expect(daysBetween({ year: 2026, month: 10, day: 21 }, { year: 2026, month: 10, day: 20 })).toBe(-1);
+    expect(daysBetween({ year: 2026, month: 10, day: 20 }, { year: 2026, month: 11, day: 3 })).toBe(14);
+  });
+});
+
+describe("relativeDayLabel", () => {
+  const today = { year: 2026, month: 10, day: 21 };
+  it("names today, tomorrow and yesterday, else the weekday and date", () => {
+    expect(relativeDayLabel(today, today)).toBe("I dag");
+    expect(relativeDayLabel({ year: 2026, month: 10, day: 22 }, today)).toBe("I morgen");
+    expect(relativeDayLabel({ year: 2026, month: 10, day: 20 }, today)).toBe("I går");
+    expect(relativeDayLabel({ year: 2026, month: 10, day: 23 }, today)).toBe("fredag 23. oktober");
   });
 });

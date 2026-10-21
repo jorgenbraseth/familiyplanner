@@ -5,6 +5,7 @@ import { RoutineBar } from "@/components/routine-bar";
 import { StartHomework } from "@/components/start-homework";
 import { StartSchool } from "@/components/start-school";
 import { StartStarSheet } from "@/components/start-star-sheet";
+import { dateInTimeZone, dayKey, daysBetween, mondayOf, parseDayParam } from "@/lib/dates";
 import { loadWeek } from "@/lib/calendar/view";
 import { t } from "@/lib/i18n";
 import type { Member } from "@/lib/members";
@@ -16,20 +17,42 @@ import { loadChildStars } from "@/lib/star-data";
 import { isTomorrow, slotView } from "@/lib/start-view";
 
 /** The children's start page (also shown when a parent previews a child). */
-export async function StartView({ member, previewing }: { member: Member; previewing: boolean }) {
+export async function StartView({
+  member,
+  previewing,
+  dag,
+}: {
+  member: Member;
+  previewing: boolean;
+  /** The raw `?dag=` search param: the day "Min dag" shows (today when missing or invalid). */
+  dag?: string | string[];
+}) {
   const now = new Date();
-  const [school, routines, stars, week] = await Promise.all([
+  const today = dateInTimeZone(now);
+  const selected = parseDayParam(dag, today);
+  // Whole weeks between this week and the selected day's week (0 unless the day is in another week).
+  const dayOffset = Math.round(daysBetween(mondayOf(today), mondayOf(selected)) / 7);
+  const [school, routines, stars, week, selSchool, selWeek] = await Promise.all([
     loadSchoolWeek(member.id, 0, now),
     loadRoutineToday(member.id, now),
     loadChildStars(member.id),
     loadWeek([member], 0, now, { weekdayOnly: true, schoolEvents: { view: "kid", memberIds: [member.id] } }),
+    dayOffset === 0 ? null : loadSchoolWeek(member.id, dayOffset, now),
+    dayOffset === 0
+      ? null
+      : loadWeek([member], dayOffset, now, { weekdayOnly: true, schoolEvents: { view: "kid", memberIds: [member.id] } }),
   ]);
   const view = todayView(school.items, school.today, school.timetable, school.hoursOverrides, "kid");
   const { slot, upcoming } = currentSlot(now, view.hours?.starts_at ?? null);
   const slotData = slotView(routines.items, routines.checks, slot);
   const hasStarTask = routines.starTaskIds[slot] !== null && stars !== null;
 
-  const events = week.days.find((d) => d.isToday)?.events ?? [];
+  // "Min dag" follows the selected day; routines, stars and homework stay on today.
+  const daySchool = selSchool ?? school;
+  const dayView = todayView(daySchool.items, selected, daySchool.timetable, daySchool.hoursOverrides, "kid");
+  const selectedKey = dayKey(selected);
+  const events = (selWeek ?? week).days.find((d) => d.key === selectedKey)?.events ?? [];
+  const failedNames = [...new Set([...week.failedNames, ...(selWeek?.failedNames ?? [])])];
   const tomorrow = isTomorrow(school.today, view.nextSchoolDay);
 
   return (
@@ -52,7 +75,7 @@ export async function StartView({ member, previewing }: { member: Member; previe
       </header>
       {previewing && <Notice>{t.preview.readOnly}</Notice>}
       {!member.calendar_id && <Notice>{t.home.noCalendar}</Notice>}
-      {week.failedNames.length > 0 && <Notice>{t.calendar.failed(week.failedNames.join(", "))}</Notice>}
+      {failedNames.length > 0 && <Notice>{t.calendar.failed(failedNames.join(", "))}</Notice>}
 
       <RoutineBar
         key={slot}
@@ -65,7 +88,7 @@ export async function StartView({ member, previewing }: { member: Member; previe
       />
 
       <div className="grid gap-4 md:grid-cols-2 md:items-start">
-        <StartSchool view={view} events={events} />
+        <StartSchool view={dayView} events={events} date={selected} today={today} />
         <StartHomework
           items={view.homeworkDue}
           weekItems={view.weekHomework.filter((i) => !i.done)}

@@ -1,6 +1,6 @@
 // Dates and times are shown in Europe/Copenhagen; weeks are ISO weeks (Monday first).
 
-import { locale } from "./i18n";
+import { locale, t } from "./i18n";
 
 export const TIME_ZONE = "Europe/Copenhagen";
 
@@ -107,4 +107,31 @@ export function formatDayHeading(date: CalendarDate): string {
 export function mondayOfIsoWeek(isoYear: number, isoWeek: number): CalendarDate {
   const week1Monday = mondayOf({ year: isoYear, month: 1, day: 4 });
   return addDays(week1Monday, (isoWeek - 1) * 7);
+}
+
+/** Whole days from `from` to `to` (negative when `to` is earlier). */
+export function daysBetween(from: CalendarDate, to: CalendarDate): number {
+  return Math.round((Date.UTC(to.year, to.month - 1, to.day) - Date.UTC(from.year, from.month - 1, from.day)) / DAY_MS);
+}
+
+/**
+ * The day selected by a `?dag=YYYY-MM-DD` search param: a real calendar date within `maxDays` of today, otherwise
+ * today (missing, malformed, impossible like 2026-02-30, or out of range).
+ */
+export function parseDayParam(value: string | string[] | undefined, today: CalendarDate, maxDays = 60): CalendarDate {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return today;
+  const date = parseDayKey(raw);
+  const real = new Date(Date.UTC(date.year, date.month - 1, date.day));
+  if (real.getUTCFullYear() !== date.year || real.getUTCMonth() + 1 !== date.month || real.getUTCDate() !== date.day) return today;
+  return Math.abs(daysBetween(today, date)) > maxDays ? today : date;
+}
+
+/** Label of a day relative to today: "I dag", "I morgen", "I går", otherwise "torsdag 23. oktober". */
+export function relativeDayLabel(date: CalendarDate, today: CalendarDate): string {
+  const diff = daysBetween(today, date);
+  if (diff === 0) return t.start.dayToday;
+  if (diff === 1) return t.start.dayTomorrow;
+  if (diff === -1) return t.start.dayYesterday;
+  return formatDayHeading(date);
 }
