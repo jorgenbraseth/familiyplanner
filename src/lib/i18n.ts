@@ -141,6 +141,10 @@ export const t = {
   stars: {
     nav: "Stjerner",
   },
+  // Parent previewing the app as one of the children ("Se som barn").
+  preview: {
+    nav: "Se som barn",
+  },
   // Push notifications and app install.
   push: {
     title: "Varsler",
