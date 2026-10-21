@@ -42,10 +42,14 @@ Create one project, e.g. `family-planner`.
 
 **A. OAuth client (for "Sign in with Google")**
 
-1. **APIs & Services → OAuth consent screen:** External, app name "Familieplanlegger", support email = yours, scopes = only `email`, `profile`, `openid`. With only these basic scopes, no Google verification is needed, so you can set publishing status to **In production**. The app's own allowlist decides who gets in.
-2. **Credentials → Create credentials → OAuth client ID → Web application.**
+The consent screen now lives in **Google Auth Platform** (menu → APIs & Services → OAuth consent screen opens it).
+
+1. **Get started:** app name "Familieplanlegger", user support email = yours, audience **External**, contact email = yours, accept the policy → **Create**.
+2. **Scopes: nothing to do.** `openid`, `email` and `profile` are non-sensitive and Supabase requests them itself, so the **Data Access** page can stay empty (if you want them listed: Data Access → Add or remove scopes → tick `.../auth/userinfo.email`, `.../auth/userinfo.profile`, `openid` → Save). Don't add any other scopes; those can trigger Google verification.
+3. **Audience → Publish app** (status **In production**). With only the basic scopes no verification is needed, and in "Testing" only listed test users could sign in. The app's own allowlist decides who gets in.
+4. **Clients → Create client → Web application** (same as Credentials → Create credentials → OAuth client ID).
    - Authorized redirect URI: `https://<your-project-ref>.supabase.co/auth/v1/callback` (shown in Supabase under Auth → Providers → Google).
-3. Copy the **Client ID** and **Client secret** → paste them into Supabase (step 4). They don't go into Vercel.
+5. Copy the **Client ID** and **Client secret** → paste them into Supabase (step 4). They don't go into Vercel.
 
 **B. Service account (for reading calendars)**
 
@@ -54,6 +58,7 @@ Create one project, e.g. `family-planner`.
 3. Open it → **Keys → Add key → JSON.** Download the file.
 4. Base64-encode it into one line and store it as `GOOGLE_SERVICE_ACCOUNT_KEY`:
    - macOS/Linux: `base64 -i key.json | tr -d '\n'`
+   - Windows (PowerShell, in the folder with the file): `[Convert]::ToBase64String([IO.File]::ReadAllBytes("$PWD\key.json")) | Set-Clipboard` (copies the result to the clipboard)
    Then delete the downloaded file.
 5. Note the service account's email (`calendar-reader@<project>.iam.gserviceaccount.com`).
 6. **Each family member** (or you, for the kids' accounts): Google Calendar → the calendar's **Settings and sharing → Share with specific people → add the service account email → "See all event details".**

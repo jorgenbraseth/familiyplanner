@@ -4,9 +4,9 @@ Private family web app at https://planner.braseth.family. Read `docs/PLAN.md` (w
 
 ## Current status
 
-The repo contains only planning docs. Next step: **Phase 0** (scaffold), then phases 1–4 in order. Extra features in PLAN.md are out of scope until phases 1–4 are done.
+Phase 0 scaffold is in the repo; the Vercel project, env vars and the `planner.braseth.family` domain are set up by hand (docs/SETUP.md). Next step: **Phase 1**. Extra features in PLAN.md are out of scope until phases 1–4 are done.
 
-- [ ] Phase 0 – Setup (Next.js + TS + Tailwind, Supabase SSR client, migrations folder, `.env.example`, deploy)
+- [x] Phase 0 – Setup (Next.js + TS + Tailwind, Supabase SSR client, migrations folder, `.env.example`, Vercel config, CI). Owner still to do: Vercel project + domain (docs/SETUP.md §5–6)
 - [ ] Phase 1 – Google login + allowlist, members admin, calendars
 - [ ] Phase 2 – Document upload, Claude extraction, parent review, child Today/Week
 - [ ] Phase 3 – Star tracks, approvals, rewards, web push, PWA
@@ -23,6 +23,14 @@ Update this checklist as phases land.
 - Web Push (`web-push`, VAPID)
 - Vitest for unit tests
 
+## Layout
+
+- `src/app/` – routes (App Router). `src/proxy.ts` – Next 16's renamed middleware; refreshes the Supabase session.
+- `src/lib/supabase/` – `server.ts` (user-scoped, default), `client.ts` (browser), `admin.ts` (service role, rare), `proxy.ts`.
+- `src/lib/i18n.ts` – all UI strings. `src/lib/dates.ts` – Copenhagen time + ISO weeks.
+- `supabase/migrations/` – SQL migrations. Tests sit next to the code as `*.test.ts`.
+- Next.js 16 differs from older versions: read `node_modules/next/dist/docs/` before using an API (see AGENTS.md). Cache Components is off on purpose (every page depends on the signed-in member).
+
 ## Rules
 
 - **Secrets are server-only.** `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_SERVICE_ACCOUNT_KEY`, `VAPID_PRIVATE_KEY` are read only in server code (`import "server-only"` in those modules). Never prefix them with `NEXT_PUBLIC_`.
@@ -36,12 +44,12 @@ Update this checklist as phases land.
 - **UI strings** live in one module (e.g. `src/lib/i18n.ts`) so the language (Norwegian/Danish) can be switched in one place. Dates/times in `Europe/Copenhagen`, weeks are ISO weeks.
 - Mobile first: kids use phones; parents approve stars from their phone.
 
-## Commands (once scaffolded)
+## Commands
 
 ```bash
 npm run dev        # local dev on :3000
 npm run lint
-npm run typecheck  # tsc --noEmit
+npm run typecheck  # next typegen && tsc --noEmit
 npm test           # vitest
 npm run build
 ```
