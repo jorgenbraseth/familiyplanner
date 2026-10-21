@@ -260,6 +260,10 @@ export const t = {
     noChildren: "Det er ingen barn i appen ennå.",
     readOnly: "Forhåndsvisning: du kan ikke endre noe her.",
   },
+  // Voice assistant (mic button, answers, parents' log).
+  assistant: {
+    nav: "Spør",
+  },
   // Push notifications and app install.
   push: {
     title: "Varsler",
