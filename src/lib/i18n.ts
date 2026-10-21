@@ -11,6 +11,8 @@ export const t = {
     family: "Familien",
     members: "Medlemmer",
     signOut: "Logg ut",
+    menu: "Meny",
+    main: "Hovedmeny",
   },
   login: {
     title: "Familieplanlegger",
