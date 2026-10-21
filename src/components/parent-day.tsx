@@ -39,7 +39,7 @@ export function ParentDayCard({ day }: { day: ParentDay }) {
       {tracks.empty ? (
         <p className="text-base text-muted">{t.parentDay.empty}</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="isolate overflow-x-auto">
           <div className="grid gap-x-1" style={style}>
             {tracks.columns.map((c) => (
               <div
@@ -74,7 +74,7 @@ export function ParentDayCard({ day }: { day: ParentDay }) {
                   className="relative flex items-center"
                   style={{ gridRow: axisRow(r.row), gridColumn: "1 / -1" }}
                 >
-                  <span className="z-10 w-10 shrink-0 text-xs font-bold tabular-nums text-muted">{r.label}</span>
+                  <span className="z-[1] w-10 shrink-0 text-xs font-bold tabular-nums text-muted">{r.label}</span>
                   <span className="h-px flex-1 bg-line" />
                 </div>
               ) : r.kind === "gap" ? (
@@ -91,7 +91,7 @@ export function ParentDayCard({ day }: { day: ParentDay }) {
                 <div
                   key={b.key}
                   title={`${b.title} ${b.timeLabel}`}
-                  className={`z-20 my-0.5 min-w-0 overflow-hidden rounded-lg px-1.5 py-1 text-xs font-bold leading-tight ${KIND[b.kind]}`}
+                  className={`z-[2] my-0.5 min-w-0 overflow-hidden rounded-lg px-1.5 py-1 text-xs font-bold leading-tight ${KIND[b.kind]}`}
                   style={{ gridRow: `${axisRow(b.rowStart)} / ${axisRow(b.rowEnd)}`, gridColumn: c.firstColumn + b.lane }}
                 >
                   <span className="sr-only">{b.timeLabel}: </span>
