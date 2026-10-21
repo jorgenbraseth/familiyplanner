@@ -1,0 +1,11 @@
+# Minimal Supabase CLI config, only what `supabase link` / `supabase db push` need.
+# The project itself lives on supabase.com; nothing here runs locally.
+project_id = "familiyplanner"
+
+[db]
+# Match the database version of the hosted project (Project Settings → Infrastructure).
+major_version = 17
+
+[db.seed]
+# Seeds are never pushed; supabase/seed.sql is run by hand once (docs/SETUP.md step 7).
+enabled = false

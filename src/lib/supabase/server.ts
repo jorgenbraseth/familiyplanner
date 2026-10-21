@@ -6,8 +6,9 @@ import { requireSupabasePublicEnv } from "./env";
 // Supabase client for Server Components, server actions and route handlers.
 // Runs as the signed-in user (RLS applies). This is the default client.
 export async function createClient() {
-  const { url, anonKey } = requireSupabasePublicEnv();
+  // Read cookies first: it marks the route as per-request, so builds without env vars don't prerender it.
   const cookieStore = await cookies();
+  const { url, anonKey } = requireSupabasePublicEnv();
 
   return createServerClient(url, anonKey, {
     cookies: {
