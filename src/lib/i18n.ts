@@ -46,6 +46,14 @@ export const t = {
     nextWeek: "Neste uke",
     thisWeek: "Denne uken",
   },
+  // Parent upload/review screens (src/app/(app)/documents).
+  documents: {
+    nav: "Dokumenter",
+  },
+  // Children's school plan in the Meg views (homework, lessons, what to pack).
+  school: {
+    title: "Skole",
+  },
   members: {
     title: "Medlemmer",
     add: "Legg til medlem",
