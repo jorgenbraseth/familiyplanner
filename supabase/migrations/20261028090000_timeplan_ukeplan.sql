@@ -3,6 +3,27 @@
 -- Plan items get an audience (children never see parent-only items) and a whole-week flag.
 -- Shapes must match src/lib/plan.ts.
 
+-- The "children change only done" trigger must not block migrations or the service role: those
+-- run without a signed-in member (no JWT, so is_parent() is false). Enforce it only for a
+-- signed-in non-parent member. (Same signature and attributes as in 20261022090000_documents.sql.)
+create or replace function public.plan_items_children_done_only()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if public.current_member_id() is not null
+     and not public.is_parent()
+     and (to_jsonb(new) - 'done') is distinct from (to_jsonb(old) - 'done') then
+    raise exception 'only "done" can be changed on a plan item'
+      using errcode = 'insufficient_privilege';
+  end if;
+  return new;
+end $$;
+
+revoke execute on function public.plan_items_children_done_only() from public, anon, authenticated;
+
 -- Documents: only two types. Old rows become ukeplan before the new check goes on.
 alter table public.documents drop constraint if exists documents_type_check;
 
@@ -14,6 +35,7 @@ alter table public.documents
 -- A timeplan has no ISO week; a ukeplan needs one.
 alter table public.documents drop constraint if exists documents_iso_week_check;
 alter table public.documents drop constraint if exists documents_iso_year_check;
+alter table public.documents drop constraint if exists documents_week_by_type_check;
 
 alter table public.documents
   alter column iso_week drop not null,
@@ -31,8 +53,8 @@ alter table public.documents
 alter table public.plan_items drop constraint if exists plan_items_kind_check;
 
 alter table public.plan_items
-  add column audience text not null default 'both' check (audience in ('child', 'parent', 'both')),
-  add column whole_week boolean not null default false;
+  add column if not exists audience text not null default 'both' check (audience in ('child', 'parent', 'both')),
+  add column if not exists whole_week boolean not null default false;
 
 -- 'bring' (things to pack) was for the child; 'note' was for everyone.
 update public.plan_items set kind = 'message', audience = 'child' where kind = 'bring';
@@ -68,7 +90,7 @@ create policy "plan_items: child marks own done"
   with check (member_id = public.current_member_id() and audience <> 'parent');
 
 -- Timetable from a timeplan document: school start/end per weekday, and the periods.
-create table public.timetable_days (
+create table if not exists public.timetable_days (
   id uuid primary key default gen_random_uuid(),
   document_id uuid not null references public.documents(id) on delete cascade,
   member_id uuid not null references public.members(id) on delete cascade,
@@ -78,9 +100,9 @@ create table public.timetable_days (
   unique (document_id, weekday)
 );
 
-create index timetable_days_member_idx on public.timetable_days (member_id, weekday);
+create index if not exists timetable_days_member_idx on public.timetable_days (member_id, weekday);
 
-create table public.timetable_periods (
+create table if not exists public.timetable_periods (
   id uuid primary key default gen_random_uuid(),
   document_id uuid not null references public.documents(id) on delete cascade,
   member_id uuid not null references public.members(id) on delete cascade,
@@ -92,14 +114,14 @@ create table public.timetable_periods (
   sort int not null default 0
 );
 
-create index timetable_periods_member_idx on public.timetable_periods (member_id, weekday);
-create index timetable_periods_document_idx on public.timetable_periods (document_id);
+create index if not exists timetable_periods_member_idx on public.timetable_periods (member_id, weekday);
+create index if not exists timetable_periods_document_idx on public.timetable_periods (document_id);
 
 alter table public.timetable_days enable row level security;
 alter table public.timetable_periods enable row level security;
 
 -- member_id must equal the document's member_id (same rule as plan_items).
-create function public.timetable_check_member()
+create or replace function public.timetable_check_member()
 returns trigger
 language plpgsql
 security definer
@@ -113,21 +135,25 @@ begin
   return new;
 end $$;
 
+drop trigger if exists timetable_days_member_matches_document on public.timetable_days;
 create trigger timetable_days_member_matches_document
   before insert or update of member_id, document_id on public.timetable_days
   for each row execute function public.timetable_check_member();
 
+drop trigger if exists timetable_periods_member_matches_document on public.timetable_periods;
 create trigger timetable_periods_member_matches_document
   before insert or update of member_id, document_id on public.timetable_periods
   for each row execute function public.timetable_check_member();
 
 revoke execute on function public.timetable_check_member() from public, anon, authenticated;
 
+drop policy if exists "timetable_days: parents all" on public.timetable_days;
 create policy "timetable_days: parents all"
   on public.timetable_days for all to authenticated
   using (public.is_parent())
   with check (public.is_parent());
 
+drop policy if exists "timetable_days: child reads own published" on public.timetable_days;
 create policy "timetable_days: child reads own published"
   on public.timetable_days for select to authenticated
   using (
@@ -135,11 +161,13 @@ create policy "timetable_days: child reads own published"
     and exists (select 1 from public.documents d where d.id = document_id and d.status = 'published')
   );
 
+drop policy if exists "timetable_periods: parents all" on public.timetable_periods;
 create policy "timetable_periods: parents all"
   on public.timetable_periods for all to authenticated
   using (public.is_parent())
   with check (public.is_parent());
 
+drop policy if exists "timetable_periods: child reads own published" on public.timetable_periods;
 create policy "timetable_periods: child reads own published"
   on public.timetable_periods for select to authenticated
   using (
@@ -152,7 +180,7 @@ revoke all on public.timetable_periods from anon;
 
 -- The member's active timetable: their latest published timeplan. security invoker, so RLS applies
 -- (a child gets their own; parents any member's).
-create function public.active_timeplan_document(member uuid)
+create or replace function public.active_timeplan_document(member uuid)
 returns uuid
 language sql
 stable

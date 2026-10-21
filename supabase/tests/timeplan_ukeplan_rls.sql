@@ -372,6 +372,34 @@ begin
   perform pg_temp.done();
 end $$;
 
+-- 5. Regression: migrations and the service role run without a JWT (no signed-in member). The
+-- "children change only done" trigger must not block them; a signed-in child is still limited.
+do $$
+declare a uuid; doc uuid; item uuid; t text;
+begin
+  select v into a from ids where k = 'a';
+  perform pg_temp.done();  -- superuser, no request.jwt.claims
+  insert into public.documents (member_id, type, iso_week, iso_year, file_path, mime_type, status)
+    values (a, 'ukeplan', 45, 2026, a || '/nojwt.pdf', 'application/pdf', 'published') returning id into doc;
+  insert into public.plan_items (document_id, member_id, date, kind, text, audience)
+    values (doc, a, '2026-11-02', 'homework', 'No-JWT item', 'both') returning id into item;
+
+  update public.plan_items set kind = 'message', audience = 'parent', text = 'Changed without JWT' where id = item;
+  select text into t from public.plan_items where id = item;
+  if t is distinct from 'Changed without JWT' then raise exception 'no-JWT update blocked'; end if;
+  update public.plan_items set audience = 'both' where id = item;
+
+  -- a signed-in child may tick done, but not change text
+  perform pg_temp.act_as('plan.child.a@example.com', 'authenticated');
+  update public.plan_items set done = true where id = item;
+  begin
+    update public.plan_items set text = 'child edit' where id = item;
+    raise exception 'child changed text';
+  exception when insufficient_privilege then null;
+  end;
+  perform pg_temp.done();
+end $$;
+
 rollback;
 
 \echo timeplan_ukeplan_rls: all checks passed
