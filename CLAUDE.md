@@ -4,10 +4,10 @@ Private family web app at https://planner.braseth.family. Read `docs/PLAN.md` (w
 
 ## Current status
 
-Phase 0 scaffold is in the repo; the Vercel project, env vars and the `planner.braseth.family` domain are set up by hand (docs/SETUP.md). Next step: **Phase 1**. Extra features in PLAN.md are out of scope until phases 1–4 are done.
+Phase 0 scaffold is in the repo; the Vercel project, env vars and the `planner.braseth.family` domain are set up by hand (docs/SETUP.md). Phase 1 code is written (members migration + RLS tests, Google login + allowlist, members admin, calendar views); it is done once the owner has signed in on their phone and sees the calendars. Extra features in PLAN.md are out of scope until phases 1–4 are done.
 
 - [x] Phase 0 – Setup (Next.js + TS + Tailwind, Supabase SSR client, migrations folder, `.env.example`, Vercel config, CI). Owner still to do: Vercel project + domain (docs/SETUP.md §5–6)
-- [ ] Phase 1 – Google login + allowlist, members admin, calendars
+- [ ] Phase 1 – Google login + allowlist, members admin, calendars (code written; waiting on migration deploy + sign-in test)
 - [ ] Phase 2 – Document upload, Claude extraction, parent review, child Today/Week
 - [ ] Phase 3 – Star tracks, approvals, rewards, web push, PWA
 - [ ] Phase 4 – Voice assistant (`/api/assistant`, tools, speech in/out, limits, log)
@@ -32,7 +32,7 @@ For every task: plan the work with Opus (the main session), then hand it off to 
 - `src/app/` – routes (App Router). `src/proxy.ts` – Next 16's renamed middleware; refreshes the Supabase session.
 - `src/lib/supabase/` – `server.ts` (user-scoped, default), `client.ts` (browser), `admin.ts` (service role, rare), `proxy.ts`.
 - `src/lib/i18n.ts` – all UI strings. `src/lib/dates.ts` – Copenhagen time + ISO weeks.
-- `supabase/migrations/` – SQL migrations. Tests sit next to the code as `*.test.ts`.
+- `supabase/migrations/` – SQL migrations, deployed by `.github/workflows/supabase.yml` on merge to `main`; `supabase/tests/run.sh` checks them and the RLS policies on a throwaway Postgres (also in CI). Unit tests sit next to the code as `*.test.ts`.
 - Next.js 16 differs from older versions: read `node_modules/next/dist/docs/` before using an API (see AGENTS.md). Cache Components is off on purpose (every page depends on the signed-in member).
 
 ## Rules
@@ -58,4 +58,4 @@ npm test           # vitest
 npm run build
 ```
 
-Run lint, typecheck and tests before committing.
+Run lint, typecheck and tests before committing (and `bash supabase/tests/run.sh` when migrations change).

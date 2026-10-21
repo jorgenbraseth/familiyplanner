@@ -72,6 +72,8 @@ The consent screen now lives in **Google Auth Platform** (menu → APIs & Servic
    - Redirect URLs: `https://planner.braseth.family/**` and `http://localhost:3000/**`
 3. Optional: disable email/password sign-up (only Google is used).
 
+**Family Link (kids' accounts).** The kids use Google accounts supervised with Family Link. The first time a child signs in, a parent may have to allow the app in the Family Link app (the child's settings, under the controls for their Google account / sign-in with Google), and children under 13 may see a "ask your parent" approval screen. Exact menus differ by version, so test this on the first sign-in and approve from the parent's phone if it asks.
+
 ## 5. Vercel
 
 1. **Add New → Project →** import `jorgenbraseth/familiyplanner`. Framework: Next.js.
@@ -94,14 +96,31 @@ The consent screen now lives in **Google Auth Platform** (menu → APIs & Servic
 
 ## 7. First members
 
-Once the database is migrated, add yourself as the first parent in the Supabase SQL editor (the seed file shows the exact statement):
+Once the database is migrated (section 8), run `supabase/seed.sql` once in the Supabase SQL editor. It adds you as the first parent:
 
 ```sql
-insert into members (name, email, role, calendar_id, colour, locale)
+insert into public.members (name, email, role, calendar_id, colour, locale)
 values ('Jørgen', 'jorgen.braseth@gmail.com', 'parent', 'jorgen.braseth@gmail.com', '#2563eb', 'nb-NO');
 ```
 
 Everyone else can then be added from the app's members page.
+
+## 8. Database migrations (GitHub Actions)
+
+The workflow `.github/workflows/supabase.yml` ("Supabase migrations") runs `supabase db push` when `supabase/migrations/**` changes on `main`. It never runs the seed. Add three repo secrets (GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**):
+
+| Secret | Where to find it |
+| --- | --- |
+| `SUPABASE_ACCESS_TOKEN` | supabase.com → **Account → Access Tokens** → generate a token |
+| `SUPABASE_PROJECT_ID` | the project ref: the `xxxx` in `https://xxxx.supabase.co`, also **Project Settings → General** |
+| `SUPABASE_DB_PASSWORD` | the database password from step 2.1 (lost it? reset under **Project Settings → Database**) |
+
+Until the secrets exist the workflow skips with a notice instead of failing.
+
+1. The first run happens when a migration lands on `main`, or start it by hand: **Actions → "Supabase migrations" → Run workflow**.
+2. Afterwards run `supabase/seed.sql` once in the SQL editor to add the first parent (section 7).
+
+Manual alternative: paste each file from `supabase/migrations/` (oldest first) into the SQL editor and run it.
 
 ---
 
