@@ -302,6 +302,15 @@ export const t = {
     noChildren: "Det er ingen barn i appen ennå.",
     readOnly: "Forhåndsvisning: du kan ikke endre noe her.",
   },
+  // Children's start page (replaces the kids' Meg page).
+  start: {
+    stars: (approved: number, goal: number) => `${approved} av ${goal} stjerner`,
+  },
+  // Morning/evening routines ("Morgenstell" / "Kveldstell") and the parents' routine editor.
+  routines: {
+    morning: "Morgenstell",
+    evening: "Kveldstell",
+  },
   // Voice assistant (mic button, answers, parents' log).
   assistant: {
     nav: "Spør",
