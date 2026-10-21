@@ -477,6 +477,8 @@ export type WeekPlanDay = {
   hours: string | null;
   periods: PeriodLine[];
   events: EventEntry[];
+  /** The day's "Min dag" timeline (see `dayTimeline`), built from periods, school hours and events. */
+  timeline: MyDayEntry[];
   homework: PlanItemRow[];
   messages: PlanItemRow[];
 };
@@ -489,6 +491,18 @@ export function isWeekPlanDayEmpty(day: Pick<WeekPlanDay, "hours" | "periods" | 
 /** Drops the days for which `isEmpty` is true (kids' week views show no empty weekdays). */
 export function withoutEmptyDays<T>(days: T[], isEmpty: (day: T) => boolean): T[] {
   return days.filter((d) => !isEmpty(d));
+}
+
+/** One legend for a whole week: a kind is shown when any day's timeline has it. */
+export function weekLegend(days: readonly Pick<WeekPlanDay, "timeline">[]): ReturnType<typeof timelineLegend> {
+  const legend = { school: false, pause: false, appointments: false };
+  for (const day of days) {
+    const l = timelineLegend(day.timeline);
+    legend.school ||= l.school;
+    legend.pause ||= l.pause;
+    legend.appointments ||= l.appointments;
+  }
+  return legend;
 }
 
 export type WholeWeek = { homework: PlanItemRow[]; messages: PlanItemRow[] };
@@ -521,12 +535,15 @@ export function weekPlan(
   const visible = filterByAudience(items, view);
   const days = groupItemsByDay(visible, monday, 7).map((d) => {
     const hours = hoursForDate(d.key, timetable, overrides);
+    const periods = periodsForDate(d.key, timetable);
+    const events = eventsByDay.get(d.key) ?? [];
     return {
       key: d.key,
       date: d.date,
       hours: formatSchoolHours(hours?.starts_at, hours?.ends_at),
-      periods: periodsForDate(d.key, timetable),
-      events: eventsByDay.get(d.key) ?? [],
+      periods,
+      events,
+      timeline: myDayEntries(periods, hours, events),
       homework: d.items.filter((i) => i.kind === "homework"),
       messages: d.items.filter((i) => i.kind === "message"),
     };

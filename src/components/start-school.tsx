@@ -1,4 +1,4 @@
-import { MyDayList, SchoolHeading, SchoolLines } from "@/components/school-items";
+import { MyDayList, SchoolHeading, SchoolLines, TimelineLegend } from "@/components/school-items";
 import { t } from "@/lib/i18n";
 import { formatSchoolHours, myDayEntries, timelineLegend, type EventEntry, type TodayView } from "@/lib/plan-view";
 
@@ -18,13 +18,9 @@ export function StartSchool({ view, events }: { view: TodayView; events: EventEn
           {t.start.myDay}
         </h2>
         {hoursLabel && <p className="text-lg font-bold text-muted">{t.start.schoolHours(hoursLabel)}</p>}
-        {(legend.school || legend.pause || legend.appointments) && (
-          <ul className="mt-2 flex flex-wrap gap-2 text-sm font-bold" aria-label={t.start.myDay}>
-            {legend.school && <LegendChip className="bg-school-soft text-on-school-soft">{t.start.legendSchool}</LegendChip>}
-            {legend.pause && <LegendChip className="bg-pause-soft text-on-pause-soft">{t.start.legendPause}</LegendChip>}
-            {legend.appointments && <LegendChip className="bg-event-soft text-on-event-soft">{t.start.legendAppointments}</LegendChip>}
-          </ul>
-        )}
+        <div className="mt-2">
+          <TimelineLegend legend={legend} label={t.start.myDay} />
+        </div>
       </div>
 
       {entries.length === 0 ? <p className="text-base text-muted">{t.start.nothingToday}</p> : <MyDayList entries={entries} />}
@@ -37,8 +33,4 @@ export function StartSchool({ view, events }: { view: TodayView; events: EventEn
       )}
     </section>
   );
-}
-
-function LegendChip({ className, children }: { className: string; children: React.ReactNode }) {
-  return <li className={`rounded-full border-2 border-line px-3 py-0.5 ${className}`}>{children}</li>;
 }

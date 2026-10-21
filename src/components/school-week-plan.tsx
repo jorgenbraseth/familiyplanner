@@ -1,7 +1,7 @@
 import { t } from "@/lib/i18n";
-import { formatWeekday, type WeekPlanDay, type WholeWeek } from "@/lib/plan-view";
+import { formatWeekday, weekLegend, type WeekPlanDay, type WholeWeek } from "@/lib/plan-view";
 import type { SchoolDocument } from "@/lib/school";
-import { SchoolEventLines, SchoolHeading, SchoolHomework, SchoolLines, SchoolPeriods } from "./school-items";
+import { MyDayList, SchoolHeading, SchoolHomework, SchoolLines, TimelineLegend } from "./school-items";
 
 /**
  * The kids' "Ukeplan": a "Hele uken" card (whole-week homework and messages) followed by one card per day with
@@ -42,6 +42,7 @@ export function SchoolWeekPlan({
           )}
         </section>
       )}
+      <TimelineLegend legend={weekLegend(days)} label={t.start.myDay} />
       <ol className="space-y-4">
         {days.map((day) => {
           const isToday = day.key === todayKey;
@@ -51,19 +52,7 @@ export function SchoolWeekPlan({
                 <h2 className={`text-2xl font-extrabold ${isToday ? "text-on-warning-soft" : ""}`}>{formatWeekday(day.date)}</h2>
                 {day.hours && <p className="text-base font-semibold text-muted">{t.school.schoolHours(day.hours)}</p>}
               </div>
-              {day.periods.length > 0 && (
-                <div className="rounded-xl bg-surface px-3">
-                  <SchoolPeriods periods={day.periods} />
-                </div>
-              )}
-              {day.events.length > 0 && (
-                <div>
-                  <SchoolHeading>{t.school.events}</SchoolHeading>
-                  <div className="rounded-xl bg-surface px-3">
-                    <SchoolEventLines events={day.events} />
-                  </div>
-                </div>
-              )}
+              {day.timeline.length > 0 && <MyDayList entries={day.timeline} />}
               {day.homework.length > 0 && (
                 <div>
                   <SchoolHeading>{t.school.homework}</SchoolHeading>

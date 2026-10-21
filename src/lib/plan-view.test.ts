@@ -20,7 +20,7 @@ import {
   todayView,
   visibleDays,
   visibleTo,
-  weekPlan,
+  weekPlan, weekLegend,
   wholeWeekSection,
   withoutEmptyDays,
   type EventEntry,
@@ -262,6 +262,16 @@ describe("weekPlan", () => {
     expect(wed.homework).toHaveLength(1);
     expect(wed.messages.map((m) => m.text)).toEqual(["Husk gym"]);
     expect(days[1].hours).toBeNull();
+    expect(wed.timeline.filter((e) => e.type === "period" || e.type === "pause")).toHaveLength(3);
+    expect(days[1].timeline).toEqual([]);
+  });
+
+  it("builds one legend for the week from the kinds on any day", () => {
+    const events = new Map([["2026-10-22", [{ id: "x", memberId: "m", title: "Tur", timeLabel: "Hele dagen", sortKey: -1 }]]]);
+    const days = weekPlan(items, timetable, undefined, events, monday, "2026-10-19", 1);
+    expect(weekLegend(days).school).toBe(true);
+    expect(weekLegend(days).appointments).toBe(true);
+    expect(weekLegend([])).toEqual({ school: false, pause: false, appointments: false });
   });
 
   it("shows events given per day and counts them as content", () => {
