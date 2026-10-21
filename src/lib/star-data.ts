@@ -7,7 +7,7 @@ import { requestsLeftToday, trackProgress, type RewardRow, type StarRow, type St
 export const TRACK_COLUMNS =
   "id, member_id, name, goal, milestone_every, small_reward, big_reward, preset_reasons, status, created_at, completed_at";
 export const STAR_COLUMNS =
-  "id, track_id, member_id, reason, photo_path, status, requested_by, decided_by, decided_at, note, created_at";
+  "id, track_id, member_id, reason, photo_path, status, requested_by, decided_by, decided_at, note, amount, task_id, created_at";
 export const REWARD_COLUMNS = "id, track_id, at_count, kind, given_at, given_by";
 
 export type ChildStars = {

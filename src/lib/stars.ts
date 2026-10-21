@@ -30,6 +30,19 @@ export type StarRow = {
   decided_by: string | null;
   decided_at: string | null;
   note: string | null;
+  /** Stars this row is worth (1..10). */
+  amount: number;
+  task_id: string | null;
+  created_at: string;
+};
+
+export type StarTaskRow = {
+  id: string;
+  track_id: string;
+  name: string;
+  /** Stars awarded for the task (1..10). */
+  stars: number;
+  sort: number;
   created_at: string;
 };
 
@@ -56,7 +69,7 @@ export type OwedReward = { atCount: number; kind: RewardKind; text: string };
 export type GivenReward = OwedReward & { givenAt: string; givenBy: string | null };
 
 export type TrackProgress = {
-  /** Approved stars, capped at the goal. */
+  /** Sum of approved star amounts, capped at the goal. */
   approved: number;
   pending: number;
   declined: number;
@@ -95,9 +108,11 @@ export function trackProgress(
   rewards: readonly RewardRow[],
 ): TrackProgress {
   const own = stars.filter((s) => s.track_id === track.id);
-  const approved = Math.min(track.goal, own.filter((s) => s.status === "approved").length);
-  const pending = own.filter((s) => s.status === "pending").length;
-  const declined = own.filter((s) => s.status === "declined").length;
+  const sumOf = (status: StarStatus) =>
+    own.filter((s) => s.status === status).reduce((sum, s) => sum + s.amount, 0);
+  const approved = Math.min(track.goal, sumOf("approved"));
+  const pending = sumOf("pending");
+  const declined = sumOf("declined");
 
   const milestones = milestonesOf(track);
   const milestonesReached = milestones.filter((m) => m <= approved);
