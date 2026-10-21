@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { locale as SPEECH_LANGUAGE, t } from "@/lib/i18n";
+import { micActive, micOutcome, micReducer } from "@/lib/mic-state";
 import { pickVoice } from "@/lib/speech-voice";
 import { MicIcon } from "./assistant-button";
 
@@ -11,6 +12,14 @@ const MAX_LENGTH = 500;
 const SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
 /** A press longer than this counts as "hold to talk"; a shorter one toggles listening. */
 const HOLD_MS = 450;
+/** No audio capture started this long after start(): give up instead of hanging in "listening". */
+const START_TIMEOUT_MS = 5000;
+/** Capturing, but no speech or words this long: stop and say so. */
+const NO_SPEECH_TIMEOUT_MS = 7000;
+/** Some browsers fire onstart but never onaudiostart; treat the mic as live after this. */
+const AUDIO_START_FALLBACK_MS = 1500;
+/** The unlock clip is empty; never wait longer than this for it before starting recognition. */
+const UNLOCK_WAIT_MS = 400;
 
 type Phase = "idle" | "listening" | "thinking" | "answer" | "error";
 
@@ -59,6 +68,8 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
+  const [canRetry, setCanRetry] = useState(false);
+  const [mic, dispatchMic] = useReducer(micReducer, "idle");
   const [left, setLeft] = useState<number | null>(null);
   const [text, setText] = useState("");
   const [speaking, setSpeaking] = useState(false);
@@ -75,7 +86,38 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
   const audioUrlRef = useRef<string | null>(null);
   const ttsAbortRef = useRef<AbortController | null>(null);
   const pressRef = useRef({ downAt: 0, ignoreUp: false });
-  const transcriptRef = useRef({ final: "", interim: "", error: "" });
+  const transcriptRef = useRef({ final: "", interim: "", error: "", userStopped: false, watchdog: false });
+  const timersRef = useRef<{ watchdog?: ReturnType<typeof setTimeout>; fallback?: ReturnType<typeof setTimeout>; force?: ReturnType<typeof setTimeout> }>({});
+  const startTokenRef = useRef(0);
+  const unlockedRef = useRef(false);
+
+  function clearMicTimers() {
+    const timers = timersRef.current;
+    clearTimeout(timers.watchdog);
+    clearTimeout(timers.fallback);
+    clearTimeout(timers.force);
+    timersRef.current = {};
+  }
+
+  /** Drop the current recogniser without letting its late events touch the UI. */
+  function discardRecognition() {
+    clearMicTimers();
+    const old = recognitionRef.current;
+    recognitionRef.current = null;
+    if (old) {
+      old.onstart = null;
+      old.onaudiostart = null;
+      old.onspeechstart = null;
+      old.onresult = null;
+      old.onerror = null;
+      old.onend = null;
+      try {
+        old.abort();
+      } catch {
+        // Already stopped.
+      }
+    }
+  }
 
   /** Device voice: the fallback when Google TTS fails or the browser blocks audio playback. */
   async function speakWithDevice(message: string, token: number) {
@@ -118,16 +160,24 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
    * one shared element during the tap; later `src` changes on it may then play. Failure is harmless:
    * play() then rejects and speak() falls back to the device voice.
    */
-  function unlockAudio() {
-    if (typeof Audio === "undefined") return;
+  function unlockAudio(): Promise<void> {
+    if (typeof Audio === "undefined") return Promise.resolve();
     if (!audioRef.current) audioRef.current = new Audio();
     const audio = audioRef.current;
-    if (audioUrlRef.current || !audio.paused) return;
+    if (unlockedRef.current || audioUrlRef.current || !audio.paused) return Promise.resolve();
+    unlockedRef.current = true;
     audio.src = SILENT_WAV;
-    audio.play().then(
-      () => audio.pause(),
-      () => {},
-    );
+    // Resolves when the clip has played (or failed), so a caller can wait for it before opening the
+    // microphone: on iOS a clip playing while recognition starts leaves recognition deaf.
+    return new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, UNLOCK_WAIT_MS);
+      const done = () => {
+        clearTimeout(timer);
+        audio.pause();
+        resolve();
+      };
+      audio.play().then(done, done);
+    });
   }
 
   async function speak(message: string) {
@@ -186,7 +236,7 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
   async function ask(raw: string) {
     const q = raw.trim().slice(0, MAX_LENGTH);
     if (!q) return;
-    unlockAudio();
+    void unlockAudio();
     stopSpeaking();
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -228,19 +278,98 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
     }
   }
 
-  function startListening() {
-    const Recognition = recognitionConstructor();
-    if (!Recognition) return;
-    unlockAudio();
+  function failMic(message: string, retry: boolean) {
+    setError(message);
+    setCanRetry(retry);
+    setPhase("error");
+  }
+
+  /** The one place a recognition session ends: handles words, errors, timeouts. Safe to call twice. */
+  function finishRecognition(recognition: SpeechRecognitionLike) {
+    if (recognitionRef.current !== recognition) return;
+    recognitionRef.current = null;
+    clearMicTimers();
+    dispatchMic("end");
+    const { final, interim, error: code, userStopped, watchdog } = transcriptRef.current;
+    const outcome = micOutcome({ said: final || interim, code, userStopped, watchdog });
+    if (outcome.kind === "ask") {
+      void ask(outcome.text);
+    } else if (outcome.kind === "idle") {
+      setPhase("idle");
+    } else {
+      failMic(t.assistant[outcome.message], outcome.retry);
+    }
+  }
+
+  /** Stop listening and treat it as "heard nothing" (or whatever was heard so far). */
+  function expireRecognition(recognition: SpeechRecognitionLike) {
+    if (recognitionRef.current !== recognition) return;
+    transcriptRef.current.watchdog = true;
+    try {
+      recognition.abort();
+    } catch {
+      // Already stopped.
+    }
+    // abort() normally fires onend; if the browser never does, finish ourselves.
+    timersRef.current.force = setTimeout(() => finishRecognition(recognition), 1000);
+  }
+
+  function armWatchdog(recognition: SpeechRecognitionLike, ms: number) {
+    clearTimeout(timersRef.current.watchdog);
+    timersRef.current.watchdog = setTimeout(() => expireRecognition(recognition), ms);
+  }
+
+  function stopEverythingAudible() {
     stopSpeaking();
     abortRef.current?.abort();
+  }
+
+  async function startListening() {
+    const Recognition = recognitionConstructor();
+    if (!Recognition) return;
+    const token = ++startTokenRef.current;
+    // Nothing may play while the microphone opens, or iOS recognition hears nothing.
+    stopEverythingAudible();
+    discardRecognition();
+    setHeard("");
+    setError("");
+    setCanRetry(false);
+    setPhase("listening");
+    dispatchMic("press");
+    // The unlock clip must start inside this tap; recognition starts only once it is over.
+    await unlockAudio();
+    if (token !== startTokenRef.current) return; // Stopped or restarted while waiting.
+
+    // A fresh recogniser per press; a reused one throws InvalidStateError or keeps stale state.
     const recognition = new Recognition();
     recognition.lang = SPEECH_LANGUAGE;
     recognition.interimResults = true;
     recognition.continuous = false;
     recognition.maxAlternatives = 1;
-    transcriptRef.current = { final: "", interim: "", error: "" };
+    transcriptRef.current = { final: "", interim: "", error: "", userStopped: false, watchdog: false };
+    const live = () => recognitionRef.current === recognition;
+    recognition.onstart = () => {
+      if (!live()) return;
+      clearTimeout(timersRef.current.fallback);
+      timersRef.current.fallback = setTimeout(() => {
+        if (!live()) return;
+        dispatchMic("audiostart");
+        armWatchdog(recognition, NO_SPEECH_TIMEOUT_MS);
+      }, AUDIO_START_FALLBACK_MS);
+    };
+    recognition.onaudiostart = () => {
+      if (!live()) return;
+      clearTimeout(timersRef.current.fallback);
+      dispatchMic("audiostart");
+      armWatchdog(recognition, NO_SPEECH_TIMEOUT_MS);
+    };
+    recognition.onspeechstart = () => {
+      if (!live()) return;
+      dispatchMic("speech");
+      clearTimeout(timersRef.current.watchdog);
+    };
     recognition.onresult = (event) => {
+      if (!live()) return;
       let finalText = "";
       let interim = "";
       for (let i = 0; i < event.results.length; i++) {
@@ -251,52 +380,58 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
       transcriptRef.current.final = finalText;
       transcriptRef.current.interim = interim;
       setHeard((finalText + interim).trim());
+      clearTimeout(timersRef.current.fallback);
+      clearTimeout(timersRef.current.watchdog);
+      dispatchMic("audiostart");
+      dispatchMic("speech");
     };
     recognition.onerror = (event) => {
+      if (!live()) return;
       transcriptRef.current.error = event.error;
     };
-    recognition.onend = () => {
-      if (recognitionRef.current !== recognition) return;
-      recognitionRef.current = null;
-      const { final, interim, error: code } = transcriptRef.current;
-      const said = (final || interim).trim();
-      if (said) {
-        void ask(said);
-      } else if (code === "not-allowed" || code === "service-not-allowed") {
-        setError(t.assistant.micDenied);
-        setPhase("error");
-      } else if (code && code !== "no-speech" && code !== "aborted") {
-        setError(t.assistant.micFailed);
-        setPhase("error");
-      } else if (code === "aborted") {
-        setPhase("idle");
-      } else {
-        setError(t.assistant.noSpeechHeard);
-        setPhase("error");
-      }
-    };
+    recognition.onend = () => finishRecognition(recognition);
     recognitionRef.current = recognition;
-    setHeard("");
-    setError("");
-    setPhase("listening");
+    armWatchdog(recognition, START_TIMEOUT_MS);
     try {
       recognition.start();
     } catch {
-      recognitionRef.current = null;
-      setError(t.assistant.micFailed);
-      setPhase("error");
+      discardRecognition();
+      dispatchMic("end");
+      failMic(t.assistant.micFailed, true);
     }
   }
 
   function stopListening() {
-    recognitionRef.current?.stop();
+    const recognition = recognitionRef.current;
+    if (!recognition) {
+      // Still waiting for the unlock clip: cancel the start.
+      startTokenRef.current++;
+      dispatchMic("end");
+      setPhase("idle");
+      return;
+    }
+    transcriptRef.current.userStopped = true;
+    clearTimeout(timersRef.current.watchdog);
+    try {
+      recognition.stop();
+    } catch {
+      // Already stopped.
+    }
+    // stop() normally fires onend; if the browser never does, finish ourselves.
+    clearTimeout(timersRef.current.force);
+    timersRef.current.force = setTimeout(() => finishRecognition(recognition), 2000);
   }
 
-  const listening = phase === "listening";
+  const listening = phase === "listening" && micActive(mic);
+  const capturing = mic === "listening" || mic === "hearing";
 
   function onMicPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
     if (event.pointerType === "mouse" && event.button !== 0) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Not capturable (pointer already gone); the press still works.
+    }
     pressRef.current.ignoreUp = false;
     if (listening) {
       // A second tap ends a tap-started recording.
@@ -306,7 +441,7 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
     }
     if (phase === "thinking") return;
     pressRef.current.downAt = event.timeStamp;
-    startListening();
+    void startListening();
   }
 
   function onMicPointerUp(event: React.PointerEvent<HTMLButtonElement>) {
@@ -316,6 +451,11 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
       return;
     }
     // Held long enough: push-to-talk ends on release. A short tap keeps listening until the next tap.
+    if (event.type === "pointercancel") {
+      // The browser took the touch (scroll, system gesture): never leave the mic running.
+      if (micActive(mic)) stopListening();
+      return;
+    }
     if (recognitionRef.current && event.timeStamp - press.downAt >= HOLD_MS) stopListening();
   }
 
@@ -323,7 +463,7 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
     // Keyboard and assistive tech activate with a click that has no pointer (detail 0): toggle.
     if (event.detail !== 0) return;
     if (listening) stopListening();
-    else if (phase !== "thinking") startListening();
+    else if (phase !== "thinking") void startListening();
   }
 
   function toggleMute() {
@@ -374,9 +514,20 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
     return () => {
       document.body.style.overflow = overflow;
       abortRef.current?.abort();
+      const startToken = startTokenRef;
+      startToken.current += 1;
+      const timers = timersRef.current;
+      clearTimeout(timers.watchdog);
+      clearTimeout(timers.fallback);
+      clearTimeout(timers.force);
       const recognition = recognitionRef.current;
       recognitionRef.current = null;
-      recognition?.abort();
+      if (recognition) {
+        recognition.onend = null;
+        recognition.onresult = null;
+        recognition.onerror = null;
+        recognition.abort();
+      }
       ttsAbortRef.current?.abort();
       audioRef.current?.pause();
       if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
@@ -440,7 +591,9 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
               {shownQuestion}
             </p>
           )}
-          {listening && !heard && <p className="text-2xl font-extrabold">{t.assistant.listening}</p>}
+          {listening && !heard && (
+            <p className="text-2xl font-extrabold">{capturing ? t.assistant.listening : t.assistant.starting}</p>
+          )}
           {phase === "thinking" && <p className="text-2xl font-extrabold">{t.assistant.thinking}</p>}
           {phase === "answer" && <p className="whitespace-pre-wrap text-2xl font-bold leading-snug">{answer}</p>}
           {phase === "answer" && noVoice && (
@@ -454,6 +607,11 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
               {error}
             </p>
           )}
+          {phase === "error" && canRetry && canListen && (
+            <button type="button" onClick={() => void startListening()} className="btn btn-primary mt-3 min-h-12">
+              {t.assistant.retry}
+            </button>
+          )}
         </div>
 
         <div className="space-y-3 border-t-2 border-line px-4 pt-3 pb-3">
@@ -464,7 +622,7 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
                   if (speaking) {
                     stopSpeaking();
                   } else {
-                    unlockAudio();
+                    void unlockAudio();
                     void speak(answer);
                   }
                 }} className="btn btn-secondary min-h-11">
@@ -486,10 +644,10 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
                 aria-pressed={listening}
                 aria-label={t.assistant.hold}
                 className={`relative flex size-20 shrink-0 touch-none select-none items-center justify-center rounded-full bg-primary text-on-primary outline-offset-4 focus-visible:outline-4 focus-visible:outline-accent disabled:opacity-60 ${
-                  listening ? "ring-4 ring-accent" : ""
+                  capturing ? "ring-4 ring-accent" : ""
                 }`}
               >
-                {listening && <span aria-hidden className="assistant-pulse absolute inset-0 rounded-full bg-accent/50" />}
+                {capturing && <span aria-hidden className="assistant-pulse absolute inset-0 rounded-full bg-accent/50" />}
                 <MicIcon className="relative size-10" />
               </button>
             ) : null}
