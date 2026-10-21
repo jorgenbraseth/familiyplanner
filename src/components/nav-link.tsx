@@ -2,18 +2,32 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { isNavActive } from "@/lib/nav-fit";
 
-/** Navigation link; the current section is shown as a green pill. */
-export function NavLink({ href, children, badge = 0 }: { href: string; children: React.ReactNode; badge?: number }) {
+/** Navigation link; the current section is shown as a green pill. `block` is the large tap target of the menu panel. */
+export function NavLink({
+  href,
+  children,
+  badge = 0,
+  block = false,
+  onClick,
+}: {
+  href: string;
+  children: React.ReactNode;
+  badge?: number;
+  block?: boolean;
+  onClick?: () => void;
+}) {
   const pathname = usePathname();
-  const active = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+  const active = isNavActive(pathname, href);
   return (
     <Link
       href={href}
+      onClick={onClick}
       aria-current={active ? "page" : undefined}
-      className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm font-bold sm:px-4 ${
-        active ? "bg-primary text-on-primary" : "text-ink hover:bg-chip"
-      }`}
+      className={`items-center rounded-full text-sm font-bold ${
+        block ? "flex min-h-12 px-4 text-base" : "inline-flex min-h-11 shrink-0 whitespace-nowrap px-3 sm:px-4"
+      } ${active ? "bg-primary text-on-primary" : "text-ink hover:bg-chip"}`}
     >
       {children}
       {badge > 0 && (

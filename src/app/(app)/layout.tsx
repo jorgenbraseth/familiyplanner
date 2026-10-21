@@ -1,5 +1,5 @@
 import { AssistantButton } from "@/components/assistant-button";
-import { NavLink } from "@/components/nav-link";
+import { TopNav, type TopNavItem } from "@/components/top-nav";
 import { signOut } from "@/app/auth/actions";
 import { t } from "@/lib/i18n";
 import { loadPendingCount } from "@/lib/star-data";
@@ -11,6 +11,24 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   // Parents see how many star requests wait for them; a preview shows exactly the child's app.
   const isParent = me.role === "parent" && !previewing;
   const pending = isParent ? await loadPendingCount() : 0;
+  const navItems: TopNavItem[] = [
+    { href: "/", label: t.nav.today },
+    ...(viewing.role === "child"
+      ? [
+          { href: "/lekser", label: t.school.navHomework },
+          { href: "/ukeplan", label: t.school.navWeekPlan },
+        ]
+      : []),
+    { href: "/family", label: t.nav.family },
+    { href: "/stars", label: t.stars.nav, badge: pending },
+    ...(isParent
+      ? [
+          { href: "/documents", label: t.documents.nav },
+          { href: "/members", label: t.nav.members },
+          { href: "/preview", label: t.preview.nav },
+        ]
+      : []),
+  ];
   return (
     <>
       <div className="sticky top-0 z-10">
@@ -26,32 +44,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             </div>
           </div>
         )}
-        <header className="border-b-2 border-line bg-surface/95 backdrop-blur">
-          <nav className="mx-auto flex max-w-2xl flex-wrap items-center gap-1 px-3 py-1.5">
-            <NavLink href="/">{t.nav.today}</NavLink>
-            {viewing.role === "child" && (
-              <>
-                <NavLink href="/lekser">{t.school.navHomework}</NavLink>
-                <NavLink href="/ukeplan">{t.school.navWeekPlan}</NavLink>
-              </>
-            )}
-            <NavLink href="/family">{t.nav.family}</NavLink>
-            <NavLink href="/stars" badge={pending}>
-              {t.stars.nav}
-            </NavLink>
-            {isParent && (
-              <>
-                <NavLink href="/documents">{t.documents.nav}</NavLink>
-                <NavLink href="/members">{t.nav.members}</NavLink>
-                <NavLink href="/preview">{t.preview.nav}</NavLink>
-              </>
-            )}
-            <form action={signOut} className="ml-auto">
-              <button type="submit" className="inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-muted hover:bg-chip">
-                {t.nav.signOut}
-              </button>
-            </form>
-          </nav>
+        <header className="relative border-b-2 border-line bg-surface/95 backdrop-blur">
+          <TopNav items={navItems} signOutAction={signOut} />
         </header>
       </div>
       <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 p-4 pb-28">{children}</main>
