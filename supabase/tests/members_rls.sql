@@ -69,7 +69,13 @@ begin
   exception when insufficient_privilege then null; -- RLS violation
   end;
 
-  update public.members set role = 'parent' where email = 'test.child@example.com';
+  -- A child may update only their own avatar_path (member_avatars migration): anything else is refused.
+  begin
+    update public.members set role = 'parent' where email = 'test.child@example.com';
+    raise exception 'child changed their own role';
+  exception when insufficient_privilege then null;
+  end;
+  update public.members set name = 'Renamed' where email = 'test.parent2@example.com';
   get diagnostics n = row_count;
   if n <> 0 then raise exception 'child update affected % rows', n; end if;
 

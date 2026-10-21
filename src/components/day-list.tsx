@@ -1,7 +1,7 @@
 import type { DayView } from "@/lib/calendar/view";
 import { t } from "@/lib/i18n";
 
-export type MemberDot = { id: string; name: string; colour: string };
+export type MemberDot = { id: string; name: string; colour: string; avatarUrl?: string | null };
 
 /** Days with their events. Shows a coloured dot (and name) per member when `members` is given. */
 export function DayList({ days, members }: { days: DayView[]; members?: MemberDot[] }) {

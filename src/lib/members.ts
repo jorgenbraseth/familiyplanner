@@ -11,9 +11,11 @@ export type Member = {
   calendar_id: string | null;
   colour: string;
   locale: string;
+  /** Profile picture in the private `avatars` bucket (`<member_id>/<name>.webp`), or null. */
+  avatar_path?: string | null;
 };
 
-export const MEMBER_COLUMNS = "id, name, email, role, calendar_id, colour, locale";
+export const MEMBER_COLUMNS = "id, name, email, role, calendar_id, colour, locale, avatar_path";
 
 // Every family member is Norwegian: speech and answers are always bokmål.
 export const LOCALES = ["nb-NO"] as const;

@@ -3,6 +3,9 @@ import { requireParent } from "@/lib/auth";
 import { t } from "@/lib/i18n";
 import { MEMBER_COLUMNS, type Member } from "@/lib/members";
 import { createClient } from "@/lib/supabase/server";
+import { AvatarEditor } from "@/components/avatar-editor";
+import { MemberAvatar } from "@/components/member-avatar";
+import { loadAvatarUrls } from "@/lib/avatar-urls";
 import { DeleteButton } from "./delete-button";
 import { MemberForm } from "./member-form";
 
@@ -12,6 +15,7 @@ export default async function MembersPage() {
   const { data, error } = await supabase.from("members").select(MEMBER_COLUMNS).order("created_at");
   if (error) throw new Error("Could not read members");
   const members = data as Member[];
+  const avatars = await loadAvatarUrls(members);
 
   return (
     <>
@@ -25,11 +29,7 @@ export default async function MembersPage() {
         {members.map((member) => (
           <li key={member.id} className="card p-3">
             <div className="flex items-center gap-3">
-              <span
-                aria-hidden
-                className="size-4 shrink-0 rounded-full"
-                style={{ backgroundColor: member.colour }}
-              />
+              <MemberAvatar colour={member.colour} url={avatars[member.id]} size={40} />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">
                   {member.name}
@@ -47,6 +47,12 @@ export default async function MembersPage() {
                 {t.members.edit}
               </summary>
               <div className="space-y-3 pt-2">
+                <AvatarEditor
+                  memberId={member.id}
+                  colour={member.colour}
+                  url={avatars[member.id]}
+                  hasAvatar={!!member.avatar_path}
+                />
                 <MemberForm member={member} />
                 {member.id !== me.id && <DeleteButton id={member.id} name={member.name} />}
               </div>

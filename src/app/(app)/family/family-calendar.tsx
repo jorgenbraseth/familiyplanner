@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MemberAvatar } from "@/components/member-avatar";
 import { DayList, type MemberDot } from "@/components/day-list";
 import type { DayView } from "@/lib/calendar/view";
 import { t } from "@/lib/i18n";
@@ -49,7 +50,7 @@ export function FamilyCalendar({
                 on ? "border-line bg-surface" : "border-dashed border-line opacity-60"
               }`}
             >
-              <span aria-hidden className="size-2.5 rounded-full" style={{ backgroundColor: m.colour }} />
+              <MemberAvatar colour={m.colour} url={m.avatarUrl} size={24} />
               {m.name}
             </button>
           );

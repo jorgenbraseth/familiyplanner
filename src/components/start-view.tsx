@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { MemberAvatar } from "@/components/member-avatar";
 import { Notice } from "@/components/notice";
 import { PushCard } from "@/components/push-card";
 import { RoutineBar } from "@/components/routine-bar";
 import { StartHomework } from "@/components/start-homework";
 import { StartSchool } from "@/components/start-school";
 import { StartStarSheet } from "@/components/start-star-sheet";
+import { loadAvatarUrls } from "@/lib/avatar-urls";
 import { dateInTimeZone, dayKey, daysBetween, mondayOf, parseDayParam } from "@/lib/dates";
 import { loadWeek } from "@/lib/calendar/view";
 import { t } from "@/lib/i18n";
@@ -32,7 +34,7 @@ export async function StartView({
   const selected = parseDayParam(dag, today);
   // Whole weeks between this week and the selected day's week (0 unless the day is in another week).
   const dayOffset = Math.round(daysBetween(mondayOf(today), mondayOf(selected)) / 7);
-  const [school, routines, stars, week, selSchool, selWeek] = await Promise.all([
+  const [school, routines, stars, week, selSchool, selWeek, avatars] = await Promise.all([
     loadSchoolWeek(member.id, 0, now),
     loadRoutineToday(member.id, now),
     loadChildStars(member.id),
@@ -41,6 +43,7 @@ export async function StartView({
     dayOffset === 0
       ? null
       : loadWeek([member], dayOffset, now, { weekdayOnly: true, schoolEvents: { view: "kid", memberIds: [member.id] } }),
+    loadAvatarUrls([member]),
   ]);
   const view = todayView(school.items, school.today, school.timetable, school.hoursOverrides, "kid");
   const { slot, upcoming } = currentSlot(now, view.hours?.starts_at ?? null);
@@ -58,7 +61,10 @@ export async function StartView({
   return (
     <>
       <header className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <h1 className="min-w-0 break-words text-4xl font-extrabold">{member.name}</h1>
+        <h1 className="flex min-w-0 items-center gap-3 break-words text-4xl font-extrabold">
+          {avatars[member.id] && <MemberAvatar colour={member.colour} url={avatars[member.id]} size={56} />}
+          {member.name}
+        </h1>
         {stars && (
           <Link
             href="/stars"
