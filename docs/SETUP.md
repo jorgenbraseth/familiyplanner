@@ -72,6 +72,8 @@ The consent screen now lives in **Google Auth Platform** (menu → APIs & Servic
    - Redirect URLs: `https://planner.braseth.family/**` and `http://localhost:3000/**`
 3. Keep **Authentication → Sign In / Providers → "Allow new users to sign up" ON**. Every family member's first Google sign-in creates their Supabase user, so turning it off blocks them with `signup_disabled`. The `members` allowlist decides who gets in. To stop email/password logins, turn off the **Email** provider instead.
 
+**Sign-up allowlist hook (optional, recommended).** After the migrations are deployed (section 8), go to **Authentication → Hooks → "Before User Created"**, choose the **Postgres** function type (the dashboard may label it "SQL"), schema `public`, function `hook_before_user_created`, and enable it. Strangers are then rejected with `not_invited` before Supabase creates a user for them, and the app shows the "not invited" page. It can stay off safely: the app's own allowlist check still signs strangers out, they just get a Supabase user row first. The function is created by migration `20261022090100_signup_allowlist_hook.sql` and reads `public.members` as `supabase_auth_admin`.
+
 **Family Link (kids' accounts).** The kids use Google accounts supervised with Family Link. The first time a child signs in, a parent may have to allow the app in the Family Link app (the child's settings, under the controls for their Google account / sign-in with Google), and children under 13 may see a "ask your parent" approval screen. Exact menus differ by version, so test this on the first sign-in and approve from the parent's phone if it asks.
 
 ## 5. Vercel
@@ -119,6 +121,8 @@ Until the secrets exist the workflow skips with a notice instead of failing.
 
 1. The first run happens when a migration lands on `main`, or start it by hand: **Actions → "Supabase migrations" → Run workflow**.
 2. Afterwards run `supabase/seed.sql` once in the SQL editor to add the first parent (section 7).
+
+The private `documents` storage bucket (and its access policies) is created by the migrations too, so there is nothing to set up under **Storage**.
 
 Manual alternative: paste each file from `supabase/migrations/` (oldest first) into the SQL editor and run it.
 

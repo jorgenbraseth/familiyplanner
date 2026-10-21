@@ -43,6 +43,7 @@ done
 echo "== seed"
 psql_run -f "$root/supabase/seed.sql"
 echo "== tests"
-for t in "$root"/supabase/tests/*_rls.sql; do
+for t in "$root"/supabase/tests/*.sql; do
+  [ "$(basename "$t")" = supabase_stubs.sql ] && continue
   psql_run -f "$t"
 done
