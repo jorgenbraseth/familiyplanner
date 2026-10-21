@@ -543,6 +543,13 @@ export const t = {
     planPublishedTitle: "Ny ukeplan",
     planPublishedBody: (week: number) => `Ukeplanen for uke ${week} er klar.`,
   },
+  install: {
+    title: "Installer appen",
+    description: "Legg appen på Hjem-skjermen, så åpner den som en vanlig app.",
+    button: "Installer appen",
+    iosSteps: "Trykk Del-knappen og velg «Legg til på Hjem-skjerm».",
+    dismiss: "Skjul",
+  },
   avatar: {
     mine: "Ditt bilde",
     change: "Endre bilde",

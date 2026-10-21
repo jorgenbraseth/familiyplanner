@@ -22,11 +22,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
   icons: { apple: "/icons/apple-touch-icon.png" },
   appleWebApp: { capable: true, title: "Planlegger", statusBarStyle: "default" },
+  // Next emits only the unprefixed mobile-web-app-capable; older iOS versions look for the Apple one.
+  other: { "apple-mobile-web-app-capable": "yes" },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
   themeColor: "#3FA34D",
 };
 
