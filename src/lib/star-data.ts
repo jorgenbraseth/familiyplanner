@@ -1,13 +1,13 @@
 import "server-only";
 import type { Member } from "./members";
 import { createClient } from "./supabase/server";
-import { trackProgress, visibleToChild, type RewardRow, type StarRow, type StarTaskRow, type StarTrackRow, type TrackProgress } from "./stars";
+import { taskScopeFilter, tasksForChild, trackProgress, visibleToChild, type RewardRow, type StarRow, type StarTaskRow, type StarTrackRow, type TrackProgress } from "./stars";
 
 export const TRACK_COLUMNS =
   "id, member_id, name, goal, milestone_every, small_reward, big_reward, preset_reasons, status, created_at, completed_at";
 export const STAR_COLUMNS =
   "id, track_id, member_id, reason, photo_path, status, requested_by, decided_by, decided_at, note, amount, task_id, created_at";
-export const TASK_COLUMNS = "id, track_id, name, stars, sort, created_at";
+export const TASK_COLUMNS = "id, member_id, name, stars, sort, created_at";
 export const REWARD_COLUMNS = "id, track_id, at_count, kind, given_at, given_by";
 
 export type ChildStars = {
@@ -15,7 +15,7 @@ export type ChildStars = {
   /** Newest first. */
   stars: StarRow[];
   rewards: RewardRow[];
-  /** The track's tasks in the parent's order. */
+  /** The tasks that apply to the child (their own and the all-children ones) in the parent's order. */
   tasks: StarTaskRow[];
   progress: TrackProgress;
 };
@@ -36,7 +36,7 @@ export async function loadChildStars(memberId: string): Promise<ChildStars | nul
   const [starsResult, rewardsResult, tasksResult] = await Promise.all([
     supabase.from("stars").select(STAR_COLUMNS).eq("track_id", track.id).order("created_at", { ascending: false }),
     supabase.from("rewards").select(REWARD_COLUMNS).eq("track_id", track.id),
-    supabase.from("star_tasks").select(TASK_COLUMNS).eq("track_id", track.id).order("sort").order("created_at"),
+    supabase.from("star_tasks").select(TASK_COLUMNS).or(taskScopeFilter(memberId)).order("sort").order("created_at"),
   ]);
   if (starsResult.error) throw new Error("Could not read the stars");
   if (tasksResult.error) throw new Error("Could not read the star tasks");
@@ -69,20 +69,18 @@ export async function loadAllChildStars(children: Member[]): Promise<ChildWithSt
 
   let stars: StarRow[] = [];
   let rewards: RewardRow[] = [];
-  let tasks: StarTaskRow[] = [];
   if (activeIds.length > 0) {
-    const [starsResult, rewardsResult, tasksResult] = await Promise.all([
+    const [starsResult, rewardsResult] = await Promise.all([
       supabase.from("stars").select(STAR_COLUMNS).in("track_id", activeIds).order("created_at", { ascending: false }),
       supabase.from("rewards").select(REWARD_COLUMNS).in("track_id", activeIds),
-      supabase.from("star_tasks").select(TASK_COLUMNS).in("track_id", activeIds).order("sort").order("created_at"),
     ]);
     if (starsResult.error) throw new Error("Could not read the stars");
-    if (tasksResult.error) throw new Error("Could not read the star tasks");
     if (rewardsResult.error) throw new Error("Could not read the rewards");
     stars = (starsResult.data ?? []) as StarRow[];
     rewards = (rewardsResult.data ?? []) as RewardRow[];
-    tasks = (tasksResult.data ?? []) as StarTaskRow[];
   }
+  // Tasks are not tied to a track: every task that applies to a child works on their active track.
+  const tasks = await loadAllTasks();
 
   return children.map((child) => {
     const own = tracks.filter((tr) => tr.member_id === child.id);
@@ -94,13 +92,21 @@ export async function loadAllChildStars(children: Member[]): Promise<ChildWithSt
             track,
             stars: stars.filter((s) => s.track_id === track.id),
             rewards: rewards.filter((r) => r.track_id === track.id),
-            tasks: tasks.filter((k) => k.track_id === track.id),
+            tasks: tasksForChild(tasks, child.id),
             progress: trackProgress(track, stars, rewards),
           }
         : null,
       completed: own.filter((tr) => tr.status === "completed"),
     };
   });
+}
+
+/** Every star task (for parents: RLS lets them read all) in the parents' order. */
+export async function loadAllTasks(): Promise<StarTaskRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("star_tasks").select(TASK_COLUMNS).order("sort").order("created_at");
+  if (error) throw new Error("Could not read the star tasks");
+  return (data ?? []) as StarTaskRow[];
 }
 
 /** Number of star requests waiting for a parent. 0 on any failure (it is only a badge). */

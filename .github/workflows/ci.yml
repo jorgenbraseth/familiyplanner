@@ -40,3 +40,9 @@ jobs:
         run: bash supabase/tests/run.sh
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      - name: Data conversion of the tasks-without-tracks migration
+        run: |
+          psql "postgresql://postgres:postgres@localhost:5432/postgres" -c "create database migration_check"
+          bash supabase/tests/migration_tasks_without_tracks.sh
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/migration_check

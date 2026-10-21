@@ -14,6 +14,9 @@ export function StarParentView({ rows }: { rows: ChildWithStars[] }) {
   if (rows.length === 0) return <p className="text-muted">{t.stars.parent.noChildren}</p>;
   return (
     <div className="space-y-6">
+      <Link href="/stars/tasks" className="btn btn-secondary">
+        {t.stars.parent.tasksLink}
+      </Link>
       {rows.map(({ child, active, completed }) => {
         const pending = active?.stars.filter((s) => s.status === "pending").reverse() ?? [];
         const decided = active?.stars.filter((s) => s.status !== "pending") ?? [];

@@ -5,6 +5,7 @@ import { requireParent } from "@/lib/auth";
 import { t } from "@/lib/i18n";
 import { parseRoutineForm, type RoutineItemInput } from "@/lib/routine-forms";
 import { ROUTINE_MAX_ITEMS_PER_SLOT, type RoutineSlot } from "@/lib/routines";
+import { taskScopeFilter } from "@/lib/stars";
 import { createClient } from "@/lib/supabase/server";
 
 export type RoutineAdminState = { ok: boolean; error?: string };
@@ -98,13 +99,12 @@ export async function saveRoutine(
   if (!child) return { ok: false, error: t.routines.admin.notFound };
 
   if (starTaskId !== "") {
-    // The task must be on the child's active track (the database only requires one of the child's tracks).
+    // The task must be the child's own or apply to all children.
     const { data: task } = await supabase
       .from("star_tasks")
-      .select("id, star_tracks!inner(member_id, status)")
+      .select("id")
       .eq("id", starTaskId)
-      .eq("star_tracks.member_id", childId)
-      .eq("star_tracks.status", "active")
+      .or(taskScopeFilter(childId))
       .maybeSingle();
     if (!task) return { ok: false, error: e.star };
   }
