@@ -60,6 +60,13 @@ describe("family-wide tools", () => {
     }
   });
 
+  it("find_next answers an unknown member with an error and needs a subject", async () => {
+    const unknown = await runTool(ctx, "find_next", { subject: "gym", member_name: "Zed" });
+    expect(unknown.isError).toBe(true);
+    const empty = await runTool(ctx, "find_next", { subject: "", member_name: "children" });
+    expect(empty.isError).toBe(true);
+  });
+
   it("rejects an invalid date range before resolving anyone", async () => {
     const outcome = await runTool(ctx, "get_timetable", { from: "2026-10-23", to: "2026-10-22", subject: "mat", member_name: "children" });
     expect(outcome.isError).toBe(true);

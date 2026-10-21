@@ -37,6 +37,16 @@ describe("buildSystemPrompt", () => {
     }
   });
 
+  it("gives the current time and the rules for 'next' questions", () => {
+    const p = buildSystemPrompt(ctx());
+    expect(p).toContain("The time now is 12:00 (Europe/Copenhagen)");
+    expect(p).toContain("find_next");
+    expect(p).toContain("Never report something that has already happened today");
+    expect(p).toContain("Never say vague things like");
+    expect(p).toContain("de neste tre ukene");
+    expect(p).toContain("answer for each child by name");
+  });
+
   it("uses parent rules for parents", () => {
     const p = buildSystemPrompt(ctx({ meId: "p1", firstName: "Kari", role: "parent" }));
     expect(p).toContain("The person asking is a parent");
