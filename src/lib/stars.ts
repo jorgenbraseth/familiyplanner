@@ -151,3 +151,11 @@ export function justReachedMilestone(
   const crossed = milestonesOf(track).filter((m) => m > prev && m <= next);
   return crossed.length > 0 ? crossed[crossed.length - 1] : null;
 }
+
+/** The reward text promised at a milestone: the big one at the goal, otherwise the small one. */
+export function rewardTextAt(
+  track: Pick<StarTrackRow, "goal" | "small_reward" | "big_reward">,
+  atCount: number,
+): string {
+  return atCount >= track.goal ? track.big_reward : track.small_reward;
+}

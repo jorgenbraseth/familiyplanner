@@ -10,10 +10,12 @@ export function SchoolWeek({
   days,
   documents,
   todayKey,
+  readOnly = false,
 }: {
   days: DayItems[];
   documents: SchoolDocument[];
   todayKey: string;
+  readOnly?: boolean;
 }) {
   const filled = days.filter((d) => d.items.length > 0);
   if (filled.length === 0) return null;
@@ -46,7 +48,7 @@ export function SchoolWeek({
               {homework.length > 0 && (
                 <div>
                   <SchoolHeading>{t.school.homework}</SchoolHeading>
-                  <SchoolHomework items={homework} />
+                  <SchoolHomework items={homework} readOnly={readOnly} />
                 </div>
               )}
               {bring.length > 0 && (

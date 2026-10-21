@@ -5,7 +5,7 @@ import type { TodayView } from "@/lib/plan-view";
 import { SchoolHeading, SchoolHomework, SchoolLines, SchoolNotes } from "./school-items";
 
 /** The school part of "I dag". Renders nothing when there is nothing to show. */
-export function SchoolToday({ view }: { view: TodayView }) {
+export function SchoolToday({ view, readOnly = false }: { view: TodayView; readOnly?: boolean }) {
   const { lessons, bring, notes, homeworkDue } = view;
   if (lessons.length + bring.length + notes.length + homeworkDue.length === 0) return null;
   const section = (heading: React.ReactNode, children: React.ReactNode, key: string) => (
@@ -20,7 +20,7 @@ export function SchoolToday({ view }: { view: TodayView }) {
       {has(lessons) && section(t.school.timetable, <SchoolLines items={lessons} />, "lessons")}
       {has(bring) && section(t.school.bring, <SchoolLines items={bring} />, "bring")}
       {has(homeworkDue) &&
-        section(t.school.homeworkFor(formatDayHeading(view.nextSchoolDay)), <SchoolHomework items={homeworkDue} />, "homework")}
+        section(t.school.homeworkFor(formatDayHeading(view.nextSchoolDay)), <SchoolHomework items={homeworkDue} readOnly={readOnly} />, "homework")}
       {has(notes) && <SchoolNotes items={notes} />}
     </div>
   );

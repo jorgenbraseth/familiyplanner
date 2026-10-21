@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 /** Navigation link; the current section is shown as a green pill. */
-export function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+export function NavLink({ href, children, badge = 0 }: { href: string; children: React.ReactNode; badge?: number }) {
   const pathname = usePathname();
   const active = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
   return (
@@ -16,6 +16,11 @@ export function NavLink({ href, children }: { href: string; children: React.Reac
       }`}
     >
       {children}
+      {badge > 0 && (
+        <span className="ml-2 inline-flex min-w-6 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-extrabold text-on-accent">
+          {badge}
+        </span>
+      )}
     </Link>
   );
 }

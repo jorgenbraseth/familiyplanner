@@ -25,12 +25,12 @@ export function SchoolLines({ items }: { items: PlanItemRow[] }) {
 }
 
 /** Homework with tick boxes. */
-export function SchoolHomework({ items }: { items: PlanItemRow[] }) {
+export function SchoolHomework({ items, readOnly = false }: { items: PlanItemRow[]; readOnly?: boolean }) {
   return (
     <ul className={listClass}>
       {items.map((item) => (
         <li key={item.id}>
-          <SchoolDoneCheckbox id={item.id} done={item.done} label={item.text} detail={item.subject} />
+          <SchoolDoneCheckbox id={item.id} done={item.done} label={item.text} detail={item.subject} readOnly={readOnly} />
         </li>
       ))}
     </ul>

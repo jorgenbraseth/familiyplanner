@@ -4,6 +4,7 @@ import {
   justReachedMilestone,
   milestonesOf,
   requestsLeftToday,
+  rewardTextAt,
   trackProgress,
   type RewardRow,
   type StarRow,
@@ -181,5 +182,14 @@ describe("daily limit", () => {
     expect(requestsLeftToday(5)).toBe(0);
     expect(requestsLeftToday(9)).toBe(0);
     expect(requestsLeftToday(-1)).toBe(5);
+  });
+});
+
+describe("rewardTextAt", () => {
+  it("gives the big reward at the goal and the small one before it", () => {
+    const rewards = { goal: 30, small_reward: "Ice cream", big_reward: "Cinema" };
+    expect(rewardTextAt(rewards, 5)).toBe("Ice cream");
+    expect(rewardTextAt(rewards, 25)).toBe("Ice cream");
+    expect(rewardTextAt(rewards, 30)).toBe("Cinema");
   });
 });
