@@ -34,17 +34,17 @@ begin
   perform pg_temp.act_as('jorgen.braseth@gmail.com', 'authenticated');
 
   insert into public.documents (member_id, type, iso_week, iso_year, file_path, mime_type)
-    values (a, 'week_schedule', 43, 2026, a || '/doc-a.pdf', 'application/pdf') returning id into da;
+    values (a, 'ukeplan', 43, 2026, a || '/doc-a.pdf', 'application/pdf') returning id into da;
   insert into public.documents (member_id, type, iso_week, iso_year, file_path, mime_type)
-    values (b, 'homework', 43, 2026, b || '/doc-b.png', 'image/png') returning id into db;
+    values (b, 'ukeplan', 43, 2026, b || '/doc-b.png', 'image/png') returning id into db;
   insert into public.plan_items (document_id, member_id, date, kind, subject, text, sort) values
     (da, a, '2026-10-26', 'lesson', 'Math', 'Fractions', 1),
-    (da, a, '2026-10-27', 'bring', null, 'Swimming bag', 2),
+    (da, a, '2026-10-27', 'message', null, 'Swimming bag', 2),
     (db, b, '2026-10-26', 'homework', 'Reading', 'Chapter 3', 1);
 
   -- member_id must match the document's
   begin
-    insert into public.plan_items (document_id, member_id, date, kind, text) values (da, b, '2026-10-26', 'note', 'Wrong child');
+    insert into public.plan_items (document_id, member_id, date, kind, text) values (da, b, '2026-10-26', 'message', 'Wrong child');
     raise exception 'mismatched member_id accepted';
   exception when check_violation then null;
   end;
@@ -56,7 +56,7 @@ begin
   exception when check_violation then null;
   end;
   begin
-    insert into public.plan_items (document_id, member_id, date, kind, text) values (da, a, '2026-10-26', 'note', '');
+    insert into public.plan_items (document_id, member_id, date, kind, text) values (da, a, '2026-10-26', 'message', '');
     raise exception 'empty text accepted';
   exception when check_violation then null;
   end;
@@ -136,7 +136,7 @@ begin
   -- no insert / delete
   begin
     insert into public.plan_items (document_id, member_id, date, kind, text)
-      values ((select v from ids where k = 'da'), (select v from ids where k = 'a'), '2026-10-28', 'note', 'Mine');
+      values ((select v from ids where k = 'da'), (select v from ids where k = 'a'), '2026-10-28', 'message', 'Mine');
     raise exception 'child inserted item';
   exception when insufficient_privilege then null;
   end;
@@ -145,7 +145,7 @@ begin
   if n <> 0 then raise exception 'child deleted % items', n; end if;
   begin
     insert into public.documents (member_id, type, iso_week, iso_year, file_path, mime_type)
-      values ((select v from ids where k = 'a'), 'other', 1, 2026, 'x/y.pdf', 'application/pdf');
+      values ((select v from ids where k = 'a'), 'ukeplan', 1, 2026, 'x/y.pdf', 'application/pdf');
     raise exception 'child inserted document';
   exception when insufficient_privilege then null;
   end;

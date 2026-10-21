@@ -33,6 +33,7 @@ export function UploadForm({
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [type, setType] = useState<DocumentType>(defaultType);
   const busy = phase !== "idle";
 
   async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
@@ -59,8 +60,8 @@ export function UploadForm({
       const created = await createDocument({
         memberId: String(form.get("member_id") ?? ""),
         type: String(form.get("type") ?? ""),
-        isoWeek: Number(form.get("iso_week")),
-        isoYear: Number(form.get("iso_year")),
+        isoWeek: type === "timeplan" ? null : Number(form.get("iso_week")),
+        isoYear: type === "timeplan" ? null : Number(form.get("iso_year")),
         mimeType: file.type,
         size: file.size,
       });
@@ -111,7 +112,12 @@ export function UploadForm({
         </label>
         <label className={label}>
           <span>{t.documents.fields.type}</span>
-          <select name="type" defaultValue={defaultType} className={input}>
+          <select
+            name="type"
+            value={type}
+            onChange={(event) => setType(event.target.value as DocumentType)}
+            className={input}
+          >
             {DOCUMENT_TYPES.map((type) => (
               <option key={type} value={type}>
                 {t.documents.types[type]}
@@ -119,34 +125,36 @@ export function UploadForm({
             ))}
           </select>
         </label>
-        <div className="flex gap-3">
-          <label className={`${label} flex-1`}>
-            <span>{t.documents.fields.week}</span>
-            <input
-              type="number"
-              name="iso_week"
-              required
-              min={1}
-              max={53}
-              inputMode="numeric"
-              defaultValue={defaultWeek}
-              className={input}
-            />
-          </label>
-          <label className={`${label} flex-1`}>
-            <span>{t.documents.fields.year}</span>
-            <input
-              type="number"
-              name="iso_year"
-              required
-              min={2000}
-              max={2100}
-              inputMode="numeric"
-              defaultValue={defaultYear}
-              className={input}
-            />
-          </label>
-        </div>
+        {type === "ukeplan" && (
+          <div className="flex gap-3">
+            <label className={`${label} flex-1`}>
+              <span>{t.documents.fields.week}</span>
+              <input
+                type="number"
+                name="iso_week"
+                required
+                min={1}
+                max={53}
+                inputMode="numeric"
+                defaultValue={defaultWeek}
+                className={input}
+              />
+            </label>
+            <label className={`${label} flex-1`}>
+              <span>{t.documents.fields.year}</span>
+              <input
+                type="number"
+                name="iso_year"
+                required
+                min={2000}
+                max={2100}
+                inputMode="numeric"
+                defaultValue={defaultYear}
+                className={input}
+              />
+            </label>
+          </div>
+        )}
         <label className={label}>
           <span>{t.documents.fields.file}</span>
           <input

@@ -34,7 +34,14 @@ export function DayList({ days, members }: { days: DayView[]; members?: MemberDo
                       {event.timeLabel}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block break-words">{event.title}</span>
+                      <span className="block break-words">
+                        {event.title}
+                        {event.school && (
+                          <span className="ml-2 rounded-full bg-chip px-2 py-0.5 align-middle text-xs font-bold text-chip-ink">
+                            {t.school.eventLabel}
+                          </span>
+                        )}
+                      </span>
                       {(member || event.location) && (
                         <span className="block truncate text-xs text-muted">
                           {[member?.name, event.location].filter(Boolean).join(" · ")}

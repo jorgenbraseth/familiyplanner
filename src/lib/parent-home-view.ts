@@ -14,7 +14,7 @@ export function uploadWeekFor(today: CalendarDate): IsoWeek {
 }
 
 /** Link to the upload form with child, type and week prefilled (read back by `parseUploadDefaults`). */
-export function uploadHref(childId: string, week: IsoWeek, type: DocumentType = "week_schedule"): string {
+export function uploadHref(childId: string, week: IsoWeek, type: DocumentType = "ukeplan"): string {
   const query = new URLSearchParams({ child: childId, type, week: String(week.isoWeek), year: String(week.isoYear) });
   return `/documents/new?${query.toString()}`;
 }
@@ -44,7 +44,7 @@ export function parseUploadDefaults(
   const type = first(params.type);
   return {
     childId: child !== undefined && childIds.includes(child) ? child : childIds[0],
-    type: DOCUMENT_TYPES.find((d) => d === type) ?? "week_schedule",
+    type: DOCUMENT_TYPES.find((d) => d === type) ?? "ukeplan",
     week: integerIn(first(params.week), 1, 53) ?? fallback.isoWeek,
     year: integerIn(first(params.year), 2000, 2100) ?? fallback.isoYear,
   };
@@ -56,8 +56,8 @@ export type SchoolEnd =
   | { kind: "time"; time: string };
 
 /**
- * When school ends today. `hours` is today's school_days row of a published plan (if any); `lessonsToday` counts
- * today's lessons. No row and no lessons: no school. A school day without a known end time: unknown.
+ * When school ends today. `hours` is today's school hours from the timetable (or an old per-date override), if any; `lessonsToday` counts
+ * today's timetable periods. No row and no lessons: no school. A school day without a known end time: unknown.
  */
 export function schoolEndSummary(
   hours: { starts_at: string | null; ends_at: string | null } | undefined,

@@ -1,5 +1,6 @@
 import { t } from "@/lib/i18n";
 import type { PlanItemRow } from "@/lib/plan";
+import type { EventEntry, PeriodLine } from "@/lib/plan-view";
 import { SchoolDoneCheckbox } from "./school-done-checkbox";
 
 export function SchoolHeading({ children }: { children: React.ReactNode }) {
@@ -9,7 +10,7 @@ export function SchoolHeading({ children }: { children: React.ReactNode }) {
 const listClass =
   "card divide-y-2 divide-line px-3";
 
-/** Lessons, bring items or notes: plain lines, subject first. */
+/** Messages: plain lines, subject first. */
 export function SchoolLines({ items }: { items: PlanItemRow[] }) {
   return (
     <ul className={listClass}>
@@ -37,11 +38,52 @@ export function SchoolHomework({ items, readOnly = false }: { items: PlanItemRow
   );
 }
 
-export function SchoolNotes({ items }: { items: PlanItemRow[] }) {
+export function SchoolMessages({ items }: { items: PlanItemRow[] }) {
   return (
     <div>
-      <SchoolHeading>{t.school.notes}</SchoolHeading>
+      <SchoolHeading>{t.school.messages}</SchoolHeading>
       <SchoolLines items={items} />
     </div>
+  );
+}
+
+/** The timetable periods of a day: period number, subject and time. */
+export function SchoolPeriods({ periods }: { periods: PeriodLine[] }) {
+  return (
+    <ol className="divide-y-2 divide-line">
+      {periods.map((p) => (
+        <li key={p.id} className="flex min-h-12 items-center gap-3 py-2 text-lg">
+          <span
+            aria-hidden
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-chip text-base font-extrabold text-chip-ink"
+          >
+            {p.period ?? "·"}
+          </span>
+          <span className="min-w-0 flex-1 break-words font-semibold">{p.title}</span>
+          {p.time && <span className="shrink-0 text-base font-bold text-muted">{p.time}</span>}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** Calendar-like lines (Google events and school events, in time order); school events get a small "Skole" label. */
+export function SchoolEventLines({ events }: { events: EventEntry[] }) {
+  return (
+    <ul className="divide-y-2 divide-line">
+      {events.map((event) => (
+        <li key={event.id} className="flex min-h-12 items-center gap-3 py-2 text-lg">
+          <span className="w-24 shrink-0 text-base font-bold text-muted">{event.timeLabel}</span>
+          <span className="min-w-0 flex-1 break-words font-semibold">
+            {event.title}
+            {event.school && (
+              <span className="ml-2 rounded-full bg-chip px-2 py-0.5 align-middle text-xs font-bold text-chip-ink">
+                {t.school.eventLabel}
+              </span>
+            )}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

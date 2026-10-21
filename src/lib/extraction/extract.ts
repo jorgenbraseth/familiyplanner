@@ -3,34 +3,57 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { addDays, dayKey, mondayOfIsoWeek } from "../dates";
-import type { AcceptedMimeType, Extraction } from "../plan";
+import { z } from "zod";
+import type { AcceptedMimeType } from "../plan";
 import { ExtractionError } from "./errors";
-import { normalizeExtraction } from "./normalize";
-import { extractionSchema } from "./schema";
+import {
+  normalizeTimeplan,
+  normalizeUkeplan,
+  type TimeplanExtraction,
+  type UkeplanExtraction,
+} from "./normalize";
+import { timeplanSchema, ukeplanSchema } from "./schema";
 
 export { ExtractionError } from "./errors";
 
-export type ExtractPlanInput = {
+export type ExtractInput = {
   data: Uint8Array;
   mimeType: AcceptedMimeType;
-  isoYear: number;
-  isoWeek: number;
   childName: string;
   locale: string;
 };
+export type ExtractUkeplanInput = ExtractInput & { isoYear: number; isoWeek: number };
 
-const SYSTEM_PROMPT = `You read Norwegian and Danish school week plans ("ukeplan" / "ugeplan") and homework sheets and turn them into structured data for a family planner.
+const COMMON_RULES = `- Keep the school's own wording and language for subjects and text. Do not translate.
+- Do not invent anything. If something is not in the document, leave it out.
+- If the document covers several children or classes, extract only what applies to the named child or to the whole class.
+- Times are 24-hour HH:MM.`;
+
+const TIMEPLAN_PROMPT = `You read Norwegian school timetables ("timeplan") and turn them into structured data for a family planner. The timetable is fixed and repeats every week; it has no dates.
 
 Rules:
-- Extract per day: school start and end time ("school_start" / "school_end", HH:MM 24-hour, when the plan gives them for that day; otherwise null), lessons (the timetable), homework, things the child must bring, and other notes for that day.
-- Lessons: one "lesson" item per timetable period, with the subject in "subject", the period number in "period" (1, 2, 3, ... as the plan numbers them; null if it has no numbers) and "start"/"end" (HH:MM) only when the plan gives times for that period, otherwise null. Do not guess times or periods. Do not turn homework or notes into lessons.
-- Keep the school's own wording and language for subjects and text. Do not translate.
-- A homework item's date is the day it is DUE. If the plan lists homework per weekday as "til tirsdag" (or similar), use that day. If it only says "this week" or gives no day, use Friday of that week.
-- Things to pack (gym clothes, swimming kit, packed lunch, ...) are "bring" items on the day they are needed.
-- Anything for the whole week that fits no single day goes in "notes".
-- Do not invent items. If something is not in the document, leave it out.
-- If the document covers several children or classes, extract only what applies to the named child or to the whole class.
-- Dates are YYYY-MM-DD and must come from the weekday-to-date table in the user message.`;
+- "days": for each weekday with school (1 = Monday ... 5 = Friday; 6 and 7 only if the timetable has Saturday/Sunday), when school starts and ends ("starts_at" / "ends_at"). Use the start of the first period and the end of the last period of that day if the document gives period times but no explicit start/end. If the document gives no times at all, use null.
+- "periods": one entry per period per weekday, in school-day order, with the subject in "subject" (the document's own wording; breaks, lunch and activities that the timetable lists are fine as subjects), the period number in "period" (1, 2, 3, ... as the document numbers them; null if it has no numbers) and "starts_at"/"ends_at" only when the document gives times for that period, otherwise null. Do not guess times or period numbers.
+${COMMON_RULES}`;
+
+const UKEPLAN_PROMPT = `You read Norwegian school week plans ("ukeplan") and turn them into structured data for a family planner. Lessons and the timetable are NOT extracted from a ukeplan; only the items below.
+
+Item kinds:
+- homework: work to do or prepare (lekser, innleveringer, øving, "til tirsdag", tests to study for). Its date is the day it is DUE. If it is listed per weekday as "til tirsdag" (or similar), use that day. If it is for the whole week ("lekser denne uken", "ukas lekser", "ukelekse") or names no day, set date to null.
+- event: an important event in the week (tur, prøve, temadag, skolefotografering, foreldremøte, svømming). Give the day as date, or null if it spans the week. Set starts_at/ends_at only when the document gives times.
+- message: an important message or something to remember that week, including things to bring (gymtøy, matpakke, skiutstyr, "husk ...", informasjon fra læreren). Give the day as date when it is day-specific, otherwise null (whole week).
+
+Audience (every item): 
+- "parent": addressed to parents/guardians ("kjære foresatte", "foreldre", "foresatte"): parent meetings, forms to sign or return, payments, volunteering, info about the school's routines for parents. Example: "Foreldremøte onsdag kl. 18:00" and "Husk å signere samtykkeskjema" are parent.
+- "child": things the child must do, bring or know. Example: "Ta med gymtøy torsdag" and "Prøve i matte fredag" are child.
+- "both": general information both should see. Example: "Temadag om trafikk onsdag" is both.
+- Homework is "child" unless it is clearly meant for parents.
+- If unsure, use "both".
+
+Other rules:
+- Do not turn the timetable or lessons into items.
+- Dates are YYYY-MM-DD and must come from the weekday-to-date table in the user message.
+${COMMON_RULES}`;
 
 const WEEKDAYS = [
   "Monday",
@@ -103,20 +126,14 @@ function toExtractionError(error: unknown): ExtractionError {
   });
 }
 
-/** Sends a school document to Claude and returns the plan items and school days for the given ISO week. */
-export async function extractPlan(
-  input: ExtractPlanInput,
-): Promise<Extraction> {
+async function run<S extends z.ZodType>(
+  input: ExtractInput,
+  system: string,
+  userText: string,
+  schema: S,
+): Promise<unknown> {
   const model = process.env.ANTHROPIC_MODEL_EXTRACT;
   if (!model) throw new Error("ANTHROPIC_MODEL_EXTRACT is not set.");
-
-  const { isoYear, isoWeek } = input;
-  const userText = `Child: ${input.childName}
-UI locale: ${input.locale}
-ISO week ${isoWeek} of ${isoYear}. Dates of that week:
-${weekTable(isoYear, isoWeek)}
-
-Extract the plan from the attached document.`;
 
   const client = new Anthropic({ timeout: 120_000 });
   let response;
@@ -124,37 +141,45 @@ Extract the plan from the attached document.`;
     response = await client.messages.parse({
       model,
       max_tokens: 16000,
-      system: SYSTEM_PROMPT,
+      system,
       messages: [
         {
           role: "user",
-          content: [
-            fileBlock(input.data, input.mimeType),
-            { type: "text", text: userText },
-          ],
+          content: [fileBlock(input.data, input.mimeType), { type: "text", text: userText }],
         },
       ],
-      output_config: { format: zodOutputFormat(extractionSchema) },
+      output_config: { format: zodOutputFormat(schema) },
     });
   } catch (error) {
     throw toExtractionError(error);
   }
 
   if (response.stop_reason === "refusal")
-    throw new ExtractionError(
-      "refused",
-      "The AI service declined to read this document.",
-    );
+    throw new ExtractionError("refused", "The AI service declined to read this document.");
   if (response.stop_reason === "max_tokens")
-    throw new ExtractionError(
-      "too_large",
-      "The document is too large to extract in one go.",
-    );
+    throw new ExtractionError("too_large", "The document is too large to extract in one go.");
   if (!response.parsed_output)
-    throw new ExtractionError(
-      "bad_result",
-      "The AI service returned an unreadable result.",
-    );
+    throw new ExtractionError("bad_result", "The AI service returned an unreadable result.");
+  return response.parsed_output;
+}
 
-  return normalizeExtraction(response.parsed_output, isoYear, isoWeek);
+/** Sends a timeplan to Claude and returns the weekday hours and periods. */
+export async function extractTimeplan(input: ExtractInput): Promise<TimeplanExtraction> {
+  const userText = `Child: ${input.childName}
+UI locale: ${input.locale}
+
+Extract the timetable from the attached document.`;
+  return normalizeTimeplan(await run(input, TIMEPLAN_PROMPT, userText, timeplanSchema));
+}
+
+/** Sends a ukeplan to Claude and returns the homework, events and messages of the given ISO week. */
+export async function extractUkeplan(input: ExtractUkeplanInput): Promise<UkeplanExtraction> {
+  const { isoYear, isoWeek } = input;
+  const userText = `Child: ${input.childName}
+UI locale: ${input.locale}
+ISO week ${isoWeek} of ${isoYear}. Dates of that week:
+${weekTable(isoYear, isoWeek)}
+
+Extract the homework, events and messages from the attached document.`;
+  return normalizeUkeplan(await run(input, UKEPLAN_PROMPT, userText, ukeplanSchema), isoYear, isoWeek);
 }

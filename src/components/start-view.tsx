@@ -6,13 +6,12 @@ import { StartHomework } from "@/components/start-homework";
 import { StartSchool } from "@/components/start-school";
 import { StartStarSheet } from "@/components/start-star-sheet";
 import { loadWeek } from "@/lib/calendar/view";
-import { dayKey } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import type { Member } from "@/lib/members";
 import { formatWeekday, todayView } from "@/lib/plan-view";
 import { loadRoutineToday } from "@/lib/routine-data";
 import { currentSlot } from "@/lib/routines";
-import { loadSchoolHours, loadSchoolWeek } from "@/lib/school";
+import { loadSchoolWeek } from "@/lib/school";
 import { loadChildStars } from "@/lib/star-data";
 import { isTomorrow, slotView } from "@/lib/start-view";
 
@@ -23,14 +22,13 @@ export async function StartView({ member, previewing }: { member: Member; previe
     loadSchoolWeek(member.id, 0, now),
     loadRoutineToday(member.id, now),
     loadChildStars(member.id),
-    loadWeek([member], 0, now, true),
+    loadWeek([member], 0, now, { weekdayOnly: true, schoolEvents: { view: "kid", memberIds: [member.id] } }),
   ]);
-  const hours = (await loadSchoolHours(member.id, school.monday)).get(dayKey(school.today));
-  const { slot, upcoming } = currentSlot(now, hours?.starts_at ?? null);
+  const view = todayView(school.items, school.today, school.timetable, school.hoursOverrides, "kid");
+  const { slot, upcoming } = currentSlot(now, view.hours?.starts_at ?? null);
   const slotData = slotView(routines.items, routines.checks, slot);
   const hasStarTask = routines.starTaskIds[slot] !== null && stars !== null;
 
-  const view = todayView(school.items, school.today);
   const events = week.days.find((d) => d.isToday)?.events ?? [];
   const tomorrow = isTomorrow(school.today, view.nextSchoolDay);
 
@@ -67,9 +65,10 @@ export async function StartView({ member, previewing }: { member: Member; previe
       />
 
       <div className="grid gap-4 md:grid-cols-2 md:items-start">
-        <StartSchool view={view} hours={hours} events={events} />
+        <StartSchool view={view} events={events} />
         <StartHomework
           items={view.homeworkDue}
+          weekItems={view.weekHomework.filter((i) => !i.done)}
           tomorrow={tomorrow}
           weekday={formatWeekday(view.nextSchoolDay).toLocaleLowerCase()}
           readOnly={previewing}

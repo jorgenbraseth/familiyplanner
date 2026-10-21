@@ -50,17 +50,22 @@ Note: if the kids use supervised (Family Link) Google accounts, Google may block
 - Server reads events with a Google **service account** (`GOOGLE_SERVICE_ACCOUNT_KEY`), using `events.list` with `singleEvents=true`, `orderBy=startTime`. Cache results ~5 minutes.
 - Read-only for now. Adding events from the app would require per-user calendar consent; later phase if wanted.
 
-## Feature 2: Weekly schedules and homework
+## Feature 2: Timeplan, ukeplan and homework
+
+Two document types:
+
+- **Timeplan** (`timeplan`, no ISO week): one child's fixed weekly timetable. Extraction gives, per weekday (Mon-Fri; Sat/Sun only if present), school start/end and every period (period number if given, start/end, subject), stored in `timetable_days` / `timetable_periods`. Once the parent publishes it, it is the child's school-day configuration; the latest published timeplan wins (`active_timeplan_document(member)`). The review page shows "Erstatter forrige timeplan" when the child already has a published one.
+- **Ukeplan** (`ukeplan`, ISO week + year required): the week's homework, events and messages in `plan_items`. No lessons come from an ukeplan any more. Kinds: `homework` (a specific day, or the whole week: `whole_week = true`, date = the Monday), `event` (important events, optional start/end time, shown in calendars), `message` (important messages and things to remember or bring; day-specific or whole week). Every item has an `audience`: `child` (things the child must do/bring/know), `parent` (addressed to parents: meetings, forms to sign, payments), `both` (general info). Homework is `child` unless clearly for parents. Children never see `parent` items (RLS).
 
 Upload flow:
 
-1. Parent uploads a PDF (or a phone photo) and tags child, type (`week_schedule` / `homework` / `other`) and ISO week + year.
+1. Parent uploads a PDF (or a phone photo) and picks child and type (default ukeplan); a ukeplan also gets ISO week + year, a timeplan does not.
 2. The browser uploads straight to the private Supabase Storage bucket `documents`, path `<member_id>/<document_id>.<ext>` (avoids Next.js body-size limits).
-3. A server action sends the file to Claude and asks for structured JSON via a forced tool call: per day, lessons, homework items (subject, text, due date), things to bring, notes.
-4. Extracted rows go into `plan_items` with the document in status `review`. The parent sees the list beside the PDF, can fix/delete/add lines, then **Publish**.
-5. The child is notified and sees it from then on.
+3. A server action sends the file to Claude with a type-specific prompt and schema (structured outputs, `src/lib/extraction/`: `extractTimeplan` / `extractUkeplan`); results are validated and normalized (HH:MM times, weekday 1-7, period 1-15, dates within the week, +7 days for homework and events).
+4. The rows go into `timetable_days`/`timetable_periods` (timeplan) or `plan_items` (ukeplan) with the document in status `review`. The parent sees them beside the PDF: a weekday grid with editable start/end and periods (timeplan), or "Hele uken" plus one section per day with editable kind, day, audience and event time (ukeplan). Then **Publish** (parents only).
+5. A published ukeplan notifies the child; a published timeplan simply becomes the active timetable.
 
-Child sees: **Today** (lessons, homework due tomorrow, what to pack), **This week** (full plan with tick boxes), and the original file one tap away. The file is the source of truth; extracted items are a convenience.
+Child sees: **Today** (school day from the timetable, homework due tomorrow, events, messages), **This week**, and the original file one tap away. The file is the source of truth; extracted items are a convenience.
 
 ## Feature 3: Star tracks and rewards
 
@@ -127,8 +132,10 @@ All child-owned rows carry `member_id`. RLS helper functions: `current_member_id
 | Table | Key fields | Notes |
 | --- | --- | --- |
 | `members` | id, name, email (unique, lowercase), role (`parent`/`child`), calendar_id, colour, locale | The allowlist |
-| `documents` | id, member_id, type, iso_week, iso_year, file_path, mime_type, status (`processing`/`review`/`published`/`failed`), error, uploaded_by, created_at | File in Storage |
-| `plan_items` | id, document_id, member_id, date, kind (`lesson`/`homework`/`bring`/`note`), subject, text, done, sort | Extracted, editable |
+| `documents` | id, member_id, type (`timeplan`/`ukeplan`), iso_week, iso_year (null for a timeplan), file_path, mime_type, status (`processing`/`review`/`published`/`failed`), error, uploaded_by, created_at | File in Storage |
+| `plan_items` | id, document_id, member_id, date, kind (`homework`/`event`/`message`; `lesson` legacy only), subject, text, audience (`child`/`parent`/`both`), whole_week, starts_at/ends_at (events), done, sort | Extracted from an ukeplan, editable |
+| `timetable_days` | id, document_id, member_id, weekday (1-7), starts_at, ends_at | School hours per weekday, from a timeplan |
+| `timetable_periods` | id, document_id, member_id, weekday, period (1-15 or null), starts_at, ends_at, subject, sort | Periods, from a timeplan, editable |
 | `star_tracks` | id, member_id, name, goal, milestone_every, small_reward, big_reward, preset_reasons text[], status (`active`/`completed`), created_at | One active per child |
 | `stars` | id, track_id, member_id, reason, photo_path, status (`pending`/`approved`/`declined`), requested_by, decided_by, decided_at, note, created_at | Only approved count |
 | `rewards` | id, track_id, at_count, kind (`small`/`big`), given_at, given_by | A row = reward handed out; "owed" = milestones reached without a row |

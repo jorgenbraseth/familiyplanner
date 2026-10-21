@@ -1,8 +1,6 @@
 // Pure helpers for the children's start page. No database or server access here.
 
 import { addDays, dayKey, type CalendarDate } from "./dates";
-import type { PlanItemRow } from "./plan";
-import { formatHm } from "./plan-view";
 import { routineProgress, type RoutineCheckRow, type RoutineItemRow, type RoutineSlot } from "./routines";
 
 export type SlotView = {
@@ -25,26 +23,6 @@ export function slotView(
   const ids = new Set(own.map((i) => i.id));
   const checkedIds = [...new Set(checks.map((c) => c.item_id))].filter((id) => ids.has(id));
   return { slot, items: own, checkedIds, progress: routineProgress(own, [...checks]) };
-}
-
-export type LessonLine = { id: string; period: number | null; time: string | null; title: string };
-
-/** "08:15–09:00" from a lesson's own times, or just one end, or null. */
-function lessonTime(startsAt: string | null, endsAt: string | null): string | null {
-  const from = formatHm(startsAt);
-  const to = formatHm(endsAt);
-  if (from && to) return `${from}–${to}`;
-  return from ?? to;
-}
-
-/** What one lesson row shows: period, time and subject (the text when there is no subject). */
-export function lessonLine(item: PlanItemRow): LessonLine {
-  return {
-    id: item.id,
-    period: item.period,
-    time: lessonTime(item.starts_at, item.ends_at),
-    title: item.subject?.trim() || item.text,
-  };
 }
 
 /** Whether the next school day is tomorrow (otherwise the heading names the weekday, e.g. "mandag"). */
