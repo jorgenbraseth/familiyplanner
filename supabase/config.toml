@@ -3,7 +3,7 @@
 project_id = "familiyplanner"
 
 [db]
-# Match the database version of the hosted project (Project Settings → Infrastructure).
+# Match the database version of the hosted project (`select version();` in the SQL editor; 17.11 on 2026-10-21).
 major_version = 17
 
 [db.seed]
