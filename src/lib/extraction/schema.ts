@@ -64,8 +64,8 @@ export const ukeplanSchema = z.object({
         .describe(
           "child = the child must do, bring or know it; parent = addressed to parents/guardians (meetings, forms to sign, payments); both = general information for everyone.",
         ),
-      starts_at: z.string().nullable().describe("Events only: start time, 24-hour HH:MM, or null."),
-      ends_at: z.string().nullable().describe("Events only: end time, 24-hour HH:MM, or null."),
+      starts_at: z.string().nullable().describe("Events only: start time, 24-hour HH:MM, or null. Always null for homework and messages."),
+      ends_at: z.string().nullable().describe("Events only: end time, 24-hour HH:MM, or null. Always null for homework and messages."),
     }),
   ),
 });

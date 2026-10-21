@@ -126,6 +126,26 @@ describe("normalizeUkeplan", () => {
   });
 });
 
+describe("homework times", () => {
+  it("drops times on homework but keeps them on events", () => {
+    const out = uke([
+      raw({ kind: "homework", text: "Les", starts_at: "08:00", ends_at: "09:00" }),
+      raw({ kind: "event", text: "Tur", starts_at: "08:00", ends_at: "09:00" }),
+    ]);
+    const by = Object.fromEntries(out.map((i) => [i.text, i]));
+    expect(by.Les).toMatchObject({ starts_at: null, ends_at: null });
+    expect(by.Tur).toMatchObject({ starts_at: "08:00", ends_at: "09:00" });
+  });
+
+  it("dedupes homework that only differs by time", () => {
+    const out = uke([
+      raw({ kind: "homework", text: "Les", starts_at: "08:00" }),
+      raw({ kind: "homework", text: "Les", starts_at: "09:00" }),
+    ]);
+    expect(out).toHaveLength(1);
+  });
+});
+
 describe("daily homework", () => {
   const week = [
     "2026-10-19",
