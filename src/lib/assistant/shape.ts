@@ -1,5 +1,6 @@
 // Result shaping and member lookup for the assistant's tools. Pure: no server access.
 
+import { mergeSharedEvents, type CalendarEvent, type SharedEvent } from "../calendar/events";
 import { addDays, dateInTimeZone, dayKey, parseDayKey } from "../dates";
 import type { PlanAudience, PlanItemKind } from "../plan";
 import { formatSchoolHours, hoursForDate, minutesOf, periodsForDate, type SchoolHours, type Timetable } from "../plan-view";
@@ -121,7 +122,7 @@ export function shapeSchoolDays(
   return result;
 }
 
-export type NamedMember = { id: string; name: string; role?: string; calendar_id?: string | null };
+export type NamedMember = { id: string; name: string; role?: string; calendar_ids?: readonly string[] };
 
 export type MemberLookup<M extends NamedMember> = { member: M } | { error: string };
 
@@ -177,4 +178,43 @@ export function filterSchoolDaysBySubject(days: readonly SchoolDayResult[], subj
   return days
     .map((d) => ({ ...d, periods: d.periods.filter((p) => matchesSubject(subject, p.subject)) }))
     .filter((d) => d.periods.length > 0);
+}
+
+/** One member's part of a calendar answer. */
+export type MemberCalendarEvents = {
+  /** Events listed under this member, oldest first. Shared ones carry the other members they are for. */
+  events: (SharedEvent & { sharedWith: string[] })[];
+  /** Names of members under whom shared events of this member are listed instead (never repeated here). */
+  sharedListedUnder: string[];
+};
+
+/**
+ * Splits calendar events (one copy per member, as getEvents returns them) for an answer about several members:
+ * an event of a calendar shared by several of them (same calendar and event id) is listed once, under the first
+ * of them in `members` order, with the names of the others in `sharedWith`. The others get the owner's name in
+ * `sharedListedUnder` so the answer can say the event is for both.
+ */
+export function splitSharedCalendarEvents(
+  events: readonly CalendarEvent[],
+  members: readonly { id: string; name: string }[],
+): Map<string, MemberCalendarEvents> {
+  const names = new Map(members.map((m) => [m.id, m.name]));
+  const order = new Map(members.map((m, i) => [m.id, i]));
+  const result = new Map<string, MemberCalendarEvents>(members.map((m) => [m.id, { events: [], sharedListedUnder: [] }]));
+  const merged = mergeSharedEvents(events).map((e) => ({
+    ...e,
+    memberIds: [...e.memberIds].sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0)),
+  }));
+  merged.sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
+  for (const event of merged) {
+    const [owner, ...others] = event.memberIds;
+    const sharedWith = others.map((id) => names.get(id) ?? "").filter(Boolean);
+    result.get(owner)?.events.push({ ...event, memberId: owner, sharedWith });
+    const ownerName = names.get(owner);
+    for (const id of others) {
+      const entry = result.get(id);
+      if (entry && ownerName && !entry.sharedListedUnder.includes(ownerName)) entry.sharedListedUnder.push(ownerName);
+    }
+  }
+  return result;
 }

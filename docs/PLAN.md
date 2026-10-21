@@ -46,7 +46,7 @@ Note: if the kids use supervised (Family Link) Google accounts, Google may block
 
 - Home screen: **Today** and **This week** for the signed-in person.
 - **Family** view: one column per person (or a merged list with coloured dots), toggle chips to show/hide each person.
-- Each member row stores a `calendar_id` (usually their Gmail address) and a colour.
+- Each member row stores `calendar_ids` (a list of Google calendar ids, usually their Gmail address plus any shared calendars) and a colour.
 - Server reads events with a Google **service account** (`GOOGLE_SERVICE_ACCOUNT_KEY`), using `events.list` with `singleEvents=true`, `orderBy=startTime`. Cache results ~5 minutes.
 - Read-only for now. Adding events from the app would require per-user calendar consent; later phase if wanted.
 
@@ -133,7 +133,7 @@ All child-owned rows carry `member_id`. RLS helper functions: `current_member_id
 
 | Table | Key fields | Notes |
 | --- | --- | --- |
-| `members` | id, name, email (unique, lowercase), role (`parent`/`child`), calendar_id, colour, locale | The allowlist |
+| `members` | id, name, email (unique, lowercase), role (`parent`/`child`), calendar_ids, colour, locale | The allowlist |
 | `documents` | id, member_id, type (`timeplan`/`ukeplan`), iso_week, iso_year (null for a timeplan), file_path, mime_type, status (`processing`/`review`/`published`/`failed`), error, uploaded_by, created_at | File in Storage |
 | `plan_items` | id, document_id, member_id, date, kind (`homework`/`event`/`message`; `lesson` legacy only), subject, text, audience (`child`/`parent`/`both`), whole_week, starts_at/ends_at (events), done, sort | Extracted from an ukeplan, editable |
 | `timetable_days` | id, document_id, member_id, weekday (1-7), starts_at, ends_at | School hours per weekday, from a timeplan |

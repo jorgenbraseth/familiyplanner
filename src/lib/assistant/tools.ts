@@ -19,6 +19,7 @@ import {
   resolveTargets,
   shapePlanItems,
   shapeSchoolDays,
+  splitSharedCalendarEvents,
   type PlanItemInput,
 } from "./shape";
 
@@ -240,12 +241,12 @@ async function findNext(ctx: ToolContext, raw: unknown): Promise<unknown> {
   const fromKey = dayKey(today);
   const toKey = dayKey(addDays(today, NEXT_SEARCH_DAYS));
 
-  const withCalendar = target.members.filter((m) => m.calendar_id);
+  const withCalendar = target.members.filter((m) => m.calendar_ids.length > 0);
   const calendar =
     withCalendar.length === 0
       ? { events: [], failedMemberIds: [] as string[] }
       : await getEvents(
-          withCalendar.map((m) => ({ memberId: m.id, calendarId: m.calendar_id })),
+          withCalendar.map((m) => ({ memberId: m.id, calendarIds: m.calendar_ids })),
           startOfDay(today),
           startOfDay(addDays(today, NEXT_SEARCH_DAYS + 1)),
         );
@@ -311,20 +312,34 @@ async function getCalendar(ctx: ToolContext, raw: unknown): Promise<unknown> {
   if ("error" in target) return { error: target.error };
 
   // Any family member may ask about any other member's calendar: calendar ids come from the members table (readable by the family).
-  const withCalendar = target.members.filter((m) => m.calendar_id);
+  const withCalendar = target.members.filter((m) => m.calendar_ids.length > 0);
   const result =
     withCalendar.length === 0
       ? { events: [], failedMemberIds: [] as string[] }
       : await getEvents(
-          withCalendar.map((m) => ({ memberId: m.id, calendarId: m.calendar_id })),
+          withCalendar.map((m) => ({ memberId: m.id, calendarIds: m.calendar_ids })),
           startOfDay(range.from),
           startOfDay(addDays(range.to, 1)),
         );
+  const split = splitSharedCalendarEvents(result.events, target.members);
   const results = target.members.map((member): Record<string, unknown> => {
-    if (!member.calendar_id) return { member: member.name, events: [], note: "no calendar connected" };
+    if (member.calendar_ids.length === 0) return { member: member.name, events: [], note: "no calendar connected" };
     if (result.failedMemberIds.includes(member.id)) return { member: member.name, error: "The calendar could not be read right now." };
-    const events = result.events.filter((e) => e.memberId === member.id).slice(0, 100).map(formatEvent);
-    return { member: member.name, events, ...(events.length === 0 ? { note: "no events found" } : {}) };
+    const mine = split.get(member.id);
+    const events = (mine?.events ?? []).slice(0, 100).map((e) => ({
+      ...formatEvent(e),
+      ...(e.sharedWith.length > 0 ? { shared_with: e.sharedWith } : {}),
+    }));
+    const listedUnder = mine?.sharedListedUnder ?? [];
+    return {
+      member: member.name,
+      events,
+      ...(listedUnder.length > 0
+        ? { note: `Shared calendar events that are also for ${member.name} are listed once, under ${listedUnder.join(" and ")}.` }
+        : events.length === 0
+          ? { note: "no events found" }
+          : {}),
+    };
   });
   if (target.members.length === 1 && "error" in results[0]) return { error: results[0].error };
   const wrapped = wrapResults(target, results);

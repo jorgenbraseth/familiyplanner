@@ -30,7 +30,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         {t.home.greeting(member.name)}
       </h1>
       <ParentSchoolEndCard data={home} avatars={avatars} />
-      {!member.calendar_id && <Notice>{t.home.noCalendar}</Notice>}
+      {member.calendar_ids.length === 0 && <Notice>{t.home.noCalendar}</Notice>}
       <ParentDayCard
         key={day.dateKey}
         day={day}

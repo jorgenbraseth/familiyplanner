@@ -395,6 +395,8 @@ export function periodsForDate(key: string, timetable: Timetable): PeriodLine[] 
 export type EventEntry = {
   id: string;
   memberId: string;
+  /** Everyone the entry applies to when a shared calendar event is listed once for several members (includes `memberId`). */
+  memberIds?: string[];
   title: string;
   timeLabel: string;
   /** Minutes after midnight the entry starts; -1 for all-day/untimed (these come first). */

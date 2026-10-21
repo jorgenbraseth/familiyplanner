@@ -80,7 +80,7 @@ export async function StartView({
         </div>
       </header>
       {previewing && <Notice>{t.preview.readOnly}</Notice>}
-      {!member.calendar_id && <Notice>{t.home.noCalendar}</Notice>}
+      {member.calendar_ids.length === 0 && <Notice>{t.home.noCalendar}</Notice>}
       {failedNames.length > 0 && <Notice>{t.calendar.failed(failedNames.join(", "))}</Notice>}
 
       <RoutineBar
