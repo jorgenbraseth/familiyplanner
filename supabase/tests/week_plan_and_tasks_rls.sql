@@ -228,7 +228,7 @@ begin
   perform pg_temp.act_as('jorgen.braseth@gmail.com', 'authenticated');
 
   insert into public.documents (member_id, type, iso_week, iso_year, file_path, mime_type)
-    values (a, 'week_schedule', 44, 2026, a || '/week.pdf', 'application/pdf') returning id into da;
+    values (a, 'ukeplan', 44, 2026, a || '/week.pdf', 'application/pdf') returning id into da;
   insert into public.school_days (document_id, member_id, date, starts_at, ends_at)
     values (da, a, '2026-10-26', '08:15', '14:30');
   insert into public.school_days (document_id, member_id, date) values (da, a, '2026-10-27');

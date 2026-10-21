@@ -70,7 +70,7 @@ export function SchoolWeekPlan({
                 href={`/documents/${doc.id}/file`}
                 className="inline-flex min-h-11 items-center text-base font-bold text-primary-strong underline underline-offset-4"
               >
-                {documents.length === 1 ? t.school.originalFile : t.school.originalFileFor(t.school.documentTypes[doc.type], doc.iso_week)}
+                {documents.length === 1 ? t.school.originalFile : t.school.originalFileFor(t.school.documentTypes[doc.type], doc.iso_week as number)}
               </a>
             </li>
           ))}

@@ -76,7 +76,7 @@ export default async function DocumentPage({
   const items = (itemData ?? []) as ItemRow[];
   const fileUrl = signed?.signedUrl ?? null;
 
-  const days = allowedItemDays(doc.iso_year, doc.iso_week);
+  const days = allowedItemDays(doc.iso_year as number, doc.iso_week as number);
   const schoolDays = new Map(
     (
       (dayData ?? []) as Pick<SchoolDayRow, "date" | "starts_at" | "ends_at">[]
@@ -124,7 +124,7 @@ export default async function DocumentPage({
         </div>
         <p className="text-sm text-muted">
           {t.documents.types[doc.type]} ·{" "}
-          {t.documents.week(doc.iso_week, doc.iso_year)} ·{" "}
+          {doc.iso_week !== null && doc.iso_year !== null ? t.documents.week(doc.iso_week, doc.iso_year) : ""} ·{" "}
           {t.documents.created(created)}
         </p>
       </header>

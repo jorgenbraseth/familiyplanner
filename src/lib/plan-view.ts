@@ -4,12 +4,17 @@ import { addDays, dayKey, type CalendarDate } from "./dates";
 import { locale } from "./i18n";
 import type { PlanItemKind, PlanItemRow } from "./plan";
 
-const KIND_ORDER: Record<PlanItemKind, number> = { lesson: 0, homework: 1, bring: 2, note: 3 };
+const KIND_ORDER: Record<PlanItemKind, number> = { lesson: 0, homework: 1, message: 2, event: 3 };
+
+// Interim mapping until the views are rebuilt: child-only messages are the old "bring" list;
+// other messages and events are the old "notes" list.
+const isBringItem = (i: PlanItemRow) => i.kind === "message" && i.audience === "child";
+const isNoteItem = (i: PlanItemRow) => (i.kind === "message" && i.audience !== "child") || i.kind === "event";
 
 export type DayItems = { key: string; date: CalendarDate; items: PlanItemRow[] };
 
 function compareItems(a: PlanItemRow, b: PlanItemRow): number {
-  return KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.sort - b.sort;
+  return KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || Number(a.audience !== "child") - Number(b.audience !== "child") || a.sort - b.sort;
 }
 
 /** `days` consecutive days from `firstDay`, each with its items (lesson, homework, bring, note, then `sort`). */
@@ -49,10 +54,11 @@ export function todayView(items: PlanItemRow[], today: CalendarDate): TodayView 
   const nextKey = dayKey(next);
   const sorted = [...items].sort(compareItems);
   const todays = (kind: PlanItemKind) => sorted.filter((i) => i.date === todayKey && i.kind === kind);
+  const todaysDay = sorted.filter((i) => i.date === todayKey);
   return {
     lessons: todays("lesson"),
-    bring: todays("bring"),
-    notes: todays("note"),
+    bring: todaysDay.filter(isBringItem),
+    notes: todaysDay.filter(isNoteItem),
     homeworkDue: sorted.filter((i) => i.date === nextKey && i.kind === "homework"),
     nextSchoolDay: next,
     nextSchoolDayKey: nextKey,
@@ -143,8 +149,8 @@ export function weekPlan(
       hours: formatSchoolHours(hours?.starts_at, hours?.ends_at),
       lessons: sortLessons(of("lesson")),
       homework: of("homework"),
-      bring: of("bring"),
-      notes: of("note"),
+      bring: d.items.filter(isBringItem),
+      notes: d.items.filter(isNoteItem),
     };
   });
   return hideEmpty ? withoutEmptyDays(planned, isWeekPlanDayEmpty) : planned;

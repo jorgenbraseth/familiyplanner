@@ -167,8 +167,8 @@ export async function processDocument(
     extraction = await extractPlan({
       data: new Uint8Array(await file.arrayBuffer()),
       mimeType: doc.mime_type,
-      isoYear: doc.iso_year,
-      isoWeek: doc.iso_week,
+      isoYear: doc.iso_year as number,
+      isoWeek: doc.iso_week as number,
       childName,
       locale,
     });

@@ -55,7 +55,7 @@ export default async function DocumentsPage() {
                   </p>
                   <p className="break-words text-sm text-muted">
                     {t.documents.types[doc.type]} ·{" "}
-                    {t.documents.week(doc.iso_week, doc.iso_year)}
+                    {doc.iso_week !== null && doc.iso_year !== null ? t.documents.week(doc.iso_week, doc.iso_year) : ""}
                   </p>
                 </div>
                 <StatusBadge status={doc.status} />

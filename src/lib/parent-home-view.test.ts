@@ -26,15 +26,15 @@ describe("uploadHref and parseUploadDefaults", () => {
 
   it("round-trips a link", () => {
     const href = uploadHref("kid-b", { isoYear: 2026, isoWeek: 44 });
-    expect(href).toBe("/documents/new?child=kid-b&type=week_schedule&week=44&year=2026");
+    expect(href).toBe("/documents/new?child=kid-b&type=ukeplan&week=44&year=2026");
     const params = Object.fromEntries(new URL(href, "http://x").searchParams);
-    expect(parseUploadDefaults(params, ids, fallback)).toEqual({ childId: "kid-b", type: "week_schedule", week: 44, year: 2026 });
+    expect(parseUploadDefaults(params, ids, fallback)).toEqual({ childId: "kid-b", type: "ukeplan", week: 44, year: 2026 });
   });
 
   it("falls back on anything invalid", () => {
     expect(parseUploadDefaults({ child: "stranger", type: "x", week: "54", year: "1999" }, ids, fallback)).toEqual({
       childId: "kid-a",
-      type: "week_schedule",
+      type: "ukeplan",
       week: 43,
       year: 2026,
     });
@@ -44,9 +44,9 @@ describe("uploadHref and parseUploadDefaults", () => {
   });
 
   it("accepts other document types and takes the first of repeated params", () => {
-    expect(parseUploadDefaults({ type: "homework", week: ["53", "2"], child: ["kid-b", "kid-a"] }, ids, fallback)).toMatchObject({
+    expect(parseUploadDefaults({ type: "timeplan", week: ["53", "2"], child: ["kid-b", "kid-a"] }, ids, fallback)).toMatchObject({
       childId: "kid-b",
-      type: "homework",
+      type: "timeplan",
       week: 53,
     });
   });

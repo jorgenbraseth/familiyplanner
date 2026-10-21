@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { dayKey } from "./dates";
-import type { PlanItemKind, PlanItemRow } from "./plan";
+import type { PlanAudience, PlanItemKind, PlanItemRow } from "./plan";
 import { formatSchoolHours, formatWeekday, groupItemsByDay, isWeekPlanDayEmpty, nextSchoolDay, todayView, visibleDays, weekPlan, withoutEmptyDays } from "./plan-view";
 
 let n = 0;
-function item(date: string, kind: PlanItemKind, sort = 0, text = "Test"): PlanItemRow {
+function item(date: string, kind: PlanItemKind, sort = 0, text = "Test", audience: PlanAudience = "both"): PlanItemRow {
   n += 1;
   return {
     id: `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`,
@@ -16,6 +16,8 @@ function item(date: string, kind: PlanItemKind, sort = 0, text = "Test"): PlanIt
     text,
     done: false,
     sort,
+    audience,
+    whole_week: false,
     period: null,
     starts_at: null,
     ends_at: null,
@@ -28,8 +30,8 @@ const monday = { year: 2026, month: 10, day: 19 };
 describe("groupItemsByDay", () => {
   it("returns every day, ordering by kind then sort", () => {
     const items = [
-      item("2026-10-19", "note", 0, "n"),
-      item("2026-10-19", "bring", 0, "b"),
+      item("2026-10-19", "message", 0, "n"),
+      item("2026-10-19", "message", 0, "b", "child"),
       item("2026-10-19", "homework", 0, "h"),
       item("2026-10-19", "lesson", 2, "l2"),
       item("2026-10-19", "lesson", 1, "l1"),
@@ -61,8 +63,8 @@ describe("nextSchoolDay", () => {
 describe("todayView", () => {
   const items = [
     item("2026-10-21", "lesson", 1, "Matte"),
-    item("2026-10-21", "bring", 0, "Gymtøy"),
-    item("2026-10-21", "note", 0, "Foreldremøte"),
+    item("2026-10-21", "message", 0, "Gymtøy", "child"),
+    item("2026-10-21", "message", 0, "Foreldremøte"),
     item("2026-10-21", "homework", 0, "Today's homework"),
     item("2026-10-22", "homework", 0, "Lesing"),
     item("2026-10-22", "lesson", 0, "Norsk"),
@@ -119,7 +121,7 @@ describe("weekPlan", () => {
     lesson("2026-10-21", 1, "Matte"),
     lesson("2026-10-21", null, "Fri", 5),
     item("2026-10-21", "homework", 0, "Les"),
-    item("2026-10-24", "note", 0, "Tur"),
+    item("2026-10-24", "message", 0, "Tur"),
   ];
   const hours = new Map([["2026-10-21", { starts_at: "08:15:00", ends_at: "14:00:00" }]]);
 
@@ -146,7 +148,7 @@ describe("empty days", () => {
     expect(isWeekPlanDayEmpty(empty)).toBe(true);
     expect(isWeekPlanDayEmpty({ ...empty, hours: "08:15–14:00" })).toBe(false);
     expect(isWeekPlanDayEmpty({ ...empty, homework: [item("2026-10-20", "homework")] })).toBe(false);
-    expect(isWeekPlanDayEmpty({ ...empty, notes: [item("2026-10-20", "note")] })).toBe(false);
+    expect(isWeekPlanDayEmpty({ ...empty, notes: [item("2026-10-20", "message")] })).toBe(false);
   });
 
   it("weekPlan can drop empty days, and gives nothing for an empty week", () => {

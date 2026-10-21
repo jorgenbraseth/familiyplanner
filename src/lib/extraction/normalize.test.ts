@@ -51,15 +51,19 @@ describe("normalizeExtraction", () => {
         period: null,
         starts_at: null,
         ends_at: null,
+        audience: "both",
+        whole_week: false,
       },
       {
         date: "2026-10-20",
-        kind: "bring",
+        kind: "message",
         subject: null,
         text: "Gym clothes",
         period: null,
         starts_at: null,
         ends_at: null,
+        audience: "child",
+        whole_week: false,
       },
     ]);
     expect(out.days).toEqual([]);
@@ -116,12 +120,14 @@ describe("normalizeExtraction", () => {
     expect(out[0].text).toHaveLength(1000);
     expect(out[1]).toEqual({
       date: "2026-10-19",
-      kind: "note",
+      kind: "message",
       subject: null,
       text: "hello",
       period: null,
       starts_at: null,
       ends_at: null,
+      audience: "both",
+      whole_week: false,
     });
   });
 
@@ -147,12 +153,14 @@ describe("normalizeExtraction", () => {
     expect(out).toEqual([
       {
         date: "2026-10-19",
-        kind: "note",
+        kind: "message",
         subject: null,
         text: "Parent meeting soon",
         period: null,
         starts_at: null,
         ends_at: null,
+        audience: "both",
+        whole_week: false,
       },
     ]);
     expect(norm({ days: [], notes: "  " })).toEqual([]);

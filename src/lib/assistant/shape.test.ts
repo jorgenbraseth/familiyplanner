@@ -31,7 +31,7 @@ describe("shapePlanItems", () => {
   it("sorts, adds weekday and keeps fields", () => {
     const r = shapePlanItems([
       { date: "2026-10-22", kind: "homework", subject: "Mat", text: "Side 4", done: false, sort: 1 },
-      { date: "2026-10-21", kind: "bring", subject: null, text: "Gymtøy", done: true, sort: 2 },
+      { date: "2026-10-21", kind: "message", subject: null, text: "Gymtøy", done: true, sort: 2 },
       { date: "2026-10-21", kind: "lesson", subject: "Norsk", text: "Lesing", done: false, sort: 1 },
     ]);
     expect(r.items.map((i) => i.text)).toEqual(["Lesing", "Gymtøy", "Side 4"]);
@@ -44,7 +44,7 @@ describe("shapePlanItems", () => {
   it("caps the list", () => {
     const rows = Array.from({ length: MAX_PLAN_ITEMS + 5 }, (_, i) => ({
       date: "2026-10-21",
-      kind: "note" as const,
+      kind: "message" as const,
       subject: null,
       text: `n${i}`,
       done: false,
