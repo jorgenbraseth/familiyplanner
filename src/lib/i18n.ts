@@ -373,8 +373,10 @@ export const t = {
   // Parents' home page (replaces the parents' Meg page).
   parentDay: {
     title: "Dagen i dag",
+    titleOtherDay: "Dagen",
     school: "Skole",
     empty: "Ingenting på programmet i dag.",
+    emptyOtherDay: "Ingenting på programmet denne dagen.",
     failed: (names: string) => `Klarte ikke å hente alt for ${names}.`,
     schoolLabel: "Skole",
     eventLabel: "Avtale",
