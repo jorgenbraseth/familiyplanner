@@ -9,7 +9,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <>
       <header className="sticky top-0 z-10 border-b border-zinc-200 bg-background/95 backdrop-blur dark:border-zinc-800">
-        <nav className="mx-auto flex max-w-2xl items-center gap-1 px-3 py-2">
+        <nav className="mx-auto flex max-w-2xl flex-wrap items-center gap-1 px-3 py-2">
           <Link href="/" className={link}>
             {t.nav.today}
           </Link>
@@ -17,9 +17,14 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             {t.nav.family}
           </Link>
           {member.role === "parent" && (
-            <Link href="/members" className={link}>
-              {t.nav.members}
-            </Link>
+            <>
+              <Link href="/documents" className={link}>
+                {t.documents.nav}
+              </Link>
+              <Link href="/members" className={link}>
+                {t.nav.members}
+              </Link>
+            </>
           )}
           <form action={signOut} className="ml-auto">
             <button type="submit" className={`${link} text-zinc-500 dark:text-zinc-400`}>

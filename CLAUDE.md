@@ -4,10 +4,10 @@ Private family web app at https://planner.braseth.family. Read `docs/PLAN.md` (w
 
 ## Current status
 
-Phase 0 scaffold is in the repo; the Vercel project, env vars and the `planner.braseth.family` domain are set up by hand (docs/SETUP.md). Phase 1 code is written (members migration + RLS tests, Google login + allowlist, members admin, calendar views); it is done once the owner has signed in on their phone and sees the calendars. Extra features in PLAN.md are out of scope until phases 1–4 are done.
+Phase 0 scaffold is in the repo; the Vercel project, env vars and the `planner.braseth.family` domain are set up by hand (docs/SETUP.md). Phase 1 is live (Google login + allowlist, members admin, calendar views). Phase 2 code is written (upload, Claude extraction, review/publish, child views, sign-up hook); it is done once a real school plan has been uploaded, reviewed and shows as today's homework. Extra features in PLAN.md are out of scope until phases 1–4 are done.
 
 - [x] Phase 0 – Setup (Next.js + TS + Tailwind, Supabase SSR client, migrations folder, `.env.example`, Vercel config, CI). Owner still to do: Vercel project + domain (docs/SETUP.md §5–6)
-- [ ] Phase 1 – Google login + allowlist, members admin, calendars (code written; waiting on migration deploy + sign-in test)
+- [x] Phase 1 – Google login + allowlist, members admin, calendars
 - [ ] Phase 2 – Document upload, Claude extraction, parent review, child Today/Week
 - [ ] Phase 3 – Star tracks, approvals, rewards, web push, PWA
 - [ ] Phase 4 – Voice assistant (`/api/assistant`, tools, speech in/out, limits, log)
@@ -43,7 +43,7 @@ For every task: plan the work with Opus (the main session), then hand it off to 
 - **Allowlist:** a signed-in Google user whose email isn't in `members` is signed out and shown a "not invited" page. Compare emails lowercased.
 - **Children's data:** no real PDFs, photos or calendar data in git, fixtures or logs. Use made-up test data.
 - **Uploads go browser → Supabase Storage directly**, then a server action processes the file (avoids body-size limits). Path: `<member_id>/<document_id>.<ext>`.
-- **Claude extraction** uses a forced tool call with a JSON schema; validate the result (e.g. zod) before writing `plan_items`. Documents go to `review` status; only parents publish.
+- **Claude extraction** uses structured outputs (`client.messages.parse` + `zodOutputFormat`, `src/lib/extraction/`); forced `tool_choice` is rejected by current models (Sonnet 5.5). Validate and normalize the result before writing `plan_items`. Documents go to `review` status; only parents publish.
 - **Schema changes** are new files in `supabase/migrations/` (never edit an applied migration).
 - **UI strings** live in one module (e.g. `src/lib/i18n.ts`) so the language (Norwegian/Danish) can be switched in one place. Dates/times in `Europe/Copenhagen`, weeks are ISO weeks.
 - Mobile first: kids use phones; parents approve stars from their phone.

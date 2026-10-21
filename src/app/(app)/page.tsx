@@ -3,13 +3,20 @@ import { Notice } from "@/components/notice";
 import { WeekNav } from "@/components/week-nav";
 import { getCurrentMember } from "@/lib/auth";
 import { loadWeek, parseWeekOffset } from "@/lib/calendar/view";
+import { SchoolToday } from "@/components/school-today";
+import { SchoolWeek } from "@/components/school-week";
 import { t } from "@/lib/i18n";
+import { groupItemsByDay, todayView } from "@/lib/plan-view";
+import { loadSchoolWeek } from "@/lib/school";
 
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const member = await getCurrentMember();
   const offset = parseWeekOffset((await searchParams).week);
-  const week = await loadWeek([member], offset);
+  const [week, school] = await Promise.all([loadWeek([member], offset), loadSchoolWeek(member.id, offset)]);
   const today = week.days.find((d) => d.isToday);
+  const schoolToday = todayView(school.items, school.today);
+  const hasSchoolToday =
+    schoolToday.lessons.length + schoolToday.bring.length + schoolToday.notes.length + schoolToday.homeworkDue.length > 0;
 
   return (
     <>
@@ -20,12 +27,18 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">{t.home.today}</h2>
           <DayList days={[today]} />
+          {hasSchoolToday && <SchoolToday view={schoolToday} />}
         </section>
       )}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">{t.home.thisWeek}</h2>
         <WeekNav path="/" offset={offset} isoWeek={week.isoWeek} />
         <DayList days={week.days} />
+        <SchoolWeek
+          days={groupItemsByDay(school.items, school.monday, 7)}
+          documents={school.documents}
+          todayKey={week.todayKey}
+        />
       </section>
     </>
   );

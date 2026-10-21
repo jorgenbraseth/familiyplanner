@@ -102,3 +102,9 @@ export function formatDayHeading(date: CalendarDate): string {
     month: "long",
   }).format(new Date(Date.UTC(date.year, date.month - 1, date.day)));
 }
+
+/** Monday of ISO week `isoWeek` in ISO week-year `isoYear` (4 January is always in week 1). */
+export function mondayOfIsoWeek(isoYear: number, isoWeek: number): CalendarDate {
+  const week1Monday = mondayOf({ year: isoYear, month: 1, day: 4 });
+  return addDays(week1Monday, (isoWeek - 1) * 7);
+}

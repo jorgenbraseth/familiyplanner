@@ -5,6 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 // Google → Supabase → here. Exchanges the code for a session, then applies the allowlist.
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
+  // The "Before User Created" hook rejects strangers; Supabase passes that back as an error.
+  const errorText = `${searchParams.get("error_description") ?? ""} ${searchParams.get("error_code") ?? ""} ${searchParams.get("error") ?? ""}`;
+  if (errorText.includes("not_invited")) return NextResponse.redirect(`${origin}/not-invited`);
+
   const code = searchParams.get("code");
   if (!code) return NextResponse.redirect(`${origin}/login?error=1`);
 
