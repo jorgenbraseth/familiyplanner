@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isNavActive, navFits } from "./nav-fit";
+import { isNavActive, navFits, navTitle } from "./nav-fit";
 
 describe("navFits", () => {
   it("fits when the items are narrower than or exactly as wide as the space", () => {
@@ -25,5 +25,26 @@ describe("isNavActive", () => {
     expect(isNavActive("/stars", "/stars")).toBe(true);
     expect(isNavActive("/stars/tasks", "/stars")).toBe(true);
     expect(isNavActive("/starship", "/stars")).toBe(false);
+  });
+});
+
+describe("navTitle", () => {
+  const items = [
+    { href: "/", label: "Meg" },
+    { href: "/stars", label: "Stjerner" },
+    { href: "/stars/tasks", label: "Oppgaver" },
+    { href: "/documents", label: "Dokumenter" },
+  ];
+  it("uses the label of the active item", () => {
+    expect(navTitle("/", items, "App")).toBe("Meg");
+    expect(navTitle("/documents", items, "App")).toBe("Dokumenter");
+  });
+  it("falls back to the closest parent item (longest prefix)", () => {
+    expect(navTitle("/documents/abc", items, "App")).toBe("Dokumenter");
+    expect(navTitle("/stars/routines/1", items, "App")).toBe("Stjerner");
+    expect(navTitle("/stars/tasks/new", items, "App")).toBe("Oppgaver");
+  });
+  it("uses the fallback when nothing matches", () => {
+    expect(navTitle("/assistant-log", items, "App")).toBe("App");
   });
 });

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { NavLink } from "@/components/nav-link";
-import { navFits } from "@/lib/nav-fit";
+import { navFits, navTitle } from "@/lib/nav-fit";
 import { t } from "@/lib/i18n";
 
 export type TopNavItem = { href: string; label: string; badge?: number };
@@ -95,7 +95,7 @@ export function TopNav({ items, signOutAction }: { items: TopNavItem[]; signOutA
       <nav aria-label={t.nav.main} className="mx-auto max-w-2xl px-3 py-1.5">
         <div ref={spaceRef} className="relative">
           {collapsed ? (
-            <div className="flex min-h-11 items-center justify-end">
+            <div className="flex min-h-11 items-center gap-2">
               <button
                 ref={buttonRef}
                 type="button"
@@ -107,6 +107,9 @@ export function TopNav({ items, signOutAction }: { items: TopNavItem[]; signOutA
               >
                 <span aria-hidden="true">{open ? "✕" : "☰"}</span>
               </button>
+              <p className="min-w-0 flex-1 truncate font-display text-lg font-extrabold text-heading">
+                {navTitle(pathname, items, t.appName)}
+              </p>
             </div>
           ) : (
             <div className="flex flex-nowrap items-center gap-1 overflow-hidden">

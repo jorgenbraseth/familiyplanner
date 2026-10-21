@@ -44,7 +44,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             </div>
           </div>
         )}
-        <header className="relative border-b-2 border-line bg-surface/95 backdrop-blur">
+        <header className="relative border-b-2 border-line bg-surface">
           <TopNav items={navItems} signOutAction={signOut} />
         </header>
       </div>
