@@ -323,6 +323,9 @@ export const t = {
     answer: "Svar",
     stop: "Stopp",
     readAgain: "Les opp igjen",
+    noVoice: "Fant ingen norsk stemme på denne enheten, så svaret vises bare som tekst.",
+    noVoiceHelp:
+      "Legg til norsk tale i telefonens eller datamaskinens innstillinger for tale/tekst-til-tale, og last siden på nytt.",
     muteOn: "Lyd av",
     muteOff: "Lyd på",
     muteLabel: "Les svar høyt",

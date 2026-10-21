@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { t } from "@/lib/i18n";
+import { pickVoice } from "@/lib/speech-voice";
 import { MicIcon } from "./assistant-button";
 
 const MUTE_KEY = "assistant-muted";
@@ -28,6 +29,23 @@ function readMuted(): boolean {
   }
 }
 
+/** getVoices() is often empty until `voiceschanged` fires; wait for it, but not forever. */
+function loadVoices(timeoutMs = 1500): Promise<SpeechSynthesisVoice[]> {
+  if (typeof speechSynthesis === "undefined") return Promise.resolve([]);
+  const now = speechSynthesis.getVoices();
+  if (now.length > 0) return Promise.resolve(now);
+  return new Promise((resolve) => {
+    const state: { timer?: ReturnType<typeof setTimeout> } = {};
+    const done = () => {
+      clearTimeout(state.timer);
+      speechSynthesis.removeEventListener("voiceschanged", done);
+      resolve(speechSynthesis.getVoices());
+    };
+    speechSynthesis.addEventListener("voiceschanged", done, { once: true });
+    state.timer = setTimeout(done, timeoutMs);
+  });
+}
+
 function recognitionConstructor(): SpeechRecognitionConstructorLike | undefined {
   if (typeof window === "undefined") return undefined;
   return window.SpeechRecognition ?? window.webkitSpeechRecognition;
@@ -42,6 +60,7 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
   const [left, setLeft] = useState<number | null>(null);
   const [text, setText] = useState("");
   const [speaking, setSpeaking] = useState(false);
+  const [noVoice, setNoVoice] = useState(false);
   const [muted, setMuted] = useState(readMuted);
   const [canListen] = useState(() => recognitionConstructor() !== undefined);
 
@@ -49,20 +68,24 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const mutedRef = useRef(muted);
+  const speakTokenRef = useRef(0);
   const pressRef = useRef({ downAt: 0, ignoreUp: false });
   const transcriptRef = useRef({ final: "", interim: "", error: "" });
 
-  function speak(message: string) {
+  async function speak(message: string) {
     if (typeof speechSynthesis === "undefined") return;
     speechSynthesis.cancel();
+    const token = ++speakTokenRef.current;
+    const voice = pickVoice(await loadVoices(), locale);
+    if (token !== speakTokenRef.current) return; // Stopped, muted or a newer request meanwhile.
+    if (!voice) {
+      setNoVoice(true);
+      return;
+    }
+    setNoVoice(false);
     const utterance = new SpeechSynthesisUtterance(message);
-    utterance.lang = locale;
-    const language = locale.split("-")[0].toLowerCase();
-    const voices = speechSynthesis.getVoices();
-    const voice =
-      voices.find((v) => v.lang.replace("_", "-").toLowerCase() === locale.toLowerCase()) ??
-      voices.find((v) => v.lang.toLowerCase().startsWith(language));
-    if (voice) utterance.voice = voice;
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
     utterance.onstart = () => setSpeaking(true);
     utterance.onend = () => setSpeaking(false);
     utterance.onerror = () => setSpeaking(false);
@@ -70,6 +93,7 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
   }
 
   function stopSpeaking() {
+    speakTokenRef.current++;
     if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
     setSpeaking(false);
   }
@@ -85,6 +109,7 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
     setHeard("");
     setText("");
     setError("");
+    setNoVoice(false);
     setPhase("thinking");
     try {
       const response = await fetch("/api/assistant", {
@@ -109,7 +134,7 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
       setAnswer(data.answer);
       setLeft(typeof data.questionsLeft === "number" ? data.questionsLeft : null);
       setPhase("answer");
-      if (!mutedRef.current) speak(data.answer);
+      if (!mutedRef.current) void speak(data.answer);
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return;
       setError(t.assistant.errors.network);
@@ -328,6 +353,12 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
           {listening && !heard && <p className="text-2xl font-extrabold">{t.assistant.listening}</p>}
           {phase === "thinking" && <p className="text-2xl font-extrabold">{t.assistant.thinking}</p>}
           {phase === "answer" && <p className="whitespace-pre-wrap text-2xl font-bold leading-snug">{answer}</p>}
+          {phase === "answer" && noVoice && (
+            <p className="mt-3 space-y-1 text-base text-muted">
+              <span className="block font-bold">{t.assistant.noVoice}</span>
+              <span className="block">{t.assistant.noVoiceHelp}</span>
+            </p>
+          )}
           {phase === "error" && (
             <p role="alert" className="rounded-xl bg-danger-soft p-3 text-lg font-bold text-on-danger-soft">
               {error}
@@ -338,8 +369,8 @@ export function AssistantPanel({ locale, onClose }: { locale: string; onClose: (
         <div className="space-y-3 border-t-2 border-line px-4 pt-3 pb-3">
           <div className="flex min-h-11 items-center justify-between gap-2">
             <p className="text-sm font-bold text-muted">{left !== null ? t.assistant.questionsLeft(left) : ""}</p>
-            {hasSynthesis && phase === "answer" && (
-              <button type="button" onClick={() => (speaking ? stopSpeaking() : speak(answer))} className="btn btn-secondary min-h-11">
+            {hasSynthesis && phase === "answer" && !noVoice && (
+              <button type="button" onClick={() => (speaking ? stopSpeaking() : void speak(answer))} className="btn btn-secondary min-h-11">
                 {speaking ? t.assistant.stop : t.assistant.readAgain}
               </button>
             )}
