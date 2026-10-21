@@ -1,33 +1,24 @@
-import Link from "next/link";
+import { NavLink } from "@/components/nav-link";
 import { signOut } from "@/app/auth/actions";
 import { getCurrentMember } from "@/lib/auth";
 import { t } from "@/lib/i18n";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const member = await getCurrentMember();
-  const link = "rounded-lg px-3 py-2 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800";
   return (
     <>
-      <header className="sticky top-0 z-10 border-b border-zinc-200 bg-background/95 backdrop-blur dark:border-zinc-800">
-        <nav className="mx-auto flex max-w-2xl flex-wrap items-center gap-1 px-3 py-2">
-          <Link href="/" className={link}>
-            {t.nav.today}
-          </Link>
-          <Link href="/family" className={link}>
-            {t.nav.family}
-          </Link>
+      <header className="sticky top-0 z-10 border-b-2 border-line bg-surface/95 backdrop-blur">
+        <nav className="mx-auto flex max-w-2xl flex-wrap items-center gap-1 px-3 py-1.5">
+          <NavLink href="/">{t.nav.today}</NavLink>
+          <NavLink href="/family">{t.nav.family}</NavLink>
           {member.role === "parent" && (
             <>
-              <Link href="/documents" className={link}>
-                {t.documents.nav}
-              </Link>
-              <Link href="/members" className={link}>
-                {t.nav.members}
-              </Link>
+              <NavLink href="/documents">{t.documents.nav}</NavLink>
+              <NavLink href="/members">{t.nav.members}</NavLink>
             </>
           )}
           <form action={signOut} className="ml-auto">
-            <button type="submit" className={`${link} text-zinc-500 dark:text-zinc-400`}>
+            <button type="submit" className="inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-muted hover:bg-chip">
               {t.nav.signOut}
             </button>
           </form>

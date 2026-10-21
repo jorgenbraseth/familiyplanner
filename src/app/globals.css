@@ -1,24 +1,176 @@
 @import "tailwindcss";
 
+/* "Skogtur" (forest picnic) theme. Dark mode redefines the same variables. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --background: #fbf8ef;
+  --surface: #fffdf7;
+  --line: #ede4cf;
+  --ink: #3b3226;
+  --muted: #8c7f6a;
+  --heading: #6d597a;
+  --primary: #3fa34d;
+  --primary-strong: #2d7a38;
+  --on-primary: #ffffff;
+  --accent: #f4a259;
+  --on-accent: #4a2a06;
+  --danger: #e15554;
+  --danger-soft: #fbe3e3;
+  --on-danger-soft: #9e2f2e;
+  --warning-soft: #fdebd3;
+  --on-warning-soft: #8a4b0f;
+  --chip: #f3ecdd;
+  --chip-ink: #5c4e3c;
+  --card-shadow: 0 2px 8px rgb(120 90 40 / 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #1e1b16;
+    --surface: #2a261f;
+    --line: #3a342a;
+    --ink: #f1ebdd;
+    --muted: #a89d88;
+    --heading: #c9b6d6;
+    --primary: #5bbe68;
+    --primary-strong: #3fa34d;
+    --on-primary: #10210f;
+    --accent: #f4a259;
+    --on-accent: #2a1803;
+    --danger: #ef6f6e;
+    --danger-soft: #3b2222;
+    --on-danger-soft: #f7b5b4;
+    --warning-soft: #3a2c18;
+    --on-warning-soft: #f4c38a;
+    --chip: #3a342a;
+    --chip-ink: #e5dcc8;
+    --card-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-heading: var(--heading);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-on-danger-soft: var(--on-danger-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-on-warning-soft: var(--on-warning-soft);
+  --color-chip: var(--chip);
+  --color-chip-ink: var(--chip-ink);
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-baloo), var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    background: var(--background);
+    color: var(--ink);
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    color: var(--heading);
+  }
+  :focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .card {
+    border: 2px solid var(--line);
+    background: var(--surface);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--card-shadow);
+  }
+  .btn {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-xl);
+    padding-inline: 1.25rem;
+    font-size: var(--text-sm);
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 80ms, box-shadow 80ms, background-color 80ms;
+  }
+  .btn:disabled {
+    opacity: 0.6;
+  }
+  .btn-primary {
+    background: var(--primary);
+    color: var(--on-primary);
+    box-shadow: 0 3px 0 var(--primary-strong);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--primary) 90%, var(--primary-strong));
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 0 0 var(--primary-strong);
+  }
+  .btn-secondary {
+    border: 2px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--chip);
+  }
+  .btn-danger {
+    border: 2px solid var(--danger);
+    background: transparent;
+    color: var(--danger);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: var(--danger-soft);
+  }
+  .field {
+    min-height: 2.75rem;
+    width: 100%;
+    border: 2px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: var(--radius-xl);
+    padding-inline: 0.75rem;
+    font-size: var(--text-base);
+  }
+  .field:focus {
+    border-color: var(--primary);
+  }
+}
+
+@layer components {
+  /* Tick box: rounded, primary border, filled with a white check when done. */
+  .tick {
+    appearance: none;
+    border: 2px solid var(--primary);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    display: inline-grid;
+    place-content: center;
+  }
+  .tick:checked {
+    background: var(--primary);
+  }
+  .tick:checked::after {
+    content: "✓";
+    color: #fff;
+    font-weight: 800;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
 }

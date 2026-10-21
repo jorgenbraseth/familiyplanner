@@ -20,18 +20,21 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold">{t.home.greeting(member.name)}</h1>
+      <h1 className="text-3xl font-extrabold">
+        <span aria-hidden className="mr-2 text-accent">★</span>
+        {t.home.greeting(member.name)}
+      </h1>
       {!member.calendar_id && <Notice>{t.home.noCalendar}</Notice>}
       {week.failedNames.length > 0 && <Notice>{t.calendar.failed(week.failedNames.join(", "))}</Notice>}
       {today && offset === 0 && (
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold">{t.home.today}</h2>
+          <h2 className="text-xl font-extrabold">{t.home.today}</h2>
           <DayList days={[today]} />
           {hasSchoolToday && <SchoolToday view={schoolToday} />}
         </section>
       )}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">{t.home.thisWeek}</h2>
+        <h2 className="text-xl font-extrabold">{t.home.thisWeek}</h2>
         <WeekNav path="/" offset={offset} isoWeek={week.isoWeek} />
         <DayList days={week.days} />
         <SchoolWeek

@@ -23,7 +23,7 @@ export function SchoolWeek({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-base font-semibold">{t.school.title}</h3>
+      <h3 className="text-xl font-extrabold">{t.school.title}</h3>
       <ol className="space-y-5">
         {filled.map((day) => {
           const lessons = of(day.items, "lesson");
@@ -33,7 +33,7 @@ export function SchoolWeek({
           return (
             <li key={day.key} className="space-y-3">
               <h4
-                className={`text-sm font-semibold capitalize ${day.key === todayKey ? "text-blue-600" : "text-zinc-500 dark:text-zinc-400"}`}
+                className={`text-base font-extrabold capitalize ${day.key === todayKey ? "text-primary-strong" : "text-muted"}`}
               >
                 {formatDayHeading(day.date)}
               </h4>
@@ -66,7 +66,7 @@ export function SchoolWeek({
             <li key={doc.id}>
               <a
                 href={`/documents/${doc.id}/file`}
-                className="inline-flex min-h-11 items-center text-base font-medium text-blue-600 underline"
+                className="inline-flex min-h-11 items-center text-base font-bold text-primary-strong underline underline-offset-4"
               >
                 {links.length === 1 ? t.school.originalFile : t.school.originalFileFor(t.school.documentTypes[doc.type], doc.iso_week)}
               </a>

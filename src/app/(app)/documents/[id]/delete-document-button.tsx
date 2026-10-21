@@ -14,7 +14,7 @@ export function DeleteDocumentButton({ id }: { id: string }) {
       <input type="hidden" name="id" value={id} />
       <button
         type="submit"
-        className="min-h-11 w-full rounded-lg border border-red-300 px-5 text-sm font-medium text-red-700 hover:bg-red-50 sm:w-auto dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+        className="btn btn-danger w-full sm:w-auto"
       >
         {t.documents.delete}
       </button>

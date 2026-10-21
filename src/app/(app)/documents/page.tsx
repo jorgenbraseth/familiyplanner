@@ -22,23 +22,23 @@ export default async function DocumentsPage() {
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t.documents.title}</h1>
+        <h1 className="text-3xl font-extrabold">{t.documents.title}</h1>
         <Link
           href="/documents/new"
-          className="inline-flex min-h-11 items-center rounded-lg bg-blue-600 px-5 text-sm font-medium text-white hover:bg-blue-700"
+          className="btn btn-primary"
         >
           {t.documents.upload}
         </Link>
       </div>
       {documents.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">{t.documents.empty}</p>
+        <p className="text-sm text-muted">{t.documents.empty}</p>
       ) : (
         <ul className="space-y-3">
           {documents.map((doc) => (
             <li key={doc.id}>
               <Link
                 href={`/documents/${doc.id}`}
-                className="flex min-h-11 items-center gap-3 rounded-xl border border-zinc-200 p-3 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+                className="card flex min-h-11 items-center gap-3 p-3 hover:border-primary"
               >
                 <span
                   aria-hidden
@@ -46,8 +46,8 @@ export default async function DocumentsPage() {
                   style={{ backgroundColor: doc.members?.colour ?? "#a1a1aa" }}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="break-words font-medium">{doc.members?.name ?? "?"}</p>
-                  <p className="break-words text-sm text-zinc-500 dark:text-zinc-400">
+                  <p className="break-words font-bold">{doc.members?.name ?? "?"}</p>
+                  <p className="break-words text-sm text-muted">
                     {t.documents.types[doc.type]} · {t.documents.week(doc.iso_week, doc.iso_year)}
                   </p>
                 </div>

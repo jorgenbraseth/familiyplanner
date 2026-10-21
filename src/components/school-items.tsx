@@ -3,11 +3,11 @@ import type { PlanItemRow } from "@/lib/plan";
 import { SchoolDoneCheckbox } from "./school-done-checkbox";
 
 export function SchoolHeading({ children }: { children: React.ReactNode }) {
-  return <h4 className="mb-1 text-base font-semibold">{children}</h4>;
+  return <h4 className="mb-1 text-lg font-extrabold">{children}</h4>;
 }
 
 const listClass =
-  "divide-y divide-zinc-100 rounded-xl border border-zinc-200 px-3 dark:divide-zinc-800 dark:border-zinc-800";
+  "card divide-y-2 divide-line px-3";
 
 /** Lessons, bring items or notes: plain lines, subject first. */
 export function SchoolLines({ items }: { items: PlanItemRow[] }) {

@@ -29,8 +29,8 @@ export function FamilyCalendar({ days, members }: { days: DayView[]; members: Me
               type="button"
               aria-pressed={on}
               onClick={() => toggle(m.id)}
-              className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${
-                on ? "border-zinc-300 dark:border-zinc-600" : "border-dashed border-zinc-300 opacity-50 dark:border-zinc-700"
+              className={`flex items-center gap-2 min-h-11 rounded-full border-2 px-4 text-sm font-bold ${
+                on ? "border-line bg-surface" : "border-dashed border-line opacity-60"
               }`}
             >
               <span aria-hidden className="size-2.5 rounded-full" style={{ backgroundColor: m.colour }} />

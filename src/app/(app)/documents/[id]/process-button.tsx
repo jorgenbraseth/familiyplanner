@@ -32,8 +32,8 @@ export function ProcessButton({
   }
 
   const style = primary
-    ? "bg-blue-600 text-white hover:bg-blue-700"
-    : "border border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800";
+    ? "btn-primary"
+    : "btn-secondary";
 
   return (
     <div className="space-y-2">
@@ -41,12 +41,12 @@ export function ProcessButton({
         type="button"
         onClick={run}
         disabled={pending}
-        className={`min-h-11 w-full rounded-lg px-5 text-sm font-medium disabled:opacity-60 sm:w-auto ${style}`}
+        className={`btn w-full sm:w-auto ${style}`}
       >
         {pending ? t.documents.reading : label}
       </button>
       {error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+        <p role="alert" className="text-sm font-semibold text-danger">
           {error}
         </p>
       )}
