@@ -48,12 +48,12 @@ function fileBlock(data: Uint8Array, mimeType: AcceptedMimeType): Anthropic.Mess
 
 function toExtractionError(error: unknown): ExtractionError {
   if (error instanceof ExtractionError) return error;
-  if (error instanceof Anthropic.RateLimitError) return new ExtractionError("The AI service is busy. Try again in a minute.", { cause: error });
-  if (error instanceof Anthropic.AuthenticationError) return new ExtractionError("The AI service rejected our credentials.", { cause: error });
-  if (error instanceof Anthropic.BadRequestError) return new ExtractionError("The AI service could not read this file.", { cause: error });
-  if (error instanceof Anthropic.APIConnectionError) return new ExtractionError("Could not reach the AI service.", { cause: error });
-  if (error instanceof Anthropic.APIError) return new ExtractionError(`The AI service failed (status ${error.status ?? "unknown"}).`, { cause: error });
-  return new ExtractionError("Extraction failed unexpectedly.", { cause: error });
+  if (error instanceof Anthropic.RateLimitError) return new ExtractionError("busy", "The AI service is busy. Try again in a minute.", { cause: error });
+  if (error instanceof Anthropic.AuthenticationError) return new ExtractionError("auth", "The AI service rejected our credentials.", { cause: error });
+  if (error instanceof Anthropic.BadRequestError) return new ExtractionError("unreadable", "The AI service could not read this file.", { cause: error });
+  if (error instanceof Anthropic.APIConnectionError) return new ExtractionError("connection", "Could not reach the AI service.", { cause: error });
+  if (error instanceof Anthropic.APIError) return new ExtractionError("service", `The AI service failed (status ${error.status ?? "unknown"}).`, { cause: error });
+  return new ExtractionError("unexpected", "Extraction failed unexpectedly.", { cause: error });
 }
 
 /** Sends a school document to Claude and returns the plan items for the given ISO week. */
@@ -85,9 +85,9 @@ Extract the plan from the attached document.`;
     throw toExtractionError(error);
   }
 
-  if (response.stop_reason === "refusal") throw new ExtractionError("The AI service declined to read this document.");
-  if (response.stop_reason === "max_tokens") throw new ExtractionError("The document is too large to extract in one go.");
-  if (!response.parsed_output) throw new ExtractionError("The AI service returned an unreadable result.");
+  if (response.stop_reason === "refusal") throw new ExtractionError("refused", "The AI service declined to read this document.");
+  if (response.stop_reason === "max_tokens") throw new ExtractionError("too_large", "The document is too large to extract in one go.");
+  if (!response.parsed_output) throw new ExtractionError("bad_result", "The AI service returned an unreadable result.");
 
   return normalizeExtraction(response.parsed_output, isoYear, isoWeek);
 }

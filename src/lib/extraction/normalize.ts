@@ -22,7 +22,7 @@ function isRealDate(key: string): boolean {
  */
 export function normalizeExtraction(raw: unknown, isoYear: number, isoWeek: number): ExtractedItem[] {
   const parsed = extractionSchema.safeParse(raw);
-  if (!parsed.success) throw new ExtractionError("The extraction result had an unexpected shape.");
+  if (!parsed.success) throw new ExtractionError("bad_result", "The extraction result had an unexpected shape.");
 
   const monday = mondayOfIsoWeek(isoYear, isoWeek);
   const first = dayKey(monday);
