@@ -8,8 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 import { createDocument, discardUpload, processDocument } from "../actions";
 
 const input =
-  "min-h-11 w-full rounded-lg border border-zinc-300 bg-transparent px-3 text-base dark:border-zinc-700";
-const label = "block space-y-1 text-sm font-medium";
+  "field";
+const label = "block space-y-1 text-sm font-bold";
 
 type Phase = "idle" | "uploading" | "reading";
 
@@ -143,24 +143,24 @@ export function UploadForm({
             accept="application/pdf,image/jpeg,image/png,image/webp"
             className={`${input} py-2`}
           />
-          <span className="block text-xs font-normal text-zinc-500 dark:text-zinc-400">
+          <span className="block text-xs font-normal text-muted">
             {t.documents.fields.fileHelp}
           </span>
         </label>
         <button
           type="submit"
-          className="min-h-11 rounded-lg bg-blue-600 px-5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+          className="btn btn-primary"
         >
           {t.documents.submit}
         </button>
       </fieldset>
       {busy && (
-        <p role="status" className="rounded-lg bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200">
+        <p role="status" className="rounded-xl bg-chip p-3 text-sm font-semibold text-chip-ink">
           {phase === "uploading" ? t.documents.uploading : t.documents.reading}
         </p>
       )}
       {error && (
-        <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+        <p role="alert" className="text-sm font-semibold text-danger">
           {error}
         </p>
       )}

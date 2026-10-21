@@ -18,7 +18,7 @@ export default async function FamilyPage({ searchParams }: PageProps<"/family">)
 
   return (
     <>
-      <h1 className="text-2xl font-semibold">{t.family.title}</h1>
+      <h1 className="text-3xl font-extrabold">{t.family.title}</h1>
       {week.failedNames.length > 0 && <Notice>{t.calendar.failed(week.failedNames.join(", "))}</Notice>}
       <WeekNav path="/family" offset={offset} isoWeek={week.isoWeek} />
       <FamilyCalendar

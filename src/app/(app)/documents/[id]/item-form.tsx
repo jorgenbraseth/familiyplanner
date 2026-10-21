@@ -9,8 +9,8 @@ import { deleteItem, saveItem, type SaveItemState } from "../actions";
 const initial: SaveItemState = { ok: false };
 
 const input =
-  "min-h-11 w-full rounded-lg border border-zinc-300 bg-transparent px-3 text-base dark:border-zinc-700";
-const label = "block space-y-1 text-sm font-medium";
+  "field";
+const label = "block space-y-1 text-sm font-bold";
 
 type ItemFields = Pick<PlanItemRow, "id" | "date" | "kind" | "subject" | "text">;
 
@@ -74,24 +74,24 @@ export function ItemForm({
             maxLength={1000}
             rows={3}
             defaultValue={item?.text ?? ""}
-            className="w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-base dark:border-zinc-700"
+            className="field py-2"
           />
         </label>
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
             disabled={pending}
-            className="min-h-11 rounded-lg bg-blue-600 px-5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            className="btn btn-primary"
           >
             {item ? t.documents.save : t.documents.addItem}
           </button>
           {!pending && state.error && (
-            <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+            <p role="alert" className="text-sm font-semibold text-danger">
               {state.error}
             </p>
           )}
           {!pending && state.ok && (
-            <p role="status" className="text-sm text-green-700 dark:text-green-300">
+            <p role="status" className="text-sm font-bold text-primary-strong">
               {t.documents.saved}
             </p>
           )}
@@ -102,7 +102,7 @@ export function ItemForm({
           <input type="hidden" name="id" value={item.id} />
           <button
             type="submit"
-            className="min-h-11 rounded-lg border border-red-300 px-4 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950"
+            className="btn btn-danger"
           >
             {t.documents.deleteItem}
           </button>

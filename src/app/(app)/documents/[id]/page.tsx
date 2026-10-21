@@ -63,7 +63,7 @@ export default async function DocumentPage({ params }: PageProps<"/documents/[id
 
   return (
     <>
-      <Link href="/documents" className="inline-flex min-h-11 items-center text-sm text-blue-700 dark:text-blue-400">
+      <Link href="/documents" className="inline-flex min-h-11 items-center text-sm font-bold text-primary-strong">
         ← {t.documents.back}
       </Link>
 
@@ -74,10 +74,10 @@ export default async function DocumentPage({ params }: PageProps<"/documents/[id
             className="size-4 shrink-0 rounded-full"
             style={{ backgroundColor: doc.members?.colour ?? "#a1a1aa" }}
           />
-          <h1 className="min-w-0 flex-1 break-words text-2xl font-semibold">{doc.members?.name ?? "?"}</h1>
+          <h1 className="min-w-0 flex-1 break-words text-3xl font-extrabold">{doc.members?.name ?? "?"}</h1>
           <StatusBadge status={doc.status} />
         </div>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-muted">
           {t.documents.types[doc.type]} · {t.documents.week(doc.iso_week, doc.iso_year)} · {t.documents.created(created)}
         </p>
       </header>
@@ -88,57 +88,57 @@ export default async function DocumentPage({ params }: PageProps<"/documents/[id
             href={fileUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center rounded-lg border border-zinc-300 px-5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className="btn btn-secondary"
           >
             {t.documents.openOriginal}
           </a>
         ) : (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">{t.documents.originalUnavailable}</p>
+          <p className="text-sm text-muted">{t.documents.originalUnavailable}</p>
         )}
         {fileUrl && doc.mime_type !== "application/pdf" && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={fileUrl} alt={t.documents.imageAlt} className="max-w-full rounded-lg border border-zinc-200 dark:border-zinc-800" />
+          <img src={fileUrl} alt={t.documents.imageAlt} className="max-w-full rounded-xl border-2 border-line" />
         )}
       </section>
 
       {doc.status === "failed" && (
-        <section className="space-y-3 rounded-xl bg-red-50 p-3 dark:bg-red-950">
-          <p className="break-words text-sm text-red-800 dark:text-red-200">{t.documents.failedNote(doc.error)}</p>
+        <section className="space-y-3 rounded-2xl bg-danger-soft p-3">
+          <p className="break-words text-sm font-semibold text-on-danger-soft">{t.documents.failedNote(doc.error)}</p>
           <ProcessButton id={doc.id} label={t.documents.retry} primary />
         </section>
       )}
       {doc.status === "processing" && (
-        <section className="space-y-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-950">
-          <p className="text-sm text-amber-800 dark:text-amber-200">{t.documents.processingNote}</p>
+        <section className="space-y-3 rounded-2xl bg-warning-soft p-3">
+          <p className="text-sm font-semibold text-on-warning-soft">{t.documents.processingNote}</p>
           <ProcessButton id={doc.id} label={t.documents.retry} primary />
         </section>
       )}
       {doc.status === "published" && (
-        <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">
+        <p className="rounded-xl bg-chip p-3 text-sm font-bold text-chip-ink">
           {t.documents.publishedNote}
         </p>
       )}
 
       {showItems && (
         <section className="space-y-4">
-          <h2 className="text-lg font-semibold">{t.documents.items}</h2>
+          <h2 className="text-xl font-extrabold">{t.documents.items}</h2>
           {items.length === 0 && (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">{t.documents.noItems}</p>
+            <p className="text-sm text-muted">{t.documents.noItems}</p>
           )}
           {[...groups.entries()].map(([date, dayItems]) => (
             <div key={date} className="space-y-2">
-              <h3 className="font-medium capitalize">{formatDayHeading(parseDayKey(date))}</h3>
+              <h3 className="font-display text-base font-extrabold capitalize">{formatDayHeading(parseDayKey(date))}</h3>
               <ul className="space-y-3">
                 {dayItems.map((item) => (
-                  <li key={item.id} className="rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
+                  <li key={item.id} className="card p-3">
                     <ItemForm item={item} documentId={doc.id} days={days} />
                   </li>
                 ))}
               </ul>
             </div>
           ))}
-          <div className="space-y-2 rounded-xl border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
-            <h3 className="font-medium">{t.documents.addItem}</h3>
+          <div className="space-y-2 rounded-2xl border-2 border-dashed border-line p-3">
+            <h3 className="font-display text-base font-extrabold">{t.documents.addItem}</h3>
             <ItemForm documentId={doc.id} days={days} defaultDate={days.includes(today) ? today : days[0]} />
           </div>
         </section>
@@ -150,11 +150,11 @@ export default async function DocumentPage({ params }: PageProps<"/documents/[id
             <input type="hidden" name="id" value={doc.id} />
             <button
               type="submit"
-              className="min-h-11 w-full rounded-lg bg-green-600 px-5 text-sm font-medium text-white hover:bg-green-700 sm:w-auto"
+              className="btn btn-primary w-full sm:w-auto"
             >
               {t.documents.publish}
             </button>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">{t.documents.publishHelp}</p>
+            <p className="text-xs text-muted">{t.documents.publishHelp}</p>
           </form>
         )}
         {(doc.status === "review" || doc.status === "failed") && (

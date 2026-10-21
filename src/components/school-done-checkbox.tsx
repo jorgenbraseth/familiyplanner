@@ -45,12 +45,12 @@ export function SchoolDoneCheckbox({
         checked={checked}
         onChange={(e) => toggle(e.target.checked)}
         aria-label={t.school.markDone(label)}
-        className="m-2 size-7 shrink-0 cursor-pointer accent-green-600"
+        className="tick m-2 size-7 shrink-0 cursor-pointer"
       />
-      <span className={`min-w-0 flex-1 break-words py-2 text-lg ${checked ? "text-zinc-400 line-through dark:text-zinc-500" : ""}`}>
-        {detail && <span className="block text-sm font-semibold text-zinc-500 dark:text-zinc-400">{detail}</span>}
+      <span className={`min-w-0 flex-1 break-words py-2 text-lg ${checked ? "text-muted line-through" : ""}`}>
+        {detail && <span className="block text-sm font-semibold text-muted">{detail}</span>}
         {label}
-        {failed && <span className="block text-sm text-red-600 no-underline">{t.school.saveFailed}</span>}
+        {failed && <span className="block text-sm font-semibold text-danger no-underline">{t.school.saveFailed}</span>}
       </span>
     </label>
   );

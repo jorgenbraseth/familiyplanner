@@ -11,14 +11,14 @@ export function DayList({ days, members }: { days: DayView[]; members?: MemberDo
       {days.map((day) => (
         <li key={day.key}>
           <h3
-            className={`mb-1 text-sm font-semibold capitalize ${day.isToday ? "text-blue-600" : "text-zinc-500 dark:text-zinc-400"}`}
+            className={`mb-1 font-display text-base font-extrabold capitalize ${day.isToday ? "text-primary-strong" : "text-muted"}`}
           >
             {day.heading}
           </h3>
           {day.events.length === 0 ? (
-            <p className="text-sm text-zinc-400 dark:text-zinc-500">{t.calendar.empty}</p>
+            <p className="text-sm text-muted">{t.calendar.empty}</p>
           ) : (
-            <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+            <ul className="card divide-y-2 divide-line overflow-hidden">
               {day.events.map((event) => {
                 const member = byId.get(event.memberId);
                 return (
@@ -30,13 +30,13 @@ export function DayList({ days, members }: { days: DayView[]; members?: MemberDo
                         style={{ backgroundColor: member.colour }}
                       />
                     )}
-                    <span className="w-24 shrink-0 text-sm tabular-nums text-zinc-500 dark:text-zinc-400">
+                    <span className="w-24 shrink-0 text-sm tabular-nums text-muted">
                       {event.timeLabel}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block break-words">{event.title}</span>
                       {(member || event.location) && (
-                        <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
+                        <span className="block truncate text-xs text-muted">
                           {[member?.name, event.location].filter(Boolean).join(" · ")}
                         </span>
                       )}
