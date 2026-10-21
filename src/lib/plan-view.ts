@@ -167,99 +167,147 @@ export function periodLine(row: Timetable["periods"][number]): PeriodLine {
   };
 }
 
-/** A time marker between two period cards: one time, or a break (period ended at `from`, next starts at `to`). */
-export type TimelineDivider = { kind: "time"; time: string } | { kind: "break"; from: string; to: string };
-
-export type PeriodTimelineEntry =
-  | { type: "divider"; divider: TimelineDivider }
-  | { type: "period"; line: PeriodLine };
+/** "HH:MM" of minutes after midnight. */
+function hmOfMinutes(minutes: number): string {
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
 
 /**
- * The periods of a day as a timeline: dividers with times between the period cards instead of a time range on each.
- * First divider: the first period's start (else the school start); last: the last period's end (else the school end);
- * between two periods: one time when one ends as the next starts, a break (both times) when there is a gap, and
- * whichever time is known when only one is. No known time means no divider there.
+ * One row of a day timeline (the kids' "Min dag"). Time is shown by dividers and empty time by a gap:
+ *  - `divider`: a time marker; an entry on the timeline has one before (its start) and one after (its end);
+ *  - `gap`: nothing happens between the divider before and the one after. It is drawn at a fixed small height,
+ *    never scaled by its length; `school` is true inside school hours (labelled "friminutt");
+ *  - `period` / `event`: the cards. `showTime` is true when the card has to show its own time: entries that
+ *    overlap an earlier one (no dividers) and events without a known end. All-day events are `event` with
+ *    `showTime` true (their label is "Hele dagen").
  */
-export function periodTimeline(periods: readonly PeriodLine[], hours?: SchoolHours): PeriodTimelineEntry[] {
-  const out: PeriodTimelineEntry[] = [];
-  const push = (divider: TimelineDivider | null) => {
-    if (divider) out.push({ type: "divider", divider });
-  };
-  const single = (time: string | null): TimelineDivider | null => (time ? { kind: "time", time } : null);
+export type TimelineEntry =
+  | { type: "divider"; time: string }
+  | { type: "gap"; school: boolean }
+  | { type: "period"; line: PeriodLine; showTime: boolean }
+  | { type: "event"; event: EventEntry; showTime: boolean };
+
+export type PeriodTimelineEntry = TimelineEntry;
+export type MyDayEntry = TimelineEntry;
+
+type TimelineItem = {
+  card: { type: "period"; line: PeriodLine } | { type: "event"; event: EventEntry };
+  start: number | null;
+  end: number | null;
+  startStr: string | null;
+  endStr: string | null;
+  sortAt: number;
+};
+
+/**
+ * The day as a timeline of school periods and timed events, with dividers for time and gaps for empty time.
+ * Deterministic rules:
+ *  - all-day/untimed events (`sortKey < 0`) come first, in their given order, with no dividers;
+ *  - the rest is ordered by start (a period without a known start is ranked by the previous period's end/start);
+ *    ties: periods before events, then the given order. The first period's missing start falls back to the school
+ *    start and the last period's missing end to the school end;
+ *  - walking in that order, an entry that starts before the latest end seen so far overlaps: it stays a card
+ *    right after the entry it overlaps, shows its own time, gets no dividers, and moves the "latest end" later
+ *    if it ends after it;
+ *  - any other entry gets a divider with its start before it and, after it, one with its end. When the next entry
+ *    starts exactly then, the divider is shared; when later, the end divider, a gap and the next start divider
+ *    follow (the gap is `school` when inside the school hours, else when both neighbours are periods and the
+ *    hours are unknown);
+ *  - an unknown start or end gives no divider on that side and no gap (an unknown start next to a known end
+ *    still shows that end); an event with an unknown end keeps its time label on the card.
+ */
+export function dayTimeline(
+  periods: readonly PeriodLine[],
+  hours: SchoolHours | undefined,
+  events: readonly EventEntry[],
+): TimelineEntry[] {
+  const items: TimelineItem[] = [];
+  let rank = 0;
   periods.forEach((line, i) => {
-    if (i === 0) push(single(line.startsAt ?? formatHm(hours?.starts_at)));
-    else {
-      const ended = periods[i - 1].endsAt;
-      const starts = line.startsAt;
-      if (ended && starts && ended < starts) push({ kind: "break", from: ended, to: starts });
-      else push(single(starts ?? ended));
-    }
-    out.push({ type: "period", line });
-    if (i === periods.length - 1) push(single(line.endsAt ?? formatHm(hours?.ends_at)));
+    const startStr = line.startsAt ?? (i === 0 ? formatHm(hours?.starts_at) : null);
+    const endStr = line.endsAt ?? (i === periods.length - 1 ? formatHm(hours?.ends_at) : null);
+    const start = minutesOf(startStr);
+    const end = minutesOf(endStr);
+    rank = start ?? rank;
+    items.push({ card: { type: "period", line }, start, end, startStr, endStr, sortAt: rank });
+    rank = end ?? rank;
   });
+  const timed = events.filter((e) => e.sortKey >= 0);
+  timed.forEach((event) => {
+    const end = event.endKey != null && event.endKey > event.sortKey ? event.endKey : null;
+    items.push({
+      card: { type: "event", event },
+      start: event.sortKey,
+      end,
+      startStr: hmOfMinutes(event.sortKey),
+      endStr: end === null ? null : hmOfMinutes(end),
+      sortAt: event.sortKey,
+    });
+  });
+  const ordered = items
+    .map((item, index) => ({ item, index }))
+    .sort(
+      (a, b) =>
+        a.item.sortAt - b.item.sortAt ||
+        (a.item.card.type === b.item.card.type ? 0 : a.item.card.type === "period" ? -1 : 1) ||
+        a.index - b.index,
+    )
+    .map(({ item }) => item);
+
+  const out: TimelineEntry[] = events
+    .filter((e) => e.sortKey < 0)
+    .map((event) => ({ type: "event", event, showTime: true }));
+  const hoursStart = minutesOf(hours?.starts_at);
+  const hoursEnd = minutesOf(hours?.ends_at);
+  const divider = (time: string) => out.push({ type: "divider", time });
+  const push = (item: TimelineItem, showTime: boolean) =>
+    out.push(item.card.type === "period" ? { type: "period", line: item.card.line, showTime } : { type: "event", event: item.card.event, showTime });
+
+  let latestEnd: number | null = null;
+  type PendingEnd = { str: string; min: number; kind: "period" | "event" };
+  let pending = null as PendingEnd | null;
+  for (const item of ordered) {
+    if (latestEnd !== null && item.start !== null && item.start < latestEnd) {
+      push(item, true);
+      if (item.end !== null && item.end > latestEnd) {
+        latestEnd = item.end;
+        if (pending) pending = { str: hmOfMinutes(item.end), min: item.end, kind: (pending as PendingEnd).kind };
+      }
+      continue;
+    }
+    if (pending) {
+      if (item.startStr && item.start !== null) {
+        divider(pending.str);
+        if (pending.min < item.start) {
+          const school =
+            hoursStart !== null && hoursEnd !== null
+              ? pending.min >= hoursStart && item.start <= hoursEnd
+              : pending.kind === "period" && item.card.type === "period";
+          out.push({ type: "gap", school });
+          divider(item.startStr);
+        }
+      } else divider(pending.str);
+    } else if (item.startStr) divider(item.startStr);
+    push(item, item.card.type === "event" && item.endStr === null);
+    pending = item.endStr && item.end !== null ? { str: item.endStr, min: item.end, kind: item.card.type } : null;
+    if (item.end !== null) latestEnd = Math.max(latestEnd ?? 0, item.end);
+  }
+  if (pending) divider(pending.str);
   return out;
 }
 
-/** One row of the kids' "Min dag" list: a school period, an appointment/school event, or a time divider. */
-export type MyDayEntry = PeriodTimelineEntry | { type: "event"; event: EventEntry };
+/** The periods of a day as a timeline (see `dayTimeline`) without events. */
+export function periodTimeline(periods: readonly PeriodLine[], hours?: SchoolHours): TimelineEntry[] {
+  return dayTimeline(periods, hours, []);
+}
 
-/**
- * "Min dag": school periods (as in `periodTimeline`, with dividers) and the day's events in one chronological list.
- * Ordering rule (deterministic):
- *  - all-day/untimed events (`sortKey < 0`) come first, in their given order;
- *  - timed events are sorted by start (ties keep their given order) and placed relative to the periods: an event
- *    starting before the first period starts (first period's start, else the school start) goes before the first
- *    divider; otherwise it follows the last period that starts at or before it (a period without a known start
- *    does not count, except the first one that falls back to the school start);
- *  - if the event starts before that period ends (or its end is unknown) it goes directly after that period's card
- *    (an event starting during a period goes after the period); if it starts at or after the period's end it goes
- *    after the divider that follows the period (the break, or the end of school).
- * Without periods the list is just the events.
- */
+/** "Min dag": the day's school periods and events as one timeline; see `dayTimeline` for the rules. */
 export function myDayEntries(
   periods: readonly PeriodLine[],
   hours: SchoolHours | undefined,
   events: readonly EventEntry[],
 ): MyDayEntry[] {
-  const timeline = periods.length > 0 ? periodTimeline(periods, hours) : [];
-  const allDay = events.filter((e) => e.sortKey < 0);
-  const timed = events
-    .map((event, index) => ({ event, index }))
-    .filter(({ event }) => event.sortKey >= 0)
-    .sort((a, b) => a.event.sortKey - b.event.sortKey || a.index - b.index);
-
-  const periodAt: { at: number; start: number | null; end: number | null }[] = [];
-  let seen = 0;
-  timeline.forEach((entry, at) => {
-    if (entry.type !== "period") return;
-    const start = minutesOf(entry.line.startsAt ?? (seen === 0 ? hours?.starts_at : null));
-    periodAt.push({ at, start, end: minutesOf(entry.line.endsAt) });
-    seen++;
-  });
-
-  // Insert position (index in the timeline the event goes before) -> events in order.
-  const before = new Map<number, EventEntry[]>();
-  for (const { event } of timed) {
-    let pos = 0;
-    const match = periodAt.filter((p) => p.start !== null && p.start <= event.sortKey).at(-1);
-    if (match) {
-      const next = timeline[match.at + 1];
-      const afterEnd = match.end !== null && event.sortKey >= match.end;
-      pos = afterEnd && next?.type === "divider" ? match.at + 2 : match.at + 1;
-    }
-    before.set(pos, [...(before.get(pos) ?? []), event]);
-  }
-
-  const out: MyDayEntry[] = allDay.map((event) => ({ type: "event", event }));
-  const flush = (pos: number) => {
-    for (const event of before.get(pos) ?? []) out.push({ type: "event", event });
-  };
-  timeline.forEach((entry, i) => {
-    flush(i);
-    out.push(entry);
-  });
-  flush(timeline.length);
-  return out;
+  return dayTimeline(periods, hours, events);
 }
 
 /** The periods of the date's ISO weekday in school order: by period (those without one after), time, then `sort`. */
@@ -287,6 +335,8 @@ export type EventEntry = {
   timeLabel: string;
   /** Minutes after midnight the entry starts; -1 for all-day/untimed (these come first). */
   sortKey: number;
+  /** Minutes after midnight the entry ends when known and later than the start (else null/absent). */
+  endKey?: number | null;
   location?: string;
   /** A ukeplan event (marked with a small "Skole" label). */
   school?: boolean;
@@ -302,6 +352,7 @@ export function schoolEventEntry(item: PlanItemRow, allDayLabel: string): EventE
     title,
     timeLabel: formatSchoolHours(item.starts_at, item.ends_at) ?? allDayLabel,
     sortKey: start ?? -1,
+    endKey: minutesOf(item.ends_at),
     school: true,
   };
 }

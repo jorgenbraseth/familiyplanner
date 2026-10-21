@@ -1,6 +1,6 @@
 import { t } from "@/lib/i18n";
 import type { PlanItemRow } from "@/lib/plan";
-import type { EventEntry, MyDayEntry, PeriodLine, PeriodTimelineEntry } from "@/lib/plan-view";
+import type { EventEntry, MyDayEntry, PeriodLine } from "@/lib/plan-view";
 import { SchoolDoneCheckbox } from "./school-done-checkbox";
 
 export function SchoolHeading({ children }: { children: React.ReactNode }) {
@@ -68,8 +68,9 @@ export function SchoolPeriods({ periods }: { periods: PeriodLine[] }) {
 }
 
 /**
- * The kids' "Min dag": school periods (green, with the period number) and other entries (orange, with their time)
- * in one list, with time dividers between the periods (see `myDayEntries`).
+ * The kids' "Min dag": school periods (green, with the period number) and other entries (orange) in one timeline
+ * (see `dayTimeline`): dividers show the times, and a fixed-height dashed gap shows empty time ("friminutt" inside
+ * school hours). Cards only show their own time when they have no dividers (overlapping or all-day entries).
  */
 export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
   return (
@@ -77,10 +78,21 @@ export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
       {entries.map((entry, i) => {
         if (entry.type === "divider") {
           return (
-            <li key={`d${i}`} className="flex items-center gap-2 text-sm font-bold text-muted" aria-label={dividerText(entry)}>
+            <li key={`d${i}`} className="flex items-center gap-2 text-sm font-bold text-muted" aria-label={entry.time}>
               <span aria-hidden className="h-0.5 flex-1 bg-line" />
-              <span aria-hidden>{dividerText(entry)}</span>
+              <span aria-hidden>{entry.time}</span>
               <span aria-hidden className="h-0.5 flex-1 bg-line" />
+            </li>
+          );
+        }
+        if (entry.type === "gap") {
+          // Fixed height whatever the length of the break: it only marks that nothing happens.
+          return (
+            <li
+              key={`g${i}`}
+              className="flex h-8 items-center justify-center rounded-xl border-2 border-dashed border-line text-xs font-bold text-muted"
+            >
+              {entry.school ? t.start.breakLabel : null}
             </li>
           );
         }
@@ -91,7 +103,7 @@ export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
               key={event.id}
               className="flex min-h-12 items-center gap-3 rounded-2xl border-2 border-line bg-event-soft px-3 py-2 text-lg text-on-event-soft"
             >
-              <span className="w-24 shrink-0 text-base font-extrabold">{event.timeLabel}</span>
+              {entry.showTime && <span className="w-24 shrink-0 text-base font-extrabold">{event.timeLabel}</span>}
               <span className="min-w-0 flex-1 break-words font-semibold">{event.title}</span>
             </li>
           );
@@ -108,16 +120,12 @@ export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
               {entry.line.period ?? "·"}
             </span>
             <span className="min-w-0 flex-1 break-words font-semibold">{entry.line.title}</span>
+            {entry.showTime && entry.line.time && <span className="shrink-0 text-base font-extrabold">{entry.line.time}</span>}
           </li>
         );
       })}
     </ol>
   );
-}
-
-function dividerText(entry: Extract<PeriodTimelineEntry, { type: "divider" }>): string {
-  const d = entry.divider;
-  return d.kind === "time" ? d.time : t.start.breakBetween(d.from, d.to);
 }
 
 /** Calendar-like lines (Google events and school events, in time order); school events get a small "Skole" label. */

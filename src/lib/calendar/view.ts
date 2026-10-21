@@ -29,6 +29,13 @@ function sortKey(event: CalendarEvent, dayStart: number): number {
   return Math.round((start - dayStart) / 60_000);
 }
 
+/** Minutes after midnight the event ends on this day; null when it ends after the day. */
+function endKey(event: CalendarEvent, dayStart: number, dayEnd: number): number | null {
+  const end = new Date(event.end).getTime();
+  if (event.allDay || end >= dayEnd) return null;
+  return Math.round((end - dayStart) / 60_000);
+}
+
 function timeLabel(event: CalendarEvent, dayStart: number, dayEnd: number): string {
   if (event.allDay) return t.calendar.allDay;
   const start = new Date(event.start).getTime();
@@ -91,6 +98,7 @@ export async function loadWeek(
           title: e.title,
           timeLabel: timeLabel(e, dayStart, dayEnd),
           sortKey: sortKey(e, dayStart),
+          endKey: endKey(e, dayStart, dayEnd),
           location: e.location,
         })),
         schoolItems.filter((i) => i.date === key).map((i) => schoolEventEntry(i, t.calendar.allDay)),

@@ -18,7 +18,7 @@ export function StartSchool({ view, events }: { view: TodayView; events: EventEn
           {t.start.myDay}
         </h2>
         {hoursLabel && <p className="text-lg font-bold text-muted">{t.start.schoolHours(hoursLabel)}</p>}
-        {entries.some((e) => e.type !== "divider") && (
+        {entries.some((e) => e.type === "period" || e.type === "event") && (
           <ul className="mt-2 flex flex-wrap gap-2 text-sm font-bold" aria-label={t.start.myDay}>
             {hasSchool && <LegendChip className="bg-school-soft text-on-school-soft">{t.start.legendSchool}</LegendChip>}
             {events.length > 0 && <LegendChip className="bg-event-soft text-on-event-soft">{t.start.legendAppointments}</LegendChip>}

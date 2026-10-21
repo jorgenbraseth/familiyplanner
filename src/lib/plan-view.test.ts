@@ -334,33 +334,84 @@ describe("myDayEntries", () => {
   });
   const periods = [period("p1", 1, "08:15", "09:00"), period("p2", 2, "09:00", "09:45"), period("p3", 3, "10:00", "10:45")];
   const hours = { starts_at: "08:15", ends_at: "10:45" };
-  const ev = (id: string, sortKey: number, timeLabel = id): EventEntry => ({ id, memberId: "m", title: id, timeLabel, sortKey });
+  const min = (hm: string) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3));
+  const ev = (id: string, from: string | null, to: string | null = null): EventEntry => ({
+    id,
+    memberId: "m",
+    title: id,
+    timeLabel: from ? `${from}–${to ?? ""}` : "Hele dagen",
+    sortKey: from ? min(from) : -1,
+    endKey: to ? min(to) : null,
+  });
   const names = (entries: ReturnType<typeof myDayEntries>) =>
-    entries.map((e) => (e.type === "event" ? `e:${e.event.id}` : e.type === "period" ? e.line.id : "-"));
+    entries.map((e) =>
+      e.type === "event"
+        ? `e:${e.event.id}${e.showTime ? "*" : ""}`
+        : e.type === "period"
+          ? `${e.line.id}${e.showTime ? "*" : ""}`
+          : e.type === "gap"
+            ? e.school ? "gap:school" : "gap"
+            : e.time,
+    );
 
   it("lists only the timeline without events and only events without periods", () => {
-    expect(names(myDayEntries(periods, hours, []))).toEqual(["-", "p1", "-", "p2", "-", "p3", "-"]);
-    expect(names(myDayEntries([], hours, [ev("b", 900), ev("a", 600)]))).toEqual(["e:a", "e:b"]);
+    expect(names(myDayEntries(periods, hours, []))).toEqual([
+      "08:15", "p1", "09:00", "p2", "09:45", "gap:school", "10:00", "p3", "10:45",
+    ]);
+    expect(names(myDayEntries([], hours, [ev("b", "15:00", "16:00"), ev("a", "10:00", "11:00")]))).toEqual([
+      "10:00", "e:a", "11:00", "gap", "15:00", "e:b", "16:00",
+    ]);
     expect(myDayEntries([], undefined, [])).toEqual([]);
   });
 
-  it("puts all-day events first and events before school before the first divider", () => {
-    const out = names(myDayEntries(periods, hours, [ev("early", 7 * 60), ev("allday", -1)]));
-    expect(out.slice(0, 3)).toEqual(["e:allday", "e:early", "-"]);
+  it("shares a divider between back-to-back entries", () => {
+    expect(names(myDayEntries(periods.slice(0, 2), hours, [ev("x", "09:45", "10:30")]))).toEqual([
+      "08:15", "p1", "09:00", "p2", "09:45", "e:x", "10:30",
+    ]);
   });
 
-  it("puts an event starting during a period right after that period's card", () => {
-    const out = names(myDayEntries(periods, hours, [ev("mid", 8 * 60 + 30)]));
-    expect(out).toEqual(["-", "p1", "e:mid", "-", "p2", "-", "p3", "-"]);
+  it("puts all-day events first with their time label and no dividers", () => {
+    expect(names(myDayEntries(periods.slice(0, 1), hours, [ev("allday", null)]))).toEqual([
+      "e:allday*", "08:15", "p1", "09:00",
+    ]);
   });
 
-  it("puts an event in a break after the break divider", () => {
-    const out = names(myDayEntries(periods, hours, [ev("brk", 9 * 60 + 50)]));
-    expect(out).toEqual(["-", "p1", "-", "p2", "-", "e:brk", "p3", "-"]);
+  it("shows a gap between school end and an afternoon appointment, without a label", () => {
+    expect(names(myDayEntries(periods.slice(0, 1), hours, [ev("late", "15:30", "16:30")]))).toEqual([
+      "08:15", "p1", "09:00", "gap", "15:30", "e:late", "16:30",
+    ]);
   });
 
-  it("puts events after school after the last divider, in time order", () => {
-    const out = names(myDayEntries(periods, hours, [ev("late2", 17 * 60), ev("late1", 15 * 60 + 30)]));
-    expect(out.slice(-3)).toEqual(["-", "e:late1", "e:late2"]);
+  it("shows a gap between an appointment before school and the first period", () => {
+    expect(names(myDayEntries(periods.slice(0, 1), hours, [ev("early", "07:00", "07:30")]))).toEqual([
+      "07:00", "e:early", "07:30", "gap", "08:15", "p1", "09:00",
+    ]);
+  });
+
+  it("keeps an appointment starting during a period as a card with its time after the period", () => {
+    expect(names(myDayEntries(periods, hours, [ev("mid", "08:30", "08:50")]))).toEqual([
+      "08:15", "p1", "e:mid*", "09:00", "p2", "09:45", "gap:school", "10:00", "p3", "10:45",
+    ]);
+  });
+
+  it("keeps two overlapping appointments as one timeline entry and one card", () => {
+    expect(names(myDayEntries([], undefined, [ev("a", "16:00", "17:00"), ev("b", "16:30", "17:30")]))).toEqual([
+      "16:00", "e:a", "e:b*", "17:30",
+    ]);
+  });
+
+  it("continues from the latest end when an overlapping card ends later", () => {
+    expect(
+      names(myDayEntries([], undefined, [ev("a", "16:00", "17:00"), ev("b", "16:30", "17:30"), ev("c", "18:00", "19:00")])),
+    ).toEqual(["16:00", "e:a", "e:b*", "17:30", "gap", "18:00", "e:c", "19:00"]);
+  });
+
+  it("falls back gracefully for unknown times", () => {
+    const noTimes: PeriodLine = { id: "pn", period: null, time: null, title: "pn", startsAt: null, endsAt: null };
+    expect(names(myDayEntries([noTimes, noTimes].map((p, i) => ({ ...p, id: `pn${i}` })), undefined, []))).toEqual(["pn0", "pn1"]);
+    // An event without a known end keeps its time label and gets no end divider or gap.
+    expect(names(myDayEntries([], undefined, [ev("open", "10:00"), ev("next", "12:00", "13:00")]))).toEqual([
+      "10:00", "e:open*", "12:00", "e:next", "13:00",
+    ]);
   });
 });

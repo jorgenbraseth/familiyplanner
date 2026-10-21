@@ -12,7 +12,7 @@ const p = (id: string, startsAt: string | null, endsAt: string | null): PeriodLi
 
 const shape = (entries: ReturnType<typeof periodTimeline>) =>
   entries.map((e) =>
-    e.type === "period" ? e.line.id : e.divider.kind === "time" ? e.divider.time : `${e.divider.from}>${e.divider.to}`,
+    e.type === "period" ? e.line.id : e.type === "divider" ? e.time : e.type === "gap" ? (e.school ? "gap:school" : "gap") : `e:${e.event.id}`,
   );
 
 describe("periodTimeline", () => {
@@ -21,9 +21,9 @@ describe("periodTimeline", () => {
       "08:15", "a", "09:00", "b", "09:45",
     ]);
   });
-  it("shows both times as a break when there is a gap", () => {
+  it("shows a divider, a school gap and a divider when there is a gap", () => {
     expect(shape(periodTimeline([p("a", "09:00", "10:15"), p("b", "10:30", "11:15")]))).toEqual([
-      "09:00", "a", "10:15>10:30", "b", "11:15",
+      "09:00", "a", "10:15", "gap:school", "10:30", "b", "11:15",
     ]);
   });
   it("handles a single period", () => {
