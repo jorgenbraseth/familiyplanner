@@ -7,24 +7,24 @@ export type MemberDot = { id: string; name: string; colour: string; avatarUrl?: 
 export function DayList({ days, members }: { days: DayView[]; members?: MemberDot[] }) {
   const byId = new Map(members?.map((m) => [m.id, m]));
   return (
-    <ol className="grid gap-4 md:grid-cols-[repeat(auto-fill,minmax(19rem,1fr))] md:items-start">
+    <ol className="grid md:grid-cols-[repeat(auto-fill,minmax(19rem,1fr))] md:items-start gap-8">
       {days.map((day) => (
         <li key={day.key}>
           <h3
-            className={`mb-1 font-display text-base font-extrabold capitalize ${day.isToday ? "text-primary-strong" : "text-muted"}`}
+            className={`mb-2 font-display text-lg font-bold capitalize ${day.isToday ? "text-primary-strong" : "text-muted"}`}
           >
             {day.heading}
           </h3>
           {day.events.length === 0 ? (
             <p className="text-sm text-muted">{t.calendar.empty}</p>
           ) : (
-            <ul className="card divide-y-2 divide-line overflow-hidden">
+            <ul className="space-y-1.5">
               {day.events.map((event) => {
                 const people = (event.memberIds ?? [event.memberId])
                   .map((id) => byId.get(id))
                   .filter((m): m is MemberDot => m !== undefined);
                 return (
-                  <li key={event.id} className="flex items-start gap-3 px-3 py-2">
+                  <li key={event.id} className="flex items-start gap-3 rounded-2xl bg-chip px-3 py-2">
                     {people.length > 0 && (
                       <span aria-hidden className="mt-1.5 flex shrink-0 gap-0.5">
                         {people.map((m) => (
@@ -39,7 +39,7 @@ export function DayList({ days, members }: { days: DayView[]; members?: MemberDo
                       <span className="block break-words">
                         {event.title}
                         {event.school && (
-                          <span className="ml-2 rounded-full bg-chip px-2 py-0.5 align-middle text-xs font-bold text-chip-ink">
+                          <span className="ml-2 rounded-full bg-surface px-2 py-0.5 align-middle text-xs font-bold text-chip-ink">
                             {t.school.eventLabel}
                           </span>
                         )}

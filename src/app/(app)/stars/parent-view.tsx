@@ -7,24 +7,24 @@ import type { ChildWithStars } from "@/lib/star-data";
 import { completeTrack, decideStar, markRewardGiven } from "./actions";
 import { GiveStarForm } from "./give-star-form";
 
-const sectionTitle = "text-lg font-extrabold";
+const sectionTitle = "text-xl font-bold";
 
 /** The parent's /stars screen: one section per child. */
 export function StarParentView({ rows }: { rows: ChildWithStars[] }) {
   if (rows.length === 0) return <p className="text-muted">{t.stars.parent.noChildren}</p>;
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <Link href="/stars/tasks" className="btn btn-secondary">
         {t.stars.parent.tasksLink}
       </Link>
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start 2xl:grid-cols-3">
+      <div className="grid gap-12 lg:grid-cols-2 lg:items-start 2xl:grid-cols-3">
       {rows.map(({ child, active, completed }) => {
         const pending = active?.stars.filter((s) => s.status === "pending").reverse() ?? [];
         const decided = active?.stars.filter((s) => s.status !== "pending") ?? [];
         return (
-          <section key={child.id} className="card space-y-4 p-4">
+          <section key={child.id} className="space-y-6">
             <div className="space-y-2">
-              <h2 className="flex items-center gap-2 text-2xl font-extrabold">
+              <h2 className="flex items-center gap-2 text-2xl font-bold">
                 <span aria-hidden className="size-4 shrink-0 rounded-full" style={{ backgroundColor: child.colour }} />
                 {child.name}
               </h2>
@@ -46,7 +46,7 @@ export function StarParentView({ rows }: { rows: ChildWithStars[] }) {
                 <h3 className={sectionTitle}>{t.stars.parent.pendingTitle}</h3>
                 <ul className="space-y-3">
                   {pending.map((star) => (
-                    <li key={star.id} className="space-y-2 rounded-xl bg-warning-soft p-3">
+                    <li key={star.id} className="space-y-2 rounded-3xl bg-warning-soft p-4">
                       <p className="break-words text-lg font-bold text-on-warning-soft">
                         <span className="mr-2 font-extrabold">{t.stars.amount(star.amount)}</span>
                         {star.reason}
@@ -64,11 +64,11 @@ export function StarParentView({ rows }: { rows: ChildWithStars[] }) {
                           placeholder={t.stars.parent.notePlaceholder}
                           className="field"
                         />
-                        <div className="grid grid-cols-2 gap-2">
-                          <button type="submit" name="decision" value="approve" className="btn btn-primary min-h-14 text-base">
+                        <div className="flex items-center gap-3">
+                          <button type="submit" name="decision" value="approve" className="btn btn-primary min-h-12 px-7 text-base">
                             {t.stars.parent.approve}
                           </button>
-                          <button type="submit" name="decision" value="decline" className="btn btn-danger min-h-14 text-base">
+                          <button type="submit" name="decision" value="decline" className="btn btn-text min-h-11 text-base text-on-warning-soft">
                             {t.stars.parent.decline}
                           </button>
                         </div>
@@ -84,7 +84,7 @@ export function StarParentView({ rows }: { rows: ChildWithStars[] }) {
                 <h3 className={sectionTitle}>{t.stars.parent.rewardsOwedTitle}</h3>
                 <ul className="space-y-2">
                   {active.progress.rewardsOwed.map((reward) => (
-                    <li key={reward.atCount} className="flex items-center gap-3 rounded-xl bg-chip p-3">
+                    <li key={reward.atCount} className="flex items-center gap-3 rounded-2xl bg-chip p-3">
                       <span aria-hidden>🎁</span>
                       <span className="min-w-0 flex-1 break-words font-bold">
                         {t.stars.parent.rewardOwed(reward.atCount, reward.text || t.stars.rewardFallback)}

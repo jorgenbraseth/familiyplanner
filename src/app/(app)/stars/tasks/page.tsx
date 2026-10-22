@@ -27,24 +27,24 @@ export default async function StarTasksPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-extrabold">{a.title}</h1>
+      <h1 className="text-4xl font-bold leading-tight">{a.title}</h1>
       <p className="max-w-[75ch] text-sm text-muted">{a.intro}</p>
 
-      <section className="card max-w-2xl space-y-3 p-4">
-        <h2 className="text-lg font-extrabold">{a.addTitle}</h2>
+      <section className="max-w-2xl space-y-3">
+        <h2 className="text-2xl font-bold">{a.addTitle}</h2>
         <TaskForm kids={children} />
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start 2xl:grid-cols-3">
+      <div className="grid gap-12 lg:grid-cols-2 lg:items-start 2xl:grid-cols-3">
       {groups.map((group) => (
-        <section key={group.key} className="card space-y-3 p-4">
-          <h2 className="text-xl font-extrabold break-words">{group.title}</h2>
+        <section key={group.key} className="space-y-3">
+          <h2 className="text-2xl font-bold break-words">{group.title}</h2>
           {group.rows.length === 0 ? (
             <p className="text-sm text-muted">{a.empty}</p>
           ) : (
             <ul className="space-y-3">
               {group.rows.map((task, index) => (
-                <li key={task.id} className="space-y-2 rounded-xl bg-chip p-3">
+                <li key={task.id} className="space-y-2 rounded-2xl bg-chip p-3">
                   <TaskForm kids={children} task={task} />
                   <div className="flex flex-wrap items-center gap-2">
                     <form action={moveTask}>

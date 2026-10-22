@@ -7,8 +7,8 @@ export function PushCard() {
   return (
     <>
       <InstallCard />
-      <section className="space-y-2 rounded-2xl border border-line bg-surface p-4 shadow-(--card-shadow)">
-        <h2 className="text-xl font-extrabold">{t.push.title}</h2>
+      <section className="space-y-2 rounded-3xl bg-chip p-5">
+        <h2 className="text-2xl font-bold">{t.push.title}</h2>
         <PushToggle />
       </section>
     </>

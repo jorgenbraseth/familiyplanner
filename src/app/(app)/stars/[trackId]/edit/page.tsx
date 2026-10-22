@@ -18,7 +18,7 @@ export default async function EditTrackPage({ params }: PageProps<"/stars/[track
   if (!data) notFound();
   return (
     <>
-      <h1 className="text-3xl font-extrabold">{t.stars.form.editTitle}</h1>
+      <h1 className="text-4xl font-bold leading-tight">{t.stars.form.editTitle}</h1>
       <TrackForm track={data as StarTrackRow} />
     </>
   );

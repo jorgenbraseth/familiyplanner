@@ -23,17 +23,17 @@ export default async function HomeworkPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-extrabold">{heading}</h1>
+      <h1 className="text-4xl font-bold leading-tight">{heading}</h1>
       {previewing && <Notice>{t.preview.readOnly}</Notice>}
       {items.length === 0 ? (
-        <p className="card p-6 text-2xl font-extrabold">
+        <p className="text-2xl font-extrabold">
           {tomorrow ? t.school.homeworkEmptyTomorrow : t.school.homeworkEmptyFor(weekday)}
         </p>
       ) : (
         <HomeworkList items={items} readOnly={previewing} />
       )}
       {weekItems.length > 0 && (
-        <section className="space-y-3" aria-labelledby="week-homework-title">
+        <section className="space-y-4" aria-labelledby="week-homework-title">
           <h2 id="week-homework-title" className="text-2xl font-extrabold">{t.school.homeworkThisWeek}</h2>
           <HomeworkList items={weekItems} readOnly={previewing} />
         </section>
@@ -52,9 +52,9 @@ export default async function HomeworkPage() {
 
 function HomeworkList({ items, readOnly }: { items: Awaited<ReturnType<typeof loadSchoolWeek>>["items"]; readOnly: boolean }) {
   return (
-    <ul className="grid gap-3 md:grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] md:items-start">
+    <ul className="grid gap-x-8 md:grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] md:items-start">
       {items.map((item) => (
-        <li key={item.id} className="card px-3 py-2">
+        <li key={item.id}>
           <SchoolDoneCheckbox id={item.id} done={item.done} label={item.text} detail={item.subject} readOnly={readOnly} large />
         </li>
       ))}

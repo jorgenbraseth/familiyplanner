@@ -45,7 +45,7 @@ export default async function ChildRoutinesPage({ params }: PageProps<"/stars/ro
   const a = t.routines.admin;
   return (
     <>
-      <h1 className="text-3xl font-extrabold">{a.title(child.name as string)}</h1>
+      <h1 className="text-4xl font-bold leading-tight">{a.title(child.name as string)}</h1>
       <p className="max-w-[75ch] text-sm text-muted">{a.explain}</p>
       {!starTasks && (
         <p className="text-sm">

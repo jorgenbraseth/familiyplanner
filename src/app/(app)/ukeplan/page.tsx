@@ -32,7 +32,7 @@ export default async function WeekPlanPage({ searchParams }: PageProps<"/ukeplan
 
   return (
     <>
-      <h1 className="text-3xl font-extrabold">{t.school.weekPlanTitle}</h1>
+      <h1 className="text-4xl font-bold leading-tight">{t.school.weekPlanTitle}</h1>
       {previewing && <Notice>{t.preview.readOnly}</Notice>}
       {calendar.failedNames.length > 0 && <Notice>{t.calendar.failed(calendar.failedNames.join(", "))}</Notice>}
       <WeekNav path="/ukeplan" offset={offset} isoWeek={isoWeekOf(school.monday).isoWeek} />

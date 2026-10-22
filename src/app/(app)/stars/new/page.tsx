@@ -23,7 +23,7 @@ export default async function NewTrackPage({ searchParams }: PageProps<"/stars/n
   if (activeResult?.data) return <Back message={t.stars.form.alreadyActive} />;
   return (
     <>
-      <h1 className="text-3xl font-extrabold">{t.stars.form.newTitle(child.name)}</h1>
+      <h1 className="text-4xl font-bold leading-tight">{t.stars.form.newTitle(child.name)}</h1>
       <TrackForm childId={child.id} />
     </>
   );
@@ -32,7 +32,7 @@ export default async function NewTrackPage({ searchParams }: PageProps<"/stars/n
 function Back({ message }: { message: string }) {
   return (
     <>
-      <h1 className="text-3xl font-extrabold">{t.stars.title}</h1>
+      <h1 className="text-4xl font-bold leading-tight">{t.stars.title}</h1>
       <p>{message}</p>
       <Link href="/stars" className="btn btn-secondary">
         {t.stars.form.cancel}

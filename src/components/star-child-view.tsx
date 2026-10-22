@@ -17,7 +17,7 @@ export function StarChildView({
 }) {
   if (!data) {
     return (
-      <section className="card space-y-2 p-6 text-center">
+      <section className="space-y-2 py-6 text-center">
         <p className="text-5xl" aria-hidden>
           ☆
         </p>
@@ -37,7 +37,7 @@ export function StarChildView({
     <>
       {previewing && <p className="text-sm font-semibold text-muted">{t.stars.readOnlyNote}</p>}
       {celebrating && (
-        <section className="celebrate card space-y-1 p-4 text-center" role="status">
+        <section className="celebrate space-y-1 rounded-3xl p-5 text-center" role="status">
           <p className="text-5xl" aria-hidden>
             <span className="celebrate-star">🎉</span>
           </p>
@@ -45,9 +45,9 @@ export function StarChildView({
           <p className="text-lg font-bold">{t.stars.celebrateBody(celebrating.text || t.stars.rewardFallback)}</p>
         </section>
       )}
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start xl:grid-cols-3">
-      <section className="card space-y-3 p-4">
-        <h2 className="text-2xl font-extrabold break-words">{track.name}</h2>
+      <div className="grid gap-12 lg:grid-cols-2 lg:items-start xl:grid-cols-3">
+      <section className="space-y-3">
+        <h2 className="text-2xl font-bold break-words">{track.name}</h2>
         <p className="text-lg font-bold">{t.stars.starCount(progress.approved, progress.goal)}</p>
         <StarBar approved={progress.approved} goal={progress.goal} />
         <StarGrid track={track} progress={progress} />
@@ -62,8 +62,8 @@ export function StarChildView({
         {progress.pending > 0 && <p className="text-sm text-muted">{t.stars.pendingShort(progress.pending)}</p>}
       </section>
       {(progress.rewardsOwed.length > 0 || progress.rewardsGiven.length > 0) && (
-        <section className="card space-y-2 p-4">
-          <h2 className="text-xl font-extrabold">{t.stars.rewardsTitle}</h2>
+        <section className="space-y-2">
+          <h2 className="text-2xl font-bold">{t.stars.rewardsTitle}</h2>
           <ul className="space-y-1">
             {progress.rewardsOwed.map((r) => (
               <li key={r.atCount} className="font-bold text-on-warning-soft">
@@ -79,8 +79,8 @@ export function StarChildView({
         </section>
       )}
       <RequestStarForm tasks={tasks} previewing={previewing} />
-      <section className="card space-y-2 p-4">
-        <h2 className="text-xl font-extrabold">{t.stars.historyTitle}</h2>
+      <section className="space-y-2">
+        <h2 className="text-2xl font-bold">{t.stars.historyTitle}</h2>
         <StarHistory stars={stars.slice(0, HISTORY_LIMIT)} empty={t.stars.historyEmpty} />
       </section>
       </div>

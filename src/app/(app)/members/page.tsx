@@ -20,14 +20,14 @@ export default async function MembersPage() {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-extrabold">{t.members.title}</h1>
+        <h1 className="text-4xl font-bold leading-tight">{t.members.title}</h1>
         <Link href="/assistant-log" className="btn btn-secondary">
           {t.assistant.log.nav}
         </Link>
       </div>
-      <ul className="grid gap-3 md:grid-cols-2 md:items-start xl:grid-cols-3">
+      <ul className="grid gap-8 md:grid-cols-2 md:items-start xl:grid-cols-3">
         {members.map((member) => (
-          <li key={member.id} className="card p-3">
+          <li key={member.id}>
             <div className="flex items-center gap-3">
               <MemberAvatar colour={member.colour} url={avatars[member.id]} size={40} />
               <div className="min-w-0 flex-1">
@@ -60,8 +60,8 @@ export default async function MembersPage() {
           </li>
         ))}
       </ul>
-      <section className="card max-w-2xl space-y-3 p-3">
-        <h2 className="text-xl font-extrabold">{t.members.add}</h2>
+      <section className="panel max-w-2xl space-y-3 p-5">
+        <h2 className="text-2xl font-bold">{t.members.add}</h2>
         <MemberForm />
       </section>
     </>

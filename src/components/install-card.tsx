@@ -43,8 +43,8 @@ export function InstallCard() {
   const mode = state === "promptable" ? "prompt" : state === "ios" ? "ios" : "hidden";
   if (dismissed || mode === "hidden") return null;
   return (
-    <section className="space-y-2 rounded-2xl border border-line bg-surface p-4 shadow-(--card-shadow)">
-      <h2 className="text-xl font-extrabold">{t.install.title}</h2>
+    <section className="space-y-2 rounded-3xl bg-chip p-5">
+      <h2 className="text-2xl font-bold">{t.install.title}</h2>
       <p className="text-sm text-muted">{mode === "ios" ? t.install.iosSteps : t.install.description}</p>
       <div className="flex flex-wrap gap-2">
         {mode === "prompt" && (

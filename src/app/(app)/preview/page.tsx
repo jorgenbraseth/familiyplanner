@@ -17,7 +17,7 @@ export default async function PreviewPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-extrabold">{t.preview.title}</h1>
+      <h1 className="text-4xl font-bold leading-tight">{t.preview.title}</h1>
       <p className="max-w-[75ch] text-muted">{t.preview.intro}</p>
       {children.length === 0 ? (
         <p>{t.preview.noChildren}</p>
@@ -28,7 +28,7 @@ export default async function PreviewPage() {
               <form action={startPreview}>
                 <input type="hidden" name="child" value={child.id} />
                 <button type="submit" className="btn btn-primary min-h-16 w-full gap-3 text-lg">
-                  <span aria-hidden className="size-4 shrink-0 rounded-full border-2 border-on-primary" style={{ backgroundColor: child.colour }} />
+                  <span aria-hidden className="size-4 shrink-0 rounded-full" style={{ backgroundColor: child.colour }} />
                   {t.preview.start(child.name)}
                 </button>
               </form>

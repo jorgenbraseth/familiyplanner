@@ -33,11 +33,11 @@ export function ModalSheet({ title, onClose, children }: { title: ReactNode; onC
         aria-modal="true"
         aria-labelledby={titleId}
         onClick={(event) => event.stopPropagation()}
-        className="flex max-h-[92dvh] w-full max-w-2xl flex-col rounded-t-3xl border-2 border-b-0 border-line bg-background shadow-2xl sm:rounded-3xl sm:border-b-2"
+        className="flex max-h-[92dvh] w-full max-w-2xl flex-col rounded-t-3xl bg-background sm:rounded-3xl"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="flex items-center justify-between gap-2 px-4 pt-3">
-          <h2 id={titleId} className="min-w-0 text-xl font-extrabold">{title}</h2>
+          <h2 id={titleId} className="min-w-0 text-xl font-bold">{title}</h2>
           <button
             type="button"
             data-autofocus

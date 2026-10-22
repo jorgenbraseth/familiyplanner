@@ -1,7 +1,7 @@
 import { DaySwitcher } from "@/components/day-switcher";
 import { Notice } from "@/components/notice";
 import { ParentDayCard } from "@/components/parent-day";
-import { ParentHomeCards, ParentSchoolEndCard } from "@/components/parent-home";
+import { ParentHomeCards, ParentHomeTop } from "@/components/parent-home";
 import { StartView } from "@/components/start-view";
 import { dateInTimeZone, daysBetween, parseDayParam } from "@/lib/dates";
 import { t } from "@/lib/i18n";
@@ -24,11 +24,11 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
   return (
     <>
-      <h1 className="text-3xl font-extrabold">
+      <h1 className="text-4xl font-bold leading-tight">
         <span aria-hidden className="mr-2 text-accent">★</span>
         {t.home.greeting(member.name)}
       </h1>
-      <ParentSchoolEndCard data={home} avatars={avatars} />
+      <ParentHomeTop data={home} avatars={avatars} />
       {member.calendar_ids.length === 0 && <Notice>{t.home.noCalendar}</Notice>}
       <ParentDayCard
         key={day.dateKey}

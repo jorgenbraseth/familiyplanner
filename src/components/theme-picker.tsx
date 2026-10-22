@@ -11,7 +11,7 @@ function ThemePreview({ theme }: { theme: Theme }) {
   const strip = (soft: string, on: string, line: string, label: string) => (
     <span
       className="block rounded-md px-2 py-0.5 text-[0.7rem] font-bold leading-snug"
-      style={{ backgroundColor: soft, color: on, borderLeft: `4px solid ${line}` }}
+      style={{ backgroundColor: soft, color: on }}
     >
       {label}
     </span>
@@ -19,15 +19,15 @@ function ThemePreview({ theme }: { theme: Theme }) {
   return (
     <span
       aria-hidden
-      className="block overflow-hidden rounded-xl border-2"
-      style={{ backgroundColor: c.background, borderColor: c.line }}
+      className="block overflow-hidden rounded-xl"
+      style={{ backgroundColor: c.background }}
     >
       <span className="block h-4" style={{ backgroundColor: c.brand }} />
       <span className="flex flex-col gap-1 p-2">
         <span className="flex items-center justify-between gap-2">
           <span
-            className="rounded-lg px-3 py-1 text-xs font-extrabold"
-            style={{ backgroundColor: c["primary"], color: c["on-primary"], boxShadow: `0 2px 0 ${c["primary-strong"]}` }}
+            className="rounded-full px-3 py-1 text-xs font-extrabold"
+            style={{ backgroundColor: c["primary"], color: c["on-primary"] }}
           >
             {t.profile.theme.previewButton}
           </span>
@@ -94,8 +94,8 @@ export function ThemePicker({ current }: { current: ThemeId }) {
                 className="peer sr-only"
               />
               <span
-                className={`block min-h-11 space-y-2 rounded-2xl border-2 bg-surface p-3 peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary ${
-                  checked ? "border-primary" : "border-line hover:border-muted"
+                className={`block min-h-11 space-y-2 rounded-3xl bg-chip p-3 peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary ${
+                  checked ? "ring-4 ring-primary" : "hover:bg-line"
                 }`}
               >
                 <ThemePreview theme={theme} />
