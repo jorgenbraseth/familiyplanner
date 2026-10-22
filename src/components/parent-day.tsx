@@ -2,6 +2,7 @@
 
 import { useMemo, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { MemberAvatar } from "@/components/member-avatar";
+import { PendingContent } from "@/components/nav-pending";
 import { buildTracksFromEntries } from "@/lib/parent-day";
 import type { ParentDay } from "@/lib/parent-day-data";
 import { t } from "@/lib/i18n";
@@ -95,6 +96,7 @@ export function ParentDayCard({
         <h2 id="day-title" className="text-2xl font-bold">{isToday ? t.parentDay.title : t.parentDay.titleOtherDay}</h2>
         {switcher}
       </div>
+      <PendingContent className="space-y-3">
       {day.failedNames.length > 0 && <p className="text-sm text-muted">{t.parentDay.failed(day.failedNames.join(", "))}</p>}
       {day.members.length > 1 && (
         <div role="group" aria-label={t.parentDay.people} className="flex flex-wrap gap-x-3">
@@ -184,6 +186,7 @@ export function ParentDayCard({
           </div>
         </div>
       )}
+      </PendingContent>
     </section>
   );
 }

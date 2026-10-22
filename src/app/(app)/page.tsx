@@ -1,4 +1,5 @@
 import { DaySwitcher } from "@/components/day-switcher";
+import { NavPendingScope } from "@/components/nav-pending";
 import { Notice } from "@/components/notice";
 import { ParentDayCard } from "@/components/parent-day";
 import { ParentHomeCards, ParentHomeTop } from "@/components/parent-home";
@@ -30,13 +31,15 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       </h1>
       <ParentHomeTop data={home} avatars={avatars} />
       {member.calendar_ids.length === 0 && <Notice>{t.home.noCalendar}</Notice>}
-      <ParentDayCard
-        key={day.dateKey}
-        day={day}
-        isToday={daysBetween(today, selected) === 0}
-        switcher={<DaySwitcher date={selected} today={today} />}
-        avatars={avatars}
-      />
+      <NavPendingScope>
+        <ParentDayCard
+          key={day.dateKey}
+          day={day}
+          isToday={daysBetween(today, selected) === 0}
+          switcher={<DaySwitcher date={selected} today={today} />}
+          avatars={avatars}
+        />
+      </NavPendingScope>
       <ParentHomeCards data={home} avatars={avatars} />
     </>
   );

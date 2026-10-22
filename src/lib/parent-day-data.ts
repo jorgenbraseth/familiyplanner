@@ -1,7 +1,7 @@
 import "server-only";
 import { buildTracksFromEntries, collect, type DayCalendarEvent, type DayMember, type DaySchoolHours, type ParentTracks, type Raw } from "./parent-day";
 import { getEvents } from "./calendar/google";
-import { addDays, dateInTimeZone, dayKey, startOfDay, type CalendarDate } from "./dates";
+import { addDays, dateInTimeZone, dayKey, mondayOf, startOfDay, type CalendarDate } from "./dates";
 import type { Member } from "./members";
 import { hoursForDate } from "./plan-view";
 import { loadSchoolEvents } from "./school";
@@ -35,7 +35,11 @@ export async function loadParentDay(
   const members = [parent, ...children];
   const failed = new Set<string>();
 
-  const calendars = getEvents(members.map((m) => ({ memberId: m.id, calendarIds: m.calendar_ids })), dayStart, dayEnd)
+  // Fetch the whole ISO week around the day (the same range and cache entry as the week views and neighbouring days),
+  // so stepping between days doesn't call Google again; `collect` drops events outside the day.
+  const weekStart = startOfDay(mondayOf(date));
+  const weekEnd = startOfDay(addDays(mondayOf(date), 7));
+  const calendars = getEvents(members.map((m) => ({ memberId: m.id, calendarIds: m.calendar_ids })), weekStart, weekEnd)
     .then((r) => {
       r.failedMemberIds.forEach((id) => failed.add(id));
       return r.events as DayCalendarEvent[];

@@ -1,5 +1,7 @@
+import { NavPendingScope, PendingContent } from "@/components/nav-pending";
 import { Notice } from "@/components/notice";
 import { WeekNav } from "@/components/week-nav";
+import { dateInTimeZone } from "@/lib/dates";
 import { loadWeek, parseWeekOffset } from "@/lib/calendar/view";
 import { visibleDays } from "@/lib/plan-view";
 import { getViewer } from "@/lib/view-as";
@@ -32,14 +34,18 @@ export default async function FamilyPage({ searchParams }: PageProps<"/family">)
   return (
     <>
       <h1 className="text-4xl font-bold leading-tight">{t.family.title}</h1>
-      {week.failedNames.length > 0 && <Notice>{t.calendar.failed(week.failedNames.join(", "))}</Notice>}
-      <WeekNav path="/family" offset={offset} isoWeek={week.isoWeek} />
-      <FamilyCalendar
-        days={visibleDays(week.days, week.todayKey, offset)}
-        onlyMemberId={kidView ? viewing.id : undefined}
-        hideEmptyDays={kidView}
-        members={members.map((m) => ({ id: m.id, name: m.name, colour: m.colour, avatarUrl: avatars[m.id] ?? null }))}
-      />
+      <NavPendingScope className="space-y-12">
+        <WeekNav path="/family" offset={offset} today={dateInTimeZone(new Date())} />
+        <PendingContent className="space-y-12">
+          {week.failedNames.length > 0 && <Notice>{t.calendar.failed(week.failedNames.join(", "))}</Notice>}
+          <FamilyCalendar
+            days={visibleDays(week.days, week.todayKey, offset)}
+            onlyMemberId={kidView ? viewing.id : undefined}
+            hideEmptyDays={kidView}
+            members={members.map((m) => ({ id: m.id, name: m.name, colour: m.colour, avatarUrl: avatars[m.id] ?? null }))}
+          />
+        </PendingContent>
+      </NavPendingScope>
       {mine && (
         <section className="max-w-2xl space-y-3" aria-labelledby="my-avatar-title">
           <h2 id="my-avatar-title" className="text-2xl font-bold">{t.avatar.mine}</h2>
