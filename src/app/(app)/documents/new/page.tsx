@@ -30,7 +30,7 @@ export default async function NewDocumentPage({ searchParams }: PageProps<"/docu
       >
         ← {t.documents.back}
       </Link>
-      <h1 className="text-3xl font-extrabold">{t.documents.newTitle}</h1>
+      <h1 className="text-4xl font-bold leading-tight">{t.documents.newTitle}</h1>
       {children.length === 0 ? (
         <p className="text-sm text-muted">{t.documents.noChildren}</p>
       ) : (

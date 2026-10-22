@@ -72,7 +72,7 @@ function ItemCard({
   const time =
     item.kind === "event" ? timeRange(item.starts_at, item.ends_at) : "";
   return (
-    <li className="card space-y-2 p-3">
+    <li className="space-y-2 rounded-3xl bg-chip p-4">
       <p className="flex flex-wrap items-center gap-2 text-sm font-extrabold">
         <span>{t.documents.kinds[item.kind]}</span>
         <span
@@ -253,12 +253,12 @@ export default async function DocumentPage({
           <img
             src={fileUrl}
             alt={t.documents.imageAlt}
-            className="max-w-full rounded-xl border-2 border-line"
+            className="max-w-full rounded-2xl"
           />
         )}
       </section>
 
-      <div className="min-w-0 space-y-6">
+      <div className="min-w-0 space-y-10">
       {doc.status === "failed" && (
         <section className="space-y-3 rounded-2xl bg-danger-soft p-3">
           <p className="break-words text-sm font-semibold text-on-danger-soft">
@@ -283,7 +283,7 @@ export default async function DocumentPage({
 
       {showItems && isTimeplan && (
         <section className="space-y-4">
-          <h2 className="text-xl font-extrabold">{t.documents.timetable}</h2>
+          <h2 className="text-2xl font-bold">{t.documents.timetable}</h2>
           <p className="text-sm text-muted">{t.documents.timeplanIntro}</p>
           {replacesPrevious && (
             <p className="rounded-xl bg-warning-soft p-3 text-sm font-bold text-on-warning-soft">
@@ -298,7 +298,7 @@ export default async function DocumentPage({
                 <h3 className="font-display text-base font-extrabold">
                   {t.documents.weekdays[weekday - 1]}
                 </h3>
-                <div className="card p-3">
+                <div className="rounded-2xl bg-chip p-3">
                   <TimetableDayForm
                     key={`${day?.starts_at}-${day?.ends_at}`}
                     documentId={doc.id}
@@ -312,7 +312,7 @@ export default async function DocumentPage({
                 )}
                 <ul className="grid gap-3 xl:grid-cols-2 xl:items-start">
                   {dayPeriods.map((p) => (
-                    <li key={p.id} className="card space-y-2 p-3">
+                    <li key={p.id} className="space-y-2 rounded-2xl bg-chip p-3">
                       <p className="text-sm font-extrabold">
                         {t.documents.periodLine(
                           p.period,
@@ -329,7 +329,7 @@ export default async function DocumentPage({
                     </li>
                   ))}
                 </ul>
-                <details className="rounded-2xl border-2 border-dashed border-line p-3">
+                <details className="rounded-2xl bg-chip p-3">
                   <summary className="min-h-11 cursor-pointer font-display text-base font-extrabold">
                     {t.documents.addPeriod}
                   </summary>
@@ -345,7 +345,7 @@ export default async function DocumentPage({
 
       {showItems && !isTimeplan && (
         <section className="space-y-4">
-          <h2 className="text-xl font-extrabold">{t.documents.ukeplanItems}</h2>
+          <h2 className="text-2xl font-bold">{t.documents.ukeplanItems}</h2>
           {items.length === 0 && (
             <p className="text-sm text-muted">{t.documents.noItems}</p>
           )}
@@ -381,7 +381,7 @@ export default async function DocumentPage({
               </ul>
             </div>
           ))}
-          <div className="space-y-2 rounded-2xl border-2 border-dashed border-line p-3">
+          <div className="space-y-2 rounded-3xl bg-chip p-4">
             <h3 className="font-display text-base font-extrabold">
               {t.documents.addItem}
             </h3>

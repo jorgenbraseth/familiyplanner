@@ -6,7 +6,7 @@ import { StartHomework } from "@/components/start-homework";
 import { StartSchool } from "@/components/start-school";
 import { StartStarSheet } from "@/components/start-star-sheet";
 import { loadAvatarUrls } from "@/lib/avatar-urls";
-import { dateInTimeZone, dayKey, daysBetween, mondayOf, parseDayParam } from "@/lib/dates";
+import { dateInTimeZone, dayKey, formatDayHeading, daysBetween, mondayOf, parseDayParam } from "@/lib/dates";
 import { loadWeek } from "@/lib/calendar/view";
 import { t } from "@/lib/i18n";
 import type { Member } from "@/lib/members";
@@ -15,6 +15,7 @@ import { loadRoutineToday } from "@/lib/routine-data";
 import { currentSlot } from "@/lib/routines";
 import { loadSchoolWeek } from "@/lib/school";
 import { loadChildStars } from "@/lib/star-data";
+import { rewardTextAt } from "@/lib/stars";
 import { isTomorrow, slotView } from "@/lib/start-view";
 
 /** The children's start page (also shown when a parent previews a child). */
@@ -56,35 +57,71 @@ export async function StartView({
   const events = (selWeek ?? week).days.find((d) => d.key === selectedKey)?.events ?? [];
   const failedNames = [...new Set([...week.failedNames, ...(selWeek?.failedNames ?? [])])];
   const tomorrow = isTomorrow(school.today, view.nextSchoolDay);
+  const nextReward =
+    stars && stars.progress.nextMilestone !== null
+      ? rewardTextAt(stars.track, stars.progress.nextMilestone) || t.stars.rewardFallback
+      : null;
+  const starPercent = stars && stars.progress.goal > 0 ? Math.min(100, Math.round((stars.progress.approved / stars.progress.goal) * 100)) : 0;
 
   return (
     <>
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <h1 className="flex min-w-0 items-center gap-3 text-4xl font-extrabold">
-          {avatars[member.id] && <MemberAvatar colour={member.colour} url={avatars[member.id]} size={56} />}
-          {member.name}
-        </h1>
-        {stars && (
-          <Link
-            href="/stars"
-            aria-label={`${t.start.stars(stars.progress.approved, stars.progress.goal)}. ${t.start.starsLink}`}
-            className="inline-flex min-h-11 items-center rounded-full border-2 border-line bg-chip px-4 text-lg font-extrabold text-chip-ink hover:bg-surface"
+      <header className="flex items-center gap-4">
+        {avatars[member.id] ? (
+          <MemberAvatar colour={member.colour} url={avatars[member.id]} size={64} />
+        ) : (
+          <span
+            aria-hidden
+            className="flex size-16 shrink-0 items-center justify-center rounded-full font-display text-3xl font-bold leading-none text-white"
+            style={{ backgroundColor: member.colour }}
           >
-            <span aria-hidden className="mr-2 text-accent">★</span>
-            {t.start.stars(stars.progress.approved, stars.progress.goal)}
-          </Link>
+            {member.name.slice(0, 1).toLocaleUpperCase()}
+          </span>
         )}
-        <div className="md:ml-auto">
-          <StartStarSheet tasks={stars?.tasks ?? []} previewing={previewing} />
+        <div className="min-w-0">
+          <h1 className="break-words text-4xl font-bold leading-tight">{member.name}</h1>
+          <p className="text-base font-semibold capitalize text-muted">{formatDayHeading(today)}</p>
         </div>
       </header>
       {previewing && <Notice>{t.preview.readOnly}</Notice>}
       {member.calendar_ids.length === 0 && <Notice>{t.home.noCalendar}</Notice>}
       {failedNames.length > 0 && <Notice>{t.calendar.failed(failedNames.join(", "))}</Notice>}
 
-      {/* Routine, "Min dag" and Lekser sit side by side on wide screens (1 column on phones, 2 from lg, 3 from xl). */}
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start xl:grid-cols-3">
-        <div className="max-lg:mb-2 lg:col-span-2 xl:col-span-1">
+      {/* Stars + routine, "Min dag" and Lekser sit side by side on wide screens (1 column on phones, 2 from lg, 3 from xl). */}
+      <div className="grid gap-12 lg:grid-cols-2 lg:items-start xl:grid-cols-3">
+        <div className="space-y-8">
+          {stars ? (
+            <section className="space-y-3 rounded-3xl bg-warning-soft p-5 text-on-warning-soft" aria-labelledby="stars-title">
+              <h2 id="stars-title" className="sr-only">{t.stars.title}</h2>
+              <Link
+                href="/stars"
+                aria-label={`${t.start.stars(stars.progress.approved, stars.progress.goal)}. ${t.start.starsLink}`}
+                className="flex items-baseline gap-3"
+              >
+                <span aria-hidden className="font-display text-6xl font-bold leading-none">{stars.progress.approved} ★</span>
+                <span aria-hidden className="text-base font-bold">{t.start.starsWord}</span>
+              </Link>
+              <p className="text-lg font-bold text-ink">
+                {nextReward !== null
+                  ? t.start.starsToward(stars.progress.approved, stars.progress.goal, nextReward)
+                  : t.start.stars(stars.progress.approved, stars.progress.goal)}
+              </p>
+              <div
+                role="progressbar"
+                aria-label={t.start.stars(stars.progress.approved, stars.progress.goal)}
+                aria-valuemin={0}
+                aria-valuemax={stars.progress.goal}
+                aria-valuenow={stars.progress.approved}
+                className="h-3 w-full overflow-hidden rounded-full bg-surface/80"
+              >
+                <div className="h-full rounded-full bg-accent" style={{ width: `${starPercent}%` }} />
+              </div>
+              <div className="pt-2">
+                <StartStarSheet tasks={stars.tasks} previewing={previewing} />
+              </div>
+            </section>
+          ) : (
+            <StartStarSheet tasks={[]} previewing={previewing} />
+          )}
           <RoutineBar
             key={slot}
             slot={slot}
@@ -93,6 +130,7 @@ export async function StartView({
             initialChecked={slotData.checkedIds}
             hasStarTask={hasStarTask}
             readOnly={previewing}
+            tint={member.colour}
           />
         </div>
         <StartSchool view={dayView} events={events} date={selected} today={today} />

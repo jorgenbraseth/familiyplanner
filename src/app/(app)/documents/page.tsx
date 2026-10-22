@@ -29,7 +29,7 @@ export default async function DocumentsPage() {
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-3xl font-extrabold">{t.documents.title}</h1>
+        <h1 className="text-4xl font-bold leading-tight">{t.documents.title}</h1>
         <Link href="/documents/new" className="btn btn-primary">
           {t.documents.upload}
         </Link>
@@ -37,12 +37,12 @@ export default async function DocumentsPage() {
       {documents.length === 0 ? (
         <p className="text-sm text-muted">{t.documents.empty}</p>
       ) : (
-        <ul className="grid gap-3 md:grid-cols-[repeat(auto-fill,minmax(20rem,1fr))]">
+        <ul className="grid gap-2 md:grid-cols-[repeat(auto-fill,minmax(20rem,1fr))]">
           {documents.map((doc) => (
             <li key={doc.id}>
               <Link
                 href={`/documents/${doc.id}`}
-                className="card flex min-h-11 items-center gap-3 p-3 hover:border-primary"
+                className="flex min-h-11 items-center gap-3 rounded-2xl bg-chip p-3 hover:bg-line"
               >
                 <span
                   aria-hidden

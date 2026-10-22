@@ -19,8 +19,8 @@ export function RequestStarForm({
   const disabled = previewing || pending;
 
   return (
-    <section className="card space-y-3 p-4">
-      <h2 className="text-xl font-extrabold">{t.stars.request.title}</h2>
+    <section className="space-y-3">
+      <h2 className="text-2xl font-bold">{t.stars.request.title}</h2>
       {previewing && <p className="text-sm font-semibold text-muted">{t.stars.request.readOnly}</p>}
       {tasks.length > 0 ? (
         <form action={formAction} className="space-y-2">

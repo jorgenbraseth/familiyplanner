@@ -13,7 +13,7 @@ const statusStyle = {
 export function StarHistory({ stars, canUndo = false, empty }: { stars: StarRow[]; canUndo?: boolean; empty: string }) {
   if (stars.length === 0) return <p className="text-sm text-muted">{empty}</p>;
   return (
-    <ul className="divide-y-2 divide-line">
+    <ul className="space-y-2">
       {stars.map((star) => (
         <li key={star.id} className="flex items-start gap-3 py-2">
           <div className="min-w-0 flex-1 space-y-0.5">

@@ -48,7 +48,7 @@ export default async function AssistantLogPage({ searchParams }: PageProps<"/ass
   return (
     <>
       <div>
-        <h1 className="text-3xl font-extrabold">{l.title}</h1>
+        <h1 className="text-4xl font-bold leading-tight">{l.title}</h1>
         <p className="mt-1 max-w-[75ch] text-muted">{l.intro}</p>
       </div>
 
@@ -72,7 +72,7 @@ export default async function AssistantLogPage({ searchParams }: PageProps<"/ass
 
         <details className="ml-auto">
           <summary className="btn btn-danger list-none">{l.clear}</summary>
-          <form action={clearAssistantLog} className="card mt-2 space-y-3 p-3">
+          <form action={clearAssistantLog} className="panel mt-2 space-y-3 p-4">
             <p className="font-bold">{l.clearConfirm}</p>
             <button type="submit" className="btn btn-danger">
               {l.clearYes}
@@ -82,16 +82,16 @@ export default async function AssistantLogPage({ searchParams }: PageProps<"/ass
       </div>
 
       {rows.length === 0 ? (
-        <p className="card p-4 text-muted">{l.empty}</p>
+        <p className="text-muted">{l.empty}</p>
       ) : (
         [...days.entries()].map(([key, dayRows]) => (
-          <section key={key} className="space-y-3">
+          <section key={key} className="space-y-4">
             <h2 className="text-xl font-extrabold capitalize">{formatDayHeading(parseDayKey(key))}</h2>
-            <ul className="grid gap-3 lg:grid-cols-2 lg:items-start 2xl:grid-cols-3">
+            <ul className="grid gap-4 lg:grid-cols-2 lg:items-start 2xl:grid-cols-3">
               {dayRows.map((row) => {
                 const member = byId.get(row.member_id);
                 return (
-                  <li key={row.id} className="card space-y-2 p-3">
+                  <li key={row.id} className="space-y-2 rounded-3xl bg-chip p-4">
                     <p className="flex items-center gap-2 text-sm text-muted">
                       <span aria-hidden className="size-3 shrink-0 rounded-full" style={{ backgroundColor: member?.colour ?? "#999999" }} />
                       <span className="font-bold text-ink">{member?.name ?? l.unknownMember}</span>
@@ -108,7 +108,7 @@ export default async function AssistantLogPage({ searchParams }: PageProps<"/ass
                     {row.tools_used && row.tools_used.length > 0 && (
                       <ul className="flex flex-wrap gap-1.5" aria-label={l.tools}>
                         {row.tools_used.map((tool, i) => (
-                          <li key={`${tool}-${i}`} className="rounded-full bg-chip px-2.5 py-0.5 text-xs font-bold text-chip-ink">
+                          <li key={`${tool}-${i}`} className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-bold text-chip-ink">
                             {tool}
                           </li>
                         ))}

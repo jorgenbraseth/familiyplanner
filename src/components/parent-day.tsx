@@ -14,8 +14,8 @@ const LANE_MIN = "4.25rem";
 const GUTTER = "2.5rem";
 
 const KIND = {
-  school: "border-l-4 border-school-line bg-school-soft text-on-school-soft",
-  event: "border-l-4 border-event-line bg-event-soft text-on-event-soft",
+  school: "bg-school-soft text-on-school-soft",
+  event: "bg-event-soft text-on-event-soft",
 } as const;
 
 /**
@@ -90,12 +90,14 @@ export function ParentDayCard({
   const axisRow = (row: number) => row + headerRows;
 
   return (
-    <section className="card space-y-3 p-4" aria-labelledby="day-title">
-      <h2 id="day-title" className="text-xl font-extrabold">{isToday ? t.parentDay.title : t.parentDay.titleOtherDay}</h2>
-      {switcher}
+    <section className="space-y-3" aria-labelledby="day-title">
+      <div className="flex flex-wrap items-center justify-between gap-x-4">
+        <h2 id="day-title" className="text-2xl font-bold">{isToday ? t.parentDay.title : t.parentDay.titleOtherDay}</h2>
+        {switcher}
+      </div>
       {day.failedNames.length > 0 && <p className="text-sm text-muted">{t.parentDay.failed(day.failedNames.join(", "))}</p>}
       {day.members.length > 1 && (
-        <div role="group" aria-label={t.parentDay.people} className="flex flex-wrap gap-2">
+        <div role="group" aria-label={t.parentDay.people} className="flex flex-wrap gap-x-3">
           {day.members.map((m) => {
             const on = !hidden.includes(m.id);
             const last = on && visible.length === 1;
@@ -106,11 +108,9 @@ export function ParentDayCard({
                 aria-pressed={on}
                 disabled={last}
                 onClick={() => toggle(m.id)}
-                className={`flex min-h-11 items-center gap-2 rounded-full border px-3 text-sm font-bold ${
-                  on ? "border-line bg-surface" : "border-line bg-transparent text-muted opacity-60"
-                }`}
+                className={`flex min-h-11 items-center gap-1.5 px-1 text-sm ${on ? "font-extrabold text-ink" : "font-semibold text-muted"}`}
               >
-                <span className={on ? "" : "opacity-40"}><MemberAvatar colour={m.colour} url={avatars[m.id]} size={avatars[m.id] ? 24 : 12} /></span>
+                <span className={on ? "" : "opacity-50"}><MemberAvatar colour={m.colour} url={avatars[m.id]} size={avatars[m.id] ? 24 : 12} /></span>
                 <span className="max-w-32 truncate">{m.name}</span>
               </button>
             );
@@ -140,7 +140,7 @@ export function ParentDayCard({
                   style={{ gridRow: 2, gridColumn: `${c.firstColumn} / span ${c.lanes}` }}
                 >
                   {c.allDay.map((a) => (
-                    <div key={a.key} className={`rounded-lg px-1.5 py-1 text-xs font-bold ${KIND[a.kind]}`}>
+                    <div key={a.key} className={`rounded-xl px-2 py-1 text-xs font-bold ${KIND[a.kind]}`}>
                       <span className="sr-only">{t.parentDay.allDay}: </span>
                       <span className="line-clamp-2 break-words">{a.title}</span>
                     </div>
@@ -156,13 +156,13 @@ export function ParentDayCard({
                   style={{ gridRow: axisRow(r.row), gridColumn: "1 / -1" }}
                 >
                   <span className="z-[1] w-10 shrink-0 text-xs font-bold tabular-nums text-muted">{r.label}</span>
-                  <span className="h-px flex-1 bg-line" />
+                  
                 </div>
               ) : r.kind === "gap" ? (
                 <div
                   key={`r-${r.row}`}
                   aria-hidden
-                  className="my-0.5 rounded-lg border border-dashed border-pause-line"
+                  className="my-0.5 rounded-xl bg-pause-soft/40"
                   style={{ gridRow: axisRow(r.row), gridColumn: "2 / -1" }}
                 />
               ) : null,
@@ -172,7 +172,7 @@ export function ParentDayCard({
                 <div
                   key={b.key}
                   title={`${b.title} ${b.timeLabel}`}
-                  className={`z-[2] my-0.5 min-w-0 overflow-hidden rounded-lg px-1.5 py-1 text-xs font-bold leading-tight ${KIND[b.kind]}`}
+                  className={`z-[2] my-0.5 min-w-0 overflow-hidden rounded-xl px-2 py-1 text-xs font-bold leading-tight ${KIND[b.kind]}`}
                   style={{ gridRow: `${axisRow(b.rowStart)} / ${axisRow(b.rowEnd)}`, gridColumn: c.firstColumn + b.lane }}
                 >
                   <span className="sr-only">{b.timeLabel}: </span>

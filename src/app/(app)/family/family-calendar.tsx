@@ -36,8 +36,8 @@ export function FamilyCalendar({
   const visibleDays = hideEmptyDays ? withoutEmptyDays(filtered, (day) => day.events.length === 0) : filtered;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2" role="group" aria-label={t.family.showWho}>
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-x-3" role="group" aria-label={t.family.showWho}>
         {members.map((m) => {
           const on = !hidden.has(m.id);
           return (
@@ -46,9 +46,7 @@ export function FamilyCalendar({
               type="button"
               aria-pressed={on}
               onClick={() => toggle(m.id)}
-              className={`flex items-center gap-2 min-h-11 rounded-full border-2 px-4 text-sm font-bold ${
-                on ? "border-line bg-surface" : "border-dashed border-line opacity-60"
-              }`}
+              className={`flex min-h-11 items-center gap-1.5 px-1 text-sm ${on ? "font-extrabold text-ink" : "font-semibold text-muted"}`}
             >
               <MemberAvatar colour={m.colour} url={m.avatarUrl} size={24} />
               {m.name}
@@ -57,7 +55,7 @@ export function FamilyCalendar({
         })}
       </div>
       {hideEmptyDays && visibleDays.length === 0 ? (
-        <p className="card p-4 text-lg">{t.family.weekEmpty}</p>
+        <p className="text-lg">{t.family.weekEmpty}</p>
       ) : (
         <DayList days={visibleDays} members={members} />
       )}

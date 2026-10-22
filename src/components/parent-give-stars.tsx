@@ -6,12 +6,14 @@ import { giveStar } from "@/app/(app)/stars/actions";
 import { MemberAvatar } from "@/components/member-avatar";
 import { ModalSheet } from "@/components/modal-sheet";
 import { GiveStarForm } from "@/app/(app)/stars/give-star-form";
+import { tintStyle } from "@/lib/colour";
 import { t } from "@/lib/i18n";
 import type { StarTaskRow } from "@/lib/stars";
 
 /**
- * One child in the parents' "Gi stjerne" card: progress, one tap button per star task (gives the task's stars,
- * approved straight away) and "Noe annet …" for a custom reason and amount.
+ * One child's tinted tile in the parents' stars section: progress and a "+★" button that opens a sheet with one
+ * tap button per star task (gives the task's stars, approved straight away) and "Noe annet …" for a custom
+ * reason and amount.
  */
 export function ParentGiveStars({
   child,
@@ -19,7 +21,7 @@ export function ParentGiveStars({
 }: {
   child: { id: string; name: string; colour: string; avatarUrl?: string | null };
   /** The child's active track, or null when there is none. */
-  track: { id: string; approved: number; goal: number; tasks: StarTaskRow[] } | null;
+  track: { id: string; approved: number; goal: number; reward: string | null; tasks: StarTaskRow[] } | null;
 }) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -48,28 +50,53 @@ export function ParentGiveStars({
     });
   }
 
+  const percent = track && track.goal > 0 ? Math.min(100, Math.round((approved / track.goal) * 100)) : 0;
+
   return (
-    <li className="space-y-3 py-3 first:pt-0 last:pb-0">
-      <div className="flex items-baseline justify-between gap-2">
-        <h3 className="flex min-w-0 items-center gap-2 text-lg font-extrabold">
-          <MemberAvatar colour={child.colour} url={child.avatarUrl} size={32} />
-          <span className="truncate">{child.name}</span>
-        </h3>
-        {track && <span className="shrink-0 text-sm font-bold text-muted">{t.stars.starCount(approved, track.goal)}</span>}
+    <li className="min-w-0 rounded-3xl p-4" style={tintStyle(child.colour)}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="flex min-w-0 items-center gap-2 text-lg font-extrabold">
+            <MemberAvatar colour={child.colour} url={child.avatarUrl} size={28} />
+            <span className="min-w-0 break-words">{child.name}</span>
+          </h3>
+          <p className="text-sm font-semibold text-muted">
+            {track ? (
+              <>
+                {t.stars.starCount(approved, track.goal)}
+                {track.reward && <> · «{track.reward}»</>}
+              </>
+            ) : (
+              t.parentHome.noTrack
+            )}
+          </p>
+        </div>
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={() => {
+            setMessage(null);
+            setOpen(true);
+          }}
+          aria-haspopup="dialog"
+          aria-label={t.parentHome.giveDialogTitle(child.name)}
+          className="btn btn-primary size-11 shrink-0 px-0 text-base"
+        >
+          <span aria-hidden>+★</span>
+        </button>
       </div>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => {
-          setMessage(null);
-          setOpen(true);
-        }}
-        aria-haspopup="dialog"
-        className="btn btn-primary min-h-12 px-4 text-base"
-      >
-        <span aria-hidden className="mr-2">★</span>
-        {t.parentHome.giveButton}
-      </button>
+      {track && (
+        <div
+          role="progressbar"
+          aria-label={t.stars.starCount(approved, track.goal)}
+          aria-valuemin={0}
+          aria-valuemax={track.goal}
+          aria-valuenow={approved}
+          className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface/75"
+        >
+          <div className="h-full rounded-full" style={{ width: `${percent}%`, backgroundColor: child.colour }} />
+        </div>
+      )}
       {open && (
         <ModalSheet title={t.parentHome.giveDialogTitle(child.name)} onClose={close}>
           <div className="space-y-3">
@@ -85,7 +112,7 @@ export function ParentGiveStars({
                         type="button"
                         disabled={pending}
                         onClick={() => give(task)}
-                        className="btn btn-primary min-h-12 px-4 text-base"
+                        className="btn btn-secondary min-h-12 px-4 text-base"
                       >
                         {task.name} {t.stars.amount(task.stars)}
                       </button>

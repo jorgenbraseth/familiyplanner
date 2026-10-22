@@ -62,23 +62,26 @@
   header :focus-visible {
     outline-color: var(--on-brand);
   }
+  /* Layout E (Luft + flater): no borders, shadows or dividers. `.card` is an unstyled section (structure comes from
+     whitespace and headings); `.panel` is a soft flat block for what needs attention or is read at a glance. */
   .card {
-    border: 2px solid var(--line);
-    background: var(--surface);
     border-radius: var(--radius-2xl);
-    box-shadow: var(--card-shadow);
+  }
+  .panel {
+    background: var(--chip);
+    border-radius: var(--radius-3xl);
   }
   .btn {
     display: inline-flex;
     min-height: 2.75rem;
     align-items: center;
     justify-content: center;
-    border-radius: var(--radius-xl);
+    border-radius: 999px;
     padding-inline: 1.25rem;
     font-size: var(--text-sm);
     font-weight: 800;
     cursor: pointer;
-    transition: transform 80ms, box-shadow 80ms, background-color 80ms;
+    transition: background-color 80ms;
   }
   .btn:disabled {
     opacity: 0.6;
@@ -86,25 +89,29 @@
   .btn-primary {
     background: var(--primary);
     color: var(--on-primary);
-    box-shadow: 0 3px 0 var(--primary-strong);
   }
   .btn-primary:hover:not(:disabled) {
     background: color-mix(in srgb, var(--primary) 90%, var(--primary-strong));
   }
-  .btn-primary:active:not(:disabled) {
-    transform: translateY(3px);
-    box-shadow: 0 0 0 var(--primary-strong);
-  }
+  /* Soft filled secondary action. */
   .btn-secondary {
-    border: 2px solid var(--line);
-    background: var(--surface);
+    background: var(--chip);
     color: var(--ink);
   }
   .btn-secondary:hover:not(:disabled) {
-    background: var(--chip);
+    background: color-mix(in srgb, var(--chip) 85%, var(--ink));
+  }
+  /* Borderless text button in the primary colour. */
+  .btn-text {
+    background: transparent;
+    color: var(--primary-strong);
+    padding-inline: 0.25rem;
+  }
+  .btn-text:hover:not(:disabled) {
+    text-decoration: underline;
+    text-underline-offset: 4px;
   }
   .btn-danger {
-    border: 2px solid var(--danger);
     background: transparent;
     color: var(--danger);
   }
@@ -114,7 +121,7 @@
   .field {
     min-height: 2.75rem;
     width: 100%;
-    border: 2px solid var(--line);
+    border: 1px solid var(--line);
     background: var(--surface);
     color: var(--ink);
     border-radius: var(--radius-xl);
@@ -124,6 +131,9 @@
   .field:focus {
     border-color: var(--primary);
   }
+  .field:disabled {
+    background: var(--chip);
+  }
 }
 
 @layer components {
@@ -131,7 +141,7 @@
   .tick {
     appearance: none;
     border: 2px solid var(--primary);
-    border-radius: var(--radius-lg);
+    border-radius: 999px;
     background: var(--surface);
     display: inline-grid;
     place-content: center;
@@ -151,7 +161,6 @@
 @layer components {
   /* Gentle "you earned a reward" animation; off for people who prefer reduced motion. */
   .celebrate {
-    border-color: var(--accent);
     background: var(--warning-soft);
   }
   @media (prefers-reduced-motion: no-preference) {

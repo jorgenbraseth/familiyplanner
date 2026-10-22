@@ -15,7 +15,7 @@ export default async function StarsPage() {
     const data = await loadChildStars(viewing.id);
     return (
       <>
-        <h1 className="text-3xl font-extrabold">{t.stars.title}</h1>
+        <h1 className="text-4xl font-bold leading-tight">{t.stars.title}</h1>
         <StarChildView data={data} previewing={previewing} />
       </>
     );
@@ -27,7 +27,7 @@ export default async function StarsPage() {
   const rows = await loadAllChildStars(data as Member[]);
   return (
     <>
-      <h1 className="text-3xl font-extrabold">{t.stars.title}</h1>
+      <h1 className="text-4xl font-bold leading-tight">{t.stars.title}</h1>
       <StarParentView rows={rows} />
     </>
   );

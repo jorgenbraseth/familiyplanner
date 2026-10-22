@@ -22,8 +22,8 @@ export function StartHomework({
   readOnly: boolean;
 }) {
   return (
-    <section className="card space-y-3 p-4" aria-labelledby="homework-title">
-      <h2 id="homework-title" className="text-2xl font-extrabold">
+    <section className="space-y-4" aria-labelledby="homework-title">
+      <h2 id="homework-title" className="flex min-h-11 items-center text-3xl font-bold">
         {tomorrow ? t.start.homeworkTomorrow : t.start.homeworkFor(weekday)}
       </h2>
       {items.length === 0 ? (
@@ -31,18 +31,25 @@ export function StartHomework({
           {tomorrow ? t.start.homeworkEmptyTomorrow : t.start.homeworkEmptyFor(weekday)}
         </p>
       ) : (
-        <ul className="divide-y-2 divide-line">
-          {items.map((item) => (
-            <li key={item.id}>
-              <SchoolDoneCheckbox id={item.id} done={item.done} label={item.text} detail={item.subject} readOnly={readOnly} large />
-            </li>
+        <div className="space-y-4">
+          {bySubject(items).map((group) => (
+            <div key={group.subject ?? ""}>
+              {group.subject && <h3 className="text-xl font-bold">{group.subject}</h3>}
+              <ul>
+                {group.items.map((item) => (
+                  <li key={item.id}>
+                    <SchoolDoneCheckbox id={item.id} done={item.done} label={item.text} readOnly={readOnly} large />
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
       {weekItems.length > 0 && (
-        <div className="border-t-2 border-line pt-3">
-          <h3 className="mb-1 text-lg font-extrabold">{t.start.homeworkThisWeek}</h3>
-          <ul className="divide-y-2 divide-line">
+        <div className="pt-4">
+          <h3 className="mb-1 text-xl font-bold">{t.start.homeworkThisWeek}</h3>
+          <ul>
             {weekItems.map((item) => (
               <li key={item.id}>
                 <SchoolDoneCheckbox id={item.id} done={item.done} label={item.text} detail={item.subject} readOnly={readOnly} />
@@ -53,4 +60,16 @@ export function StartHomework({
       )}
     </section>
   );
+}
+
+/** The items grouped by subject, in the order each subject first appears (items without a subject form one group). */
+function bySubject(items: PlanItemRow[]): { subject: string | null; items: PlanItemRow[] }[] {
+  const groups: { subject: string | null; items: PlanItemRow[] }[] = [];
+  for (const item of items) {
+    const subject = item.subject?.trim() || null;
+    const group = groups.find((g) => g.subject === subject);
+    if (group) group.items.push(item);
+    else groups.push({ subject, items: [item] });
+  }
+  return groups;
 }

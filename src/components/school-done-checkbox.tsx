@@ -47,16 +47,16 @@ export function SchoolDoneCheckbox({
   }
 
   return (
-    <label className={`flex min-h-12 items-start gap-1 py-0.5 ${readOnly ? "" : "cursor-pointer"}`}>
+    <label className={`flex ${large ? "min-h-14 items-center" : "min-h-12 items-start"} gap-2 py-0.5 ${readOnly ? "" : "cursor-pointer"}`}>
       <input
         type="checkbox"
         checked={checked}
         disabled={readOnly}
         onChange={(e) => toggle(e.target.checked)}
         aria-label={t.school.markDone(flattenItemText(label))}
-        className={`tick m-2 ${large ? "size-9" : "size-7"} shrink-0 ${readOnly ? "opacity-70" : "cursor-pointer"}`}
+        className={`tick m-1.5 ${large ? "size-8" : "size-7"} shrink-0 ${readOnly ? "opacity-70" : "cursor-pointer"}`}
       />
-      <div className={`min-w-0 flex-1 break-words py-2 ${large ? "text-2xl font-semibold" : "text-lg"} ${checked ? "text-muted line-through" : ""}`}>
+      <div className={`min-w-0 flex-1 break-words py-2 ${large ? "text-xl font-bold leading-snug" : "text-lg"} ${checked ? "text-muted line-through" : ""}`}>
         {detail && <span className={`block ${large ? "text-xl font-extrabold text-ink" : "text-sm font-semibold text-muted"}`}>{detail}</span>}
         <StructuredText text={label} />
         {failed && <span className="block text-sm font-semibold text-danger no-underline">{t.school.saveFailed}</span>}

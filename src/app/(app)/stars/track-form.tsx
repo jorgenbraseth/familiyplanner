@@ -14,7 +14,7 @@ const help = "block text-xs font-normal text-muted";
 export function TrackForm({ childId, track }: { childId?: string; track?: StarTrackRow }) {
   const [state, formAction, pending] = useActionState(track ? updateTrack : createTrack, initial);
   return (
-    <form action={formAction} className="card max-w-2xl space-y-3 p-4">
+    <form action={formAction} className="panel max-w-2xl space-y-3 p-5">
       {track ? <input type="hidden" name="id" value={track.id} /> : <input type="hidden" name="child" value={childId ?? ""} />}
       <label className={label}>
         <span>{t.stars.form.name}</span>

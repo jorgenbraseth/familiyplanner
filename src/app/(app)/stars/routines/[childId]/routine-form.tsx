@@ -68,9 +68,9 @@ export function RoutineForm({
         setDirty(false);
         formAction(formData);
       }}
-      className="card space-y-3 p-4"
+      className="panel space-y-3 p-5"
     >
-      <h2 className="text-xl font-extrabold">
+      <h2 className="text-2xl font-bold">
         {slot === "morning" ? t.routines.morning : t.routines.evening}
       </h2>
       <input type="hidden" name="childId" value={childId} />

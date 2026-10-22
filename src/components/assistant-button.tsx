@@ -23,7 +23,7 @@ export function AssistantButton() {
         onClick={() => setOpen(true)}
         aria-label={t.assistant.open}
         aria-haspopup="dialog"
-        className="fixed right-4 z-20 flex size-16 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg outline-offset-4 focus-visible:outline-4 focus-visible:outline-accent"
+        className="fixed right-4 z-20 flex size-16 items-center justify-center rounded-full bg-primary text-on-primary outline-offset-4 focus-visible:outline-4 focus-visible:outline-accent"
         style={{ bottom: "calc(1rem + env(safe-area-inset-bottom))" }}
       >
         <MicIcon className="size-8" />

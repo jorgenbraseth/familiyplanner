@@ -22,13 +22,13 @@ export function SchoolWeekPlan({
 }) {
   const hasWhole = wholeWeek.homework.length + wholeWeek.messages.length > 0;
   // The caller has already dropped empty days (weekPlan with hideEmpty), so nothing at all means an empty week.
-  if (days.length === 0 && !hasWhole) return <p className="card p-4 text-lg">{t.school.weekPlanEmpty}</p>;
+  if (days.length === 0 && !hasWhole) return <p className="text-lg">{t.school.weekPlanEmpty}</p>;
   return (
-    <div className="space-y-4">
+    <div className="space-y-10">
       {hasWhole && (
-        <section className="card space-y-3 p-3" aria-labelledby="whole-week-title">
-          <h2 id="whole-week-title" className="text-2xl font-extrabold">{t.school.wholeWeek}</h2>
-          <div className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
+        <section className="space-y-3" aria-labelledby="whole-week-title">
+          <h2 id="whole-week-title" className="text-2xl font-bold">{t.school.wholeWeek}</h2>
+          <div className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-8 lg:space-y-0">
           {wholeWeek.homework.length > 0 && (
             <div>
               <SchoolHeading>{t.school.homework}</SchoolHeading>
@@ -44,15 +44,15 @@ export function SchoolWeekPlan({
           </div>
         </section>
       )}
-      <TimelineLegend legend={weekLegend(days)} label={t.start.myDay} />
-      <ol className="grid gap-4 md:grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] md:items-start">
+      <div className="pl-[4.25rem]"><TimelineLegend legend={weekLegend(days)} label={t.start.myDay} /></div>
+      <ol className="grid gap-10 md:grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] md:items-start">
         {days.map((day) => {
           const isToday = day.key === todayKey;
           return (
-            <li key={day.key} className={`card space-y-3 p-3 ${isToday ? "border-accent bg-warning-soft" : ""}`}>
+            <li key={day.key} className={`space-y-3 ${isToday ? "rounded-3xl bg-warning-soft p-4 text-on-warning-soft" : ""}`}>
               <div>
-                <h2 className={`text-2xl font-extrabold ${isToday ? "text-on-warning-soft" : ""}`}>{formatWeekday(day.date)}</h2>
-                {day.hours && <p className="text-base font-semibold text-muted">{t.school.schoolHours(day.hours)}</p>}
+                <h2 className={`text-2xl font-bold ${isToday ? "text-on-warning-soft" : ""}`}>{formatWeekday(day.date)}</h2>
+                {day.hours && <p className={`text-base font-semibold ${isToday ? "" : "text-muted"}`}>{t.school.schoolHours(day.hours)}</p>}
               </div>
               {day.timeline.length > 0 && <MyDayList entries={day.timeline} />}
               {day.homework.length > 0 && (

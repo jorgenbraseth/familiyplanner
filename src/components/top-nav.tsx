@@ -164,14 +164,14 @@ export function TopNav({ items, signOutAction }: { items: TopNavItem[]; signOutA
         </div>
       </nav>
       {open && (
-        <div className="absolute inset-x-0 top-full border-b-2 border-line bg-surface shadow-lg">
+        <div className="absolute inset-x-0 top-full bg-surface">
           <div
             ref={panelRef}
             id={panelId}
             className="mx-auto flex max-h-[calc(100dvh-8rem)] max-w-[120rem] flex-col gap-1 overflow-y-auto px-3 py-2 md:max-w-md md:ml-auto md:mr-0 lg:px-7"
           >
             <NavLinks items={items} block onNavigate={() => close(true)} />
-            <div className="mt-1 flex flex-col items-start gap-1 border-t-2 border-line pt-2">
+            <div className="mt-3 flex flex-col items-start gap-1">
               {installIn(panelSignOutClass, true)}
               {signOutIn(panelSignOutClass)}
             </div>

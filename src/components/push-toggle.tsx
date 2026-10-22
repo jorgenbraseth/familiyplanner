@@ -115,7 +115,7 @@ export function PushToggle() {
             type="button"
             onClick={disable}
             disabled={busy}
-            className="rounded-full border border-line bg-chip px-4 py-2 text-sm font-bold text-chip-ink disabled:opacity-60"
+            className="min-h-11 rounded-full bg-chip px-4 py-2 text-sm font-bold text-chip-ink disabled:opacity-60"
           >
             {t.push.disable}
           </button>

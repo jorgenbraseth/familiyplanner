@@ -31,7 +31,7 @@ export default async function FamilyPage({ searchParams }: PageProps<"/family">)
 
   return (
     <>
-      <h1 className="text-3xl font-extrabold">{t.family.title}</h1>
+      <h1 className="text-4xl font-bold leading-tight">{t.family.title}</h1>
       {week.failedNames.length > 0 && <Notice>{t.calendar.failed(week.failedNames.join(", "))}</Notice>}
       <WeekNav path="/family" offset={offset} isoWeek={week.isoWeek} />
       <FamilyCalendar
@@ -41,8 +41,8 @@ export default async function FamilyPage({ searchParams }: PageProps<"/family">)
         members={members.map((m) => ({ id: m.id, name: m.name, colour: m.colour, avatarUrl: avatars[m.id] ?? null }))}
       />
       {mine && (
-        <section className="card max-w-2xl space-y-2 p-4" aria-labelledby="my-avatar-title">
-          <h2 id="my-avatar-title" className="text-xl font-extrabold">{t.avatar.mine}</h2>
+        <section className="max-w-2xl space-y-3" aria-labelledby="my-avatar-title">
+          <h2 id="my-avatar-title" className="text-2xl font-bold">{t.avatar.mine}</h2>
           <AvatarEditor memberId={mine.id} colour={mine.colour} url={avatars[mine.id]} hasAvatar={!!mine.avatar_path} />
         </section>
       )}

@@ -14,24 +14,25 @@ export function StartSchool({ view, events, date, today }: { view: TodayView; ev
   const legend = timelineLegend(entries);
 
   return (
-    <section className="card space-y-4 p-4" aria-labelledby="school-title">
+    <section className="space-y-4" aria-labelledby="school-title">
       <div>
-        <h2 id="school-title" className="text-2xl font-extrabold">
-          {t.start.myDay}
-        </h2>
-        <div className="mt-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-4">
+          <h2 id="school-title" className="text-3xl font-bold">
+            {t.start.myDay}
+          </h2>
           <DaySwitcher date={date} today={today} />
         </div>
-        {hoursLabel && <p className="mt-2 text-lg font-bold text-muted">{t.start.schoolHours(hoursLabel)}</p>}
-        <div className="mt-2">
-          <TimelineLegend legend={legend} label={t.start.myDay} />
-        </div>
+        {hoursLabel && <p className="mt-1 text-lg font-bold text-muted">{t.start.schoolHours(hoursLabel)}</p>}
       </div>
 
       {entries.length === 0 ? <p className="text-base text-muted">{daysBetween(today, date) === 0 ? t.start.nothingToday : t.start.nothingOnDay}</p> : <MyDayList entries={entries} />}
 
+      <div className="pl-[4.25rem]">
+        <TimelineLegend legend={legend} label={t.start.myDay} />
+      </div>
+
       {view.messages.length > 0 && (
-        <div>
+        <div className="pt-4">
           <SchoolHeading>{t.start.remember}</SchoolHeading>
           <SchoolLines items={view.messages} />
         </div>

@@ -546,7 +546,7 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
         aria-modal="true"
         aria-labelledby="assistant-title"
         onClick={(event) => event.stopPropagation()}
-        className="flex h-[min(42rem,92dvh)] w-full max-w-2xl flex-col rounded-t-3xl border-2 border-b-0 border-line bg-surface shadow-2xl"
+        className="flex h-[min(42rem,92dvh)] w-full max-w-2xl flex-col rounded-t-3xl bg-surface"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="flex items-center gap-2 px-4 pt-3">
@@ -614,7 +614,7 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <div className="space-y-3 border-t-2 border-line px-4 pt-3 pb-3">
+        <div className="space-y-3 px-4 pt-3 pb-3">
           <div className="flex min-h-11 items-center justify-between gap-2">
             <p className="text-sm font-bold text-muted">{left !== null ? t.assistant.questionsLeft(left) : ""}</p>
             {hasSynthesis && phase === "answer" && !noVoice && (

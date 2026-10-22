@@ -31,7 +31,6 @@ export function StartStarSheet({
         aria-haspopup="dialog"
         className="btn btn-primary min-h-14 px-6 text-lg"
       >
-        <span aria-hidden className="mr-2">★</span>
         {t.start.registerStar}
       </button>
       {open && <Sheet onClose={close} tasks={tasks} previewing={previewing} />}
@@ -72,11 +71,11 @@ function Sheet({
         aria-modal="true"
         aria-label={t.start.registerStarTitle}
         onClick={(event) => event.stopPropagation()}
-        className="flex max-h-[92dvh] w-full max-w-2xl flex-col rounded-t-3xl border-2 border-b-0 border-line bg-background shadow-2xl"
+        className="flex max-h-[92dvh] w-full max-w-2xl flex-col rounded-t-3xl bg-background"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="flex items-center justify-between gap-2 px-4 pt-3">
-          <h2 className="text-xl font-extrabold">{t.start.registerStarTitle}</h2>
+          <h2 className="text-xl font-bold">{t.start.registerStarTitle}</h2>
           <button
             type="button"
             data-autofocus
