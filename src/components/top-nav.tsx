@@ -5,6 +5,9 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { NavLink } from "@/components/nav-link";
 import { navFits, navTitle } from "@/lib/nav-fit";
+import { ModalSheet } from "@/components/modal-sheet";
+import { manualBrowser } from "@/lib/install-platform";
+import { useInstall } from "@/lib/use-install";
 import { t } from "@/lib/i18n";
 
 export type TopNavItem = { href: string; label: string; badge?: number };
@@ -43,6 +46,10 @@ export function TopNav({ items, signOutAction }: { items: TopNavItem[]; signOutA
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const refocusRef = useRef(false);
+  const { state: installState, promptInstall } = useInstall();
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
+  // Hidden while "unknown" (server and hydration) and once installed; the measuring copy follows the same rule.
+  const canInstall = installState !== "unknown" && installState !== "installed";
 
   useLayoutEffect(() => {
     const space = spaceRef.current;
@@ -93,6 +100,17 @@ export function TopNav({ items, signOutAction }: { items: TopNavItem[]; signOutA
       </button>
     </form>
   );
+  const onInstallClick = (inPanel: boolean) => {
+    if (inPanel) close(false);
+    if (installState === "promptable") void promptInstall();
+    else setShowInstallHelp(true);
+  };
+  const installIn = (cls: string, inPanel: boolean) =>
+    canInstall && (
+      <button type="button" className={cls} onClick={() => onInstallClick(inPanel)}>
+        {t.install.menuItem}
+      </button>
+    );
   const icon = (
     <Image src="/icons/icon-192.png" alt="" width={28} height={28} className="size-7 shrink-0" />
   );
@@ -123,7 +141,10 @@ export function TopNav({ items, signOutAction }: { items: TopNavItem[]; signOutA
             <div className="flex flex-nowrap items-center gap-1 overflow-hidden">
               {icon}
               <NavLinks items={items} />
-              <div className="ml-auto shrink-0">{signOutIn(signOutClass)}</div>
+              <div className="ml-auto flex shrink-0 items-center gap-1">
+                {installIn(signOutClass, false)}
+                {signOutIn(signOutClass)}
+              </div>
             </div>
           )}
           {/* Hidden copy with the natural width of the row, so the fit does not depend on what is visible.
@@ -133,7 +154,8 @@ export function TopNav({ items, signOutAction }: { items: TopNavItem[]; signOutA
             <div ref={measureRef} inert className="flex w-max flex-nowrap items-center gap-1">
               {icon}
               <NavLinks items={items} />
-              <div className="ml-3 shrink-0">
+              <div className="ml-3 flex shrink-0 items-center gap-1">
+                {canInstall && <span className={signOutClass}>{t.install.menuItem}</span>}
                 <span className={signOutClass}>{t.nav.signOut}</span>
               </div>
             </div>
@@ -148,10 +170,34 @@ export function TopNav({ items, signOutAction }: { items: TopNavItem[]; signOutA
             className="mx-auto flex max-h-[calc(100dvh-8rem)] max-w-[120rem] flex-col gap-1 overflow-y-auto px-3 py-2 md:max-w-md md:ml-auto md:mr-0 lg:px-7"
           >
             <NavLinks items={items} block onNavigate={() => close(true)} />
-            <div className="mt-1 border-t-2 border-line pt-2">{signOutIn(panelSignOutClass)}</div>
+            <div className="mt-1 flex flex-col items-start gap-1 border-t-2 border-line pt-2">
+              {installIn(panelSignOutClass, true)}
+              {signOutIn(panelSignOutClass)}
+            </div>
           </div>
         </div>
       )}
+      {showInstallHelp && (
+        <ModalSheet title={t.install.sheetTitle} onClose={() => setShowInstallHelp(false)}>
+          <InstallSteps ios={installState === "ios"} />
+        </ModalSheet>
+      )}
+    </div>
+  );
+}
+
+function InstallSteps({ ios }: { ios: boolean }) {
+  const steps = ios
+    ? t.install.iosSheet
+    : t.install.manualSheet[typeof navigator === "undefined" ? "other" : manualBrowser(navigator.userAgent)];
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted">{t.install.description}</p>
+      <ol className="list-decimal space-y-2 pl-5 text-base">
+        {steps.map((step) => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
     </div>
   );
 }
