@@ -45,6 +45,7 @@ export function StarChildView({
           <p className="text-lg font-bold">{t.stars.celebrateBody(celebrating.text || t.stars.rewardFallback)}</p>
         </section>
       )}
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start xl:grid-cols-3">
       <section className="card space-y-3 p-4">
         <h2 className="text-2xl font-extrabold break-words">{track.name}</h2>
         <p className="text-lg font-bold">{t.stars.starCount(progress.approved, progress.goal)}</p>
@@ -82,6 +83,7 @@ export function StarChildView({
         <h2 className="text-xl font-extrabold">{t.stars.historyTitle}</h2>
         <StarHistory stars={stars.slice(0, HISTORY_LIMIT)} empty={t.stars.historyEmpty} />
       </section>
+      </div>
     </>
   );
 }

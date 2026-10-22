@@ -99,7 +99,7 @@ export function TopNav({ items, signOutAction }: { items: TopNavItem[]; signOutA
 
   return (
     <div ref={rootRef}>
-      <nav aria-label={t.nav.main} className="mx-auto max-w-2xl px-3 py-1.5">
+      <nav aria-label={t.nav.main} className="mx-auto max-w-[120rem] px-3 py-1.5 lg:px-7">
         <div ref={spaceRef} className="relative">
           {collapsed ? (
             <div className="flex min-h-11 items-center gap-2">
@@ -145,7 +145,7 @@ export function TopNav({ items, signOutAction }: { items: TopNavItem[]; signOutA
           <div
             ref={panelRef}
             id={panelId}
-            className="mx-auto flex max-h-[calc(100dvh-8rem)] max-w-2xl flex-col gap-1 overflow-y-auto px-3 py-2"
+            className="mx-auto flex max-h-[calc(100dvh-8rem)] max-w-[120rem] flex-col gap-1 overflow-y-auto px-3 py-2 md:max-w-md md:ml-auto md:mr-0 lg:px-7"
           >
             <NavLinks items={items} block onNavigate={() => close(true)} />
             <div className="mt-1 border-t-2 border-line pt-2">{signOutIn(panelSignOutClass)}</div>

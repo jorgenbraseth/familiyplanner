@@ -18,11 +18,11 @@ export default async function PreviewPage() {
   return (
     <>
       <h1 className="text-3xl font-extrabold">{t.preview.title}</h1>
-      <p className="text-muted">{t.preview.intro}</p>
+      <p className="max-w-[75ch] text-muted">{t.preview.intro}</p>
       {children.length === 0 ? (
         <p>{t.preview.noChildren}</p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {children.map((child) => (
             <li key={child.id}>
               <form action={startPreview}>

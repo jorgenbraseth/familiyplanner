@@ -7,7 +7,7 @@ export type MemberDot = { id: string; name: string; colour: string; avatarUrl?: 
 export function DayList({ days, members }: { days: DayView[]; members?: MemberDot[] }) {
   const byId = new Map(members?.map((m) => [m.id, m]));
   return (
-    <ol className="space-y-4">
+    <ol className="grid gap-4 md:grid-cols-[repeat(auto-fill,minmax(19rem,1fr))] md:items-start">
       {days.map((day) => (
         <li key={day.key}>
           <h3

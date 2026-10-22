@@ -37,6 +37,7 @@ For every task: plan the work with Opus (the main session), then hand it off to 
 
 ## Rules
 
+- **Wide screens use the full width:** no app-wide max width (only a generous `max-w-[120rem]` cap), content flows into columns (`md`/`lg`/`xl` grids) and mobile stays as is; forms and dialogs keep a readable width (`max-w-2xl`), running text ~75ch.
 - **Secrets are server-only.** `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_SERVICE_ACCOUNT_KEY`, `VAPID_PRIVATE_KEY` are read only in server code (`import "server-only"` in those modules). Never prefix them with `NEXT_PUBLIC_`.
 - **Authorization lives in the database.** Every table has RLS enabled; policies use `current_member_id()` and `is_parent()`. App code uses the user-scoped Supabase client by default. Use the service-role client only where RLS can't apply (sending push to another member, allowlist check before a session exists) and keep those call sites few and obvious.
 - **The voice assistant's tools run as the signed-in user** (user-scoped client), so RLS limits what Claude can read. Don't widen this with the service-role client.

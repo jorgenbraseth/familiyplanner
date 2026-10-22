@@ -93,7 +93,7 @@ export function UploadForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3">
+    <form onSubmit={submit} className="max-w-2xl space-y-3">
       <fieldset disabled={busy} className="space-y-3">
         <label className={label}>
           <span>{t.documents.fields.child}</span>

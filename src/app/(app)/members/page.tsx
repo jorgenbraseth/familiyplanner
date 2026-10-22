@@ -25,7 +25,7 @@ export default async function MembersPage() {
           {t.assistant.log.nav}
         </Link>
       </div>
-      <ul className="space-y-3">
+      <ul className="grid gap-3 md:grid-cols-2 md:items-start xl:grid-cols-3">
         {members.map((member) => (
           <li key={member.id} className="card p-3">
             <div className="flex items-center gap-3">
@@ -60,7 +60,7 @@ export default async function MembersPage() {
           </li>
         ))}
       </ul>
-      <section className="space-y-3 card p-3">
+      <section className="card max-w-2xl space-y-3 p-3">
         <h2 className="text-xl font-extrabold">{t.members.add}</h2>
         <MemberForm />
       </section>

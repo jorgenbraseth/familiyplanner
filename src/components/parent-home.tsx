@@ -24,7 +24,7 @@ export function ParentHomeCards({ data, avatars = {} }: { data: ParentHome; avat
   const pending = children.flatMap((c) => c.pending.map((star) => ({ star, child: c.child })));
 
   return (
-    <>
+    <div className="grid gap-6 lg:grid-cols-2 lg:items-start 2xl:grid-cols-3">
       <section className="card space-y-3 p-4" aria-labelledby="give-title">
         <h2 id="give-title" className={cardTitle}>
           <span aria-hidden className="mr-2 text-accent">★</span>
@@ -169,7 +169,7 @@ export function ParentHomeCards({ data, avatars = {} }: { data: ParentHome; avat
           ))}
         </ul>
       </section>
-    </>
+    </div>
   );
 }
 
@@ -181,7 +181,7 @@ export function ParentSchoolEndCard({ data, avatars = {} }: { data: ParentHome; 
   return (
     <section className="card space-y-3 p-4" aria-labelledby="end-title">
       <h2 id="end-title" className={cardTitle}>{t.parentHome.endTitle}</h2>
-      <ul className="space-y-1">
+      <ul className="space-y-1 md:flex md:flex-wrap md:gap-x-10 md:space-y-0">
         {children.map(({ child, schoolEnd }) => (
           <li key={child.id} className="flex items-center gap-2 text-lg">
             <Dot colour={child.colour} url={avatars[child.id]} />
