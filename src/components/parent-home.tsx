@@ -127,7 +127,7 @@ export function ParentHomeCards({ data, avatars = {} }: { data: ParentHome; avat
       <section aria-labelledby="homework-title" className="space-y-4">
         <h2 id="homework-title" className={sectionTitle}>{t.parentHome.homeworkTitle}</h2>
         <ul className="space-y-6">
-          {children.map(({ child, homework, homeworkTomorrow, nextSchoolDay }) => (
+          {children.map(({ child, homework, carried, homeworkTomorrow, nextSchoolDay }) => (
             <li key={child.id} className="space-y-1">
               <h3 className="flex items-center gap-2 text-lg font-extrabold">
                 <Dot colour={child.colour} url={avatars[child.id]} />
@@ -135,11 +135,11 @@ export function ParentHomeCards({ data, avatars = {} }: { data: ParentHome; avat
                   {child.name}: {(homeworkTomorrow ? t.school.homeworkTomorrow : t.school.homeworkFor(formatWeekday(nextSchoolDay).toLocaleLowerCase())).toLocaleLowerCase()}
                 </span>
               </h3>
-              {homework.length === 0 ? (
+              {homework.length === 0 && carried.length === 0 ? (
                 <p className="text-base text-muted">{t.parentHome.homeworkNone}</p>
               ) : (
                 <ul className="space-y-2">
-                  {homework.map((item) => (
+                  {[...carried, ...homework.map((item) => ({ item, label: null }))].map(({ item, label }) => (
                     <li key={item.id} className="flex items-start gap-2 text-base">
                       <span
                         role="img"
@@ -149,6 +149,7 @@ export function ParentHomeCards({ data, avatars = {} }: { data: ParentHome; avat
                         {item.done ? "✓" : "○"}
                       </span>
                       <div className="min-w-0 break-words">
+                        {label && <span className="block text-sm font-semibold text-muted">{label}</span>}
                         {item.subject && <span className="block font-extrabold">{item.subject}</span>}
                         <StructuredText text={item.text} />
                       </div>

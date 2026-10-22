@@ -1,5 +1,6 @@
 import "server-only";
 import { dateInTimeZone } from "./dates";
+import type { CarriedItem } from "./homework-carry";
 import type { Member } from "./members";
 import { MEMBER_COLUMNS } from "./members";
 import { schoolEndSummary, uploadWeekFor, type SchoolEnd } from "./parent-home-view";
@@ -20,6 +21,8 @@ export type ParentHomeChild = {
   pending: StarRow[];
   /** Homework due on the next school day, from published documents only (as the child sees it). */
   homework: PlanItemRow[];
+  /** Unfinished homework from earlier days with its label ("Fra mandag"), oldest first. */
+  carried: CarriedItem[];
   nextSchoolDay: CalendarDate;
   homeworkTomorrow: boolean;
   schoolEnd: SchoolEnd;
@@ -49,6 +52,7 @@ export async function loadParentHome(now = new Date()): Promise<ParentHome> {
         stars: active,
         pending: active?.stars.filter((s) => s.status === "pending").reverse() ?? [],
         homework: view.homeworkDue,
+        carried: school.carriedOver,
         nextSchoolDay: view.nextSchoolDay,
         homeworkTomorrow: isTomorrow(school.today, view.nextSchoolDay),
         schoolEnd: schoolEndSummary(view.hours, view.periods.length),

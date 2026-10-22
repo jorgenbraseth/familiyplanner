@@ -135,6 +135,7 @@ export async function StartView({
         </div>
         <StartSchool view={dayView} events={events} date={selected} today={today} />
         <StartHomework
+          carried={school.carriedOver}
           items={view.homeworkDue}
           weekItems={view.weekHomework.filter((i) => !i.done)}
           tomorrow={tomorrow}

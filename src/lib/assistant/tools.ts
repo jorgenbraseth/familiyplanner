@@ -4,6 +4,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getEvents } from "../calendar/google";
+import { carryQueryFromKey } from "../homework-carry";
 import { addDays, dateInTimeZone, dayKey, formatDayHeading, formatTime, mondayOf, startOfDay } from "../dates";
 import type { Member } from "../members";
 import { REWARD_COLUMNS, STAR_COLUMNS, TRACK_COLUMNS } from "../star-data";
@@ -17,6 +18,7 @@ import {
   filterSchoolDaysBySubject,
   normalizeKind,
   resolveTargets,
+  shapeCarriedHomework,
   shapePlanItems,
   shapeSchoolDays,
   splitSharedCalendarEvents,
@@ -62,7 +64,7 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
   {
     name: "get_plan_items",
     description:
-      "School plan for a day range of at most 31 days: ukeplan items (homework, events, messages) plus the school hours and periods (timetable) of each school day. Homework dates are the day it is due. Items with whole_week true belong to the whole week: their date is the Monday of that week.",
+      "School plan for a day range of at most 31 days: ukeplan items (homework, events, messages) plus the school hours and periods (timetable) of each school day. Homework dates are the day it is due. Items with whole_week true belong to the whole week: their date is the Monday of that week. When the range reaches today or later, the result may also hold unfinished_earlier_homework: homework not ticked off that was due today or earlier (oldest first); always mention it when answering about homework (\"Du har også igjen ...\").",
     input_schema: {
       type: "object",
       properties: {
@@ -174,15 +176,40 @@ async function planItemsFor(
     items = shapePlanItems(rows);
   }
 
+  // Unfinished homework from earlier days ("Du har også igjen ..."), when the answer reaches today or later and
+  // covers homework. Rows the main query already lists are left out.
+  const today = dateInTimeZone(ctx.now ?? new Date());
+  const todayKey = dayKey(today);
+  let earlier: ReturnType<typeof shapeCarriedHomework> = [];
+  if (!filter.timetableOnly && (filter.kind === null || filter.kind === "homework") && range.toKey >= todayKey) {
+    const { data, error } = await ctx.supabase
+      .from("plan_items")
+      .select("date, kind, subject, text, done, sort, audience, whole_week, documents!inner(status)")
+      .eq("member_id", member.id)
+      .eq("documents.status", "published")
+      .eq("kind", "homework")
+      .eq("done", false)
+      .gte("date", carryQueryFromKey(today))
+      .lte("date", todayKey)
+      .order("date")
+      .order("sort");
+    if (error) throw new Error("Could not read plan items");
+    const mondayKey = dayKey(mondayOf(range.from));
+    earlier = shapeCarriedHomework((data ?? []) as unknown as PlanItemInput[], today, (r) =>
+      r.whole_week ? r.date >= mondayKey : r.date >= range.fromKey,
+    );
+  }
+
   const [timetable, overrides] = await Promise.all([
     fetchTimetable(ctx.supabase, member.id),
     fetchHoursOverrides(ctx.supabase, member.id, range.fromKey, range.toKey),
   ]);
   const schoolDays = shapeSchoolDays(range.fromKey, range.toKey, timetable, overrides);
-  const empty = items.items.length === 0 && schoolDays.length === 0;
+  const empty = items.items.length === 0 && schoolDays.length === 0 && earlier.length === 0;
   return {
     member: member.name,
     items: items.items,
+    ...(earlier.length > 0 ? { unfinished_earlier_homework: earlier } : {}),
     school_days: schoolDays,
     ...(empty ? { note: NO_ACCESS_NOTE } : {}),
     ...(items.truncated ? { truncated: true } : {}),

@@ -1,5 +1,6 @@
 import { SchoolDoneCheckbox } from "@/components/school-done-checkbox";
 import { t } from "@/lib/i18n";
+import type { CarriedItem } from "@/lib/homework-carry";
 import type { PlanItemRow } from "@/lib/plan";
 
 /**
@@ -7,12 +8,15 @@ import type { PlanItemRow } from "@/lib/plan";
  * "Denne uken" list of whole-week homework that is not done yet.
  */
 export function StartHomework({
+  carried = [],
   items,
   weekItems,
   tomorrow,
   weekday,
   readOnly,
 }: {
+  /** Unfinished homework from earlier days, oldest first, shown above the rest. */
+  carried?: CarriedItem[];
   items: PlanItemRow[];
   /** Whole-week homework that is not done. */
   weekItems: PlanItemRow[];
@@ -26,10 +30,22 @@ export function StartHomework({
       <h2 id="homework-title" className="flex min-h-11 items-center text-3xl font-bold">
         {tomorrow ? t.start.homeworkTomorrow : t.start.homeworkFor(weekday)}
       </h2>
+      {carried.length > 0 && (
+        <ul>
+          {carried.map(({ item, label }) => (
+            <li key={item.id}>
+              <p className="pt-2 text-sm font-semibold text-muted">{label}</p>
+              <SchoolDoneCheckbox id={item.id} done={item.done} label={item.text} detail={item.subject} readOnly={readOnly} large />
+            </li>
+          ))}
+        </ul>
+      )}
       {items.length === 0 ? (
-        <p className="text-xl font-extrabold">
-          {tomorrow ? t.start.homeworkEmptyTomorrow : t.start.homeworkEmptyFor(weekday)}
-        </p>
+        carried.length === 0 && (
+          <p className="text-xl font-extrabold">
+            {tomorrow ? t.start.homeworkEmptyTomorrow : t.start.homeworkEmptyFor(weekday)}
+          </p>
+        )
       ) : (
         <div className="space-y-4">
           {bySubject(items).map((group) => (

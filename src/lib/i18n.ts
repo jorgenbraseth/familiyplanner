@@ -170,6 +170,11 @@ export const t = {
     homeworkThisWeek: "Denne uken",
     homeworkFor: (day: string) => `Lekser til ${day}`,
     homework: "Lekser",
+    // Unfinished homework from earlier days, shown at the top of the lists.
+    carriedToday: "Til i dag",
+    carriedYesterday: "Fra i går",
+    carriedFrom: (day: string) => `Fra ${day}`,
+    carriedFromWeek: (week: number) => `Fra uke ${week}`,
     originalFile: "Se originalen",
     originalFileFor: (type: string, week: number) => `Se originalen: ${type}, uke ${week}`,
     documentTypes: { timeplan: "timeplan", ukeplan: "ukeplan" },
