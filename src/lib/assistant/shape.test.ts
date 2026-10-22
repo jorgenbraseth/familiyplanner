@@ -6,6 +6,7 @@ import {
   normalizeKind,
   resolveMember,
   resolveTargets,
+  shapeCarriedHomework,
   shapePlanItems,
   shapeSchoolDays,
   splitSharedCalendarEvents,
@@ -229,5 +230,31 @@ describe("splitSharedCalendarEvents", () => {
     );
     expect(split.get("m")!.events).toHaveLength(1);
     expect(split.get("e")!.events).toHaveLength(1);
+  });
+});
+
+describe("shapeCarriedHomework", () => {
+  const today = { year: 2026, month: 10, day: 21 };
+  const row = (date: string, text: string, over: Partial<Parameters<typeof shapeCarriedHomework>[0][number]> = {}) => ({
+    date,
+    kind: "homework" as const,
+    subject: "Matte",
+    text,
+    done: false,
+    ...over,
+  });
+
+  it("lists unfinished earlier homework oldest first with a relative day and flattened text", () => {
+    const result = shapeCarriedHomework([row("2026-10-20", "- side 4\n- side 5"), row("2026-10-19", "Les")], today);
+    expect(result.map((r) => [r.due, r.when, r.text])).toEqual([
+      ["2026-10-19", "mandag 19. oktober", "Les"],
+      ["2026-10-20", "i går", expect.stringContaining("side 4")],
+    ]);
+    expect(result[1].text).not.toContain("\n");
+  });
+
+  it("leaves out done, future and skipped rows", () => {
+    const rows = [row("2026-10-20", "a", { done: true }), row("2026-10-22", "b"), row("2026-10-20", "c"), row("2026-10-19", "d")];
+    expect(shapeCarriedHomework(rows, today, (r) => r.text === "d").map((r) => r.text)).toEqual(["c"]);
   });
 });

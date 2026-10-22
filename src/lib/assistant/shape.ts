@@ -1,7 +1,8 @@
 // Result shaping and member lookup for the assistant's tools. Pure: no server access.
 
 import { mergeSharedEvents, type CalendarEvent, type SharedEvent } from "../calendar/events";
-import { addDays, dateInTimeZone, dayKey, parseDayKey } from "../dates";
+import { addDays, dateInTimeZone, dayKey, parseDayKey, type CalendarDate } from "../dates";
+import { carriedOverHomework, dueKeyOf } from "../homework-carry";
 import { flattenItemText } from "../item-text";
 import type { PlanAudience, PlanItemKind } from "../plan";
 import { formatSchoolHours, hoursForDate, minutesOf, periodsForDate, type SchoolHours, type Timetable } from "../plan-view";
@@ -72,6 +73,37 @@ export function shapePlanItems(rows: readonly PlanItemInput[]): { items: PlanIte
     ...(items.length === 0 ? { note: NO_ACCESS_NOTE } : {}),
     ...(sorted.length > MAX_PLAN_ITEMS ? { truncated: true } : {}),
   };
+}
+
+export type CarriedHomeworkResult = {
+  /** The day it was due ("YYYY-MM-DD"); for a whole-week item the last day of its week. */
+  due: string;
+  weekday: string;
+  /** Ready-made relative day in bokmål: "i dag", "i går", "tirsdag 13. oktober". */
+  when: string;
+  subject: string | null;
+  text: string;
+};
+
+/**
+ * Unfinished homework from earlier days (see carriedOverHomework: due today or earlier, at most 14 days back, oldest
+ * first) for "Du har også igjen ...". `rows` are the member's homework rows; `skip` drops rows the answer already lists.
+ */
+export function shapeCarriedHomework(
+  rows: readonly PlanItemInput[],
+  today: CalendarDate,
+  skip: (row: PlanItemInput) => boolean = () => false,
+): CarriedHomeworkResult[] {
+  const todayKey = dayKey(today);
+  return carriedOverHomework(
+    rows.filter((r) => !skip(r)).map((r) => ({ ...r, sort: r.sort ?? 0, whole_week: r.whole_week ?? false })),
+    today,
+  )
+    .slice(0, MAX_PLAN_ITEMS)
+    .map((r) => {
+      const due = dueKeyOf(r);
+      return { due, weekday: weekdayName(due), when: relativeDayLabel(todayKey, due), subject: r.subject, text: flattenItemText(r.text) };
+    });
 }
 
 export type SchoolDayResult = {

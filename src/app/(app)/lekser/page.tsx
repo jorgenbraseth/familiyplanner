@@ -18,6 +18,7 @@ export default async function HomeworkPage() {
   const tomorrow = view.nextSchoolDayKey === dayKey(addDays(school.today, 1));
   const weekday = formatWeekday(view.nextSchoolDay).toLocaleLowerCase();
   const heading = tomorrow ? t.school.homeworkTomorrow : t.school.homeworkFor(weekday);
+  const carried = school.carriedOver;
   const docIds = new Set([...items, ...weekItems].map((i) => i.document_id));
   const link = school.documents.find((d) => docIds.has(d.id));
 
@@ -25,12 +26,24 @@ export default async function HomeworkPage() {
     <>
       <h1 className="text-4xl font-bold leading-tight">{heading}</h1>
       {previewing && <Notice>{t.preview.readOnly}</Notice>}
-      {items.length === 0 ? (
-        <p className="text-2xl font-extrabold">
-          {tomorrow ? t.school.homeworkEmptyTomorrow : t.school.homeworkEmptyFor(weekday)}
-        </p>
-      ) : (
+      {carried.length > 0 && (
+        <ul className="grid gap-x-8 md:grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] md:items-start">
+          {carried.map(({ item, label }) => (
+            <li key={item.id}>
+              <p className="pt-2 text-sm font-semibold text-muted">{label}</p>
+              <SchoolDoneCheckbox id={item.id} done={item.done} label={item.text} detail={item.subject} readOnly={previewing} large />
+            </li>
+          ))}
+        </ul>
+      )}
+      {items.length > 0 ? (
         <HomeworkList items={items} readOnly={previewing} />
+      ) : (
+        carried.length === 0 && (
+          <p className="text-2xl font-extrabold">
+            {tomorrow ? t.school.homeworkEmptyTomorrow : t.school.homeworkEmptyFor(weekday)}
+          </p>
+        )
       )}
       {weekItems.length > 0 && (
         <section className="space-y-4" aria-labelledby="week-homework-title">
