@@ -61,7 +61,7 @@ export async function StartView({
   return (
     <>
       <header className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <h1 className="flex min-w-0 items-center gap-3 break-words text-4xl font-extrabold">
+        <h1 className="flex min-w-0 items-center gap-3 text-4xl font-extrabold">
           {avatars[member.id] && <MemberAvatar colour={member.colour} url={avatars[member.id]} size={56} />}
           {member.name}
         </h1>

@@ -111,11 +111,11 @@ export function RoutineBar({
             collapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"
           }`}
         >
-        <ul className="grid min-h-0 grid-cols-1 gap-2 overflow-hidden sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="flex min-h-0 flex-wrap gap-2 overflow-hidden">
           {items.map((item) => {
             const on = checked.has(item.id);
             return (
-              <li key={item.id}>
+              <li key={item.id} className="max-w-full grow basis-[14rem]">
                 <button
                   type="button"
                   role="checkbox"
@@ -137,7 +137,7 @@ export function RoutineBar({
                   >
                     {on ? "✓" : ""}
                   </span>
-                  <span className={`min-w-0 break-words ${on ? "line-through decoration-2" : ""}`}>{item.name}</span>
+                  <span className={`min-w-0 [overflow-wrap:normal] [word-break:normal] hyphens-none ${on ? "line-through decoration-2" : ""}`}>{item.name}</span>
                 </button>
               </li>
             );
