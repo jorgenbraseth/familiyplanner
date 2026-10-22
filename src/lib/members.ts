@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { t } from "./i18n";
+import type { ThemeId } from "./themes";
 
 export type Role = "parent" | "child";
 
@@ -14,9 +15,11 @@ export type Member = {
   locale: string;
   /** Profile picture in the private `avatars` bucket (`<member_id>/<name>.webp`), or null. */
   avatar_path?: string | null;
+  /** Colour theme (src/lib/themes.ts); the column defaults to the default theme. */
+  theme?: ThemeId;
 };
 
-export const MEMBER_COLUMNS = "id, name, email, role, calendar_ids, colour, locale, avatar_path";
+export const MEMBER_COLUMNS = "id, name, email, role, calendar_ids, colour, locale, avatar_path, theme";
 
 // Every family member is Norwegian: speech and answers are always bokmål.
 export const LOCALES = ["nb-NO"] as const;

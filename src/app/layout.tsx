@@ -1,20 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Baloo_2, Nunito } from "next/font/google";
+import { cookies } from "next/headers";
+import { Fraunces, Fredoka, Lexend, Nunito, Work_Sans } from "next/font/google";
 import { SwRegister } from "@/components/sw-register";
 import { htmlLang, t } from "@/lib/i18n";
+import { THEME_COOKIE, fallbackCss, getTheme, parseThemeId, themeCss } from "@/lib/themes";
 import "./globals.css";
 
-const nunito = Nunito({
-  variable: "--font-nunito",
-  subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
-});
+// One font per family a theme uses (src/lib/themes.ts maps them to --font-sans / --font-display). Only the weights
+// the UI uses are loaded; the default theme's fonts are preloaded, the others load when a theme needs them.
+const nunito = Nunito({ variable: "--font-nunito", subsets: ["latin"], weight: ["400", "600", "700", "800"], display: "swap" });
+const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], weight: ["700", "800"], display: "swap" });
+const fredoka = Fredoka({ variable: "--font-fredoka", subsets: ["latin"], weight: ["600", "700"], display: "swap", preload: false });
+const lexend = Lexend({ variable: "--font-lexend", subsets: ["latin"], weight: ["400", "600", "700", "800"], display: "swap", preload: false });
+const workSans = Work_Sans({ variable: "--font-work-sans", subsets: ["latin"], weight: ["400", "600", "700", "800"], display: "swap", preload: false });
 
-const baloo = Baloo_2({
-  variable: "--font-baloo",
-  subsets: ["latin"],
-  weight: ["600", "800"],
-});
+const fontVariables = [nunito, fraunces, fredoka, lexend, workSans].map((f) => f.variable).join(" ");
 
 export const metadata: Metadata = {
   title: t.appName,
@@ -32,19 +32,25 @@ export const metadata: Metadata = {
   other: { "apple-mobile-web-app-capable": "yes" },
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#c24e49" },
-    { media: "(prefers-color-scheme: dark)", color: "#121826" },
-  ],
-};
+export async function generateViewport(): Promise<Viewport> {
+  const theme = getTheme(parseThemeId((await cookies()).get(THEME_COOKIE)?.value));
+  return {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+    themeColor: theme.tokens.brand,
+  };
+}
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // The theme cookie is set when the theme is saved (and by ThemeSync on a new device); no cookie means the default.
+  const theme = parseThemeId((await cookies()).get(THEME_COOKIE)?.value);
   return (
-    <html lang={htmlLang} className={`${nunito.variable} ${baloo.variable} antialiased`}>
+    <html lang={htmlLang} data-theme-name={theme} className={`${fontVariables} antialiased`}>
+      <head>
+        {/* Our own constants only (src/lib/themes.ts), nothing user-provided. */}
+        <style dangerouslySetInnerHTML={{ __html: `${fallbackCss()}\n${themeCss()}` }} />
+      </head>
       <body className="flex min-h-dvh flex-col overflow-x-clip font-sans">{children}
         <SwRegister />
       </body>

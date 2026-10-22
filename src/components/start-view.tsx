@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { MemberAvatar } from "@/components/member-avatar";
 import { Notice } from "@/components/notice";
-import { PushCard } from "@/components/push-card";
 import { RoutineBar } from "@/components/routine-bar";
 import { StartHomework } from "@/components/start-homework";
 import { StartSchool } from "@/components/start-school";
@@ -105,8 +104,6 @@ export async function StartView({
           readOnly={previewing}
         />
       </div>
-
-      {!previewing && <PushCard />}
     </>
   );
 }

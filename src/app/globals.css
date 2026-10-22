@@ -1,72 +1,9 @@
 @import "tailwindcss";
 
-/* "Kalenderblad" theme (from the calendar app icon: red top bar, blue buttons, yellow stars). Dark mode redefines the same variables. */
+/* Colours and fonts come from src/lib/themes.ts: the root layout emits one :root[data-theme-name="..."] rule per theme
+   (plus a bare :root fallback). Light only for now. */
 :root {
-  --background: #f4f5f9;
-  --surface: #ffffff;
-  --line: #dfe2ec;
-  --ink: #1e2a44;
-  --muted: #66708a;
-  --heading: #b5443f;
-  --brand: #c24e49;
-  --on-brand: #ffffff;
-  --primary: #1672bd;
-  --primary-strong: #0f5a98;
-  --on-primary: #ffffff;
-  --accent: #f6b41c;
-  --on-accent: #4a3000;
-  --danger: #e23a55;
-  --danger-soft: #fde4e8;
-  --on-danger-soft: #9b1c33;
-  --warning-soft: #fff1d1;
-  --on-warning-soft: #8a5a00;
-  --chip: #eceef5;
-  --chip-ink: #3c4660;
-  --school-soft: #e4f4d8;
-  --on-school-soft: #2c6a17;
-  --school-line: #7bc043;
-  --pause-soft: #eee6fd;
-  --on-pause-soft: #5a32b8;
-  --pause-line: #b79cf2;
-  --event-soft: #fff0dc;
-  --on-event-soft: #9a4a06;
-  --event-line: #f7801f;
-  --card-shadow: 0 2px 10px rgb(30 42 68 / 0.08);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #121826;
-    --surface: #1b2335;
-    --line: #2b3550;
-    --ink: #eef1f8;
-    --muted: #9aa3bd;
-    --heading: #f08a80;
-    --brand: #c24e49;
-    --on-brand: #ffffff;
-    --primary: #4aa8f0;
-    --primary-strong: #2b8ad6;
-    --on-primary: #06213a;
-    --accent: #f6c044;
-    --on-accent: #3a2600;
-    --danger: #f26a7e;
-    --danger-soft: #3d1d27;
-    --on-danger-soft: #f9b3be;
-    --warning-soft: #3a2d12;
-    --on-warning-soft: #f6cf7a;
-    --chip: #263049;
-    --chip-ink: #d6dbea;
-    --school-soft: #1f3420;
-    --on-school-soft: #b5e39a;
-    --school-line: #5f9c33;
-    --pause-soft: #2a2246;
-    --on-pause-soft: #cdb8fb;
-    --pause-line: #6e55b8;
-    --event-soft: #3a2814;
-    --on-event-soft: #f9c08a;
-    --event-line: #c9661a;
-    --card-shadow: 0 2px 10px rgb(0 0 0 / 0.35);
-  }
+  color-scheme: light;
 }
 
 @theme inline {
@@ -99,8 +36,8 @@
   --color-event-line: var(--event-line);
   --color-event-soft: var(--event-soft);
   --color-on-event-soft: var(--on-event-soft);
-  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-baloo), var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--theme-font-sans);
+  --font-display: var(--theme-font-display);
 }
 
 @layer base {
@@ -112,7 +49,7 @@
   h2,
   h3,
   h4 {
-    font-family: var(--font-display);
+    font-family: var(--theme-font-display);
     color: var(--heading);
   }
   :focus-visible {

@@ -7,7 +7,7 @@ import { saveMember, type SaveMemberState } from "./actions";
 
 const initial: SaveMemberState = { ok: false };
 
-/** Suggested member colours (Kalenderblad); any other stored colour stays valid, the picker still allows free choice. */
+/** Suggested member colours; any other stored colour stays valid, the picker still allows free choice. */
 const COLOUR_CHOICES = ["#6bb33a", "#29a3f0", "#f5b41c", "#9d6bf0", "#f7801f", "#e5484d"];
 
 const input =
