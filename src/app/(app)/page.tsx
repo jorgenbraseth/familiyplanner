@@ -2,7 +2,6 @@ import { DaySwitcher } from "@/components/day-switcher";
 import { Notice } from "@/components/notice";
 import { ParentDayCard } from "@/components/parent-day";
 import { ParentHomeCards, ParentSchoolEndCard } from "@/components/parent-home";
-import { PushCard } from "@/components/push-card";
 import { StartView } from "@/components/start-view";
 import { dateInTimeZone, daysBetween, parseDayParam } from "@/lib/dates";
 import { t } from "@/lib/i18n";
@@ -39,7 +38,6 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         avatars={avatars}
       />
       <ParentHomeCards data={home} avatars={avatars} />
-      <PushCard />
     </>
   );
 }

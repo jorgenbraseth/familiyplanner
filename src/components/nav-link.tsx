@@ -25,7 +25,7 @@ export function NavLink({
       href={href}
       onClick={onClick}
       aria-current={active ? "page" : undefined}
-      className={`items-center rounded-full text-sm font-bold ${
+      className={`items-center gap-2 rounded-full text-sm font-bold ${
         block ? "flex min-h-12 px-4 text-base" : "inline-flex min-h-11 shrink-0 whitespace-nowrap px-3 sm:px-4"
       } ${block
         ? active ? "bg-brand text-on-brand" : "text-ink hover:bg-chip"

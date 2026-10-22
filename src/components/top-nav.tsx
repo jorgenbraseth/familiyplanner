@@ -10,7 +10,7 @@ import { manualBrowser } from "@/lib/install-platform";
 import { useInstall } from "@/lib/use-install";
 import { t } from "@/lib/i18n";
 
-export type TopNavItem = { href: string; label: string; badge?: number };
+export type TopNavItem = { href: string; label: string; badge?: number; /** Small decoration before the label (the profile's picture). */ icon?: React.ReactNode };
 
 const signOutClass =
   "inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-on-brand hover:bg-on-brand/15"
@@ -21,6 +21,7 @@ const panelSignOutClass =
 function NavLinks({ items, block, onNavigate }: { items: TopNavItem[]; block?: boolean; onNavigate?: () => void }) {
   return items.map((item) => (
     <NavLink key={item.href} href={item.href} badge={item.badge} block={block} onClick={onNavigate}>
+      {item.icon}
       {item.label}
     </NavLink>
   ));
