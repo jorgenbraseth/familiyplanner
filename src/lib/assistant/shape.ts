@@ -2,6 +2,7 @@
 
 import { mergeSharedEvents, type CalendarEvent, type SharedEvent } from "../calendar/events";
 import { addDays, dateInTimeZone, dayKey, parseDayKey } from "../dates";
+import { flattenItemText } from "../item-text";
 import type { PlanAudience, PlanItemKind } from "../plan";
 import { formatSchoolHours, hoursForDate, minutesOf, periodsForDate, type SchoolHours, type Timetable } from "../plan-view";
 import { minutesNowCopenhagen, relativeDayLabel, weekdayName } from "./range";
@@ -60,7 +61,7 @@ export function shapePlanItems(rows: readonly PlanItemInput[]): { items: PlanIte
     weekday: weekdayName(r.date),
     kind: r.kind,
     subject: r.subject,
-    text: r.text,
+    text: flattenItemText(r.text),
     done: r.done,
     audience: r.audience ?? "both",
     whole_week: r.whole_week ?? false,

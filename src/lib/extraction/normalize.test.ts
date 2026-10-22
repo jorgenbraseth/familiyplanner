@@ -32,6 +32,18 @@ describe("normalizeTime", () => {
   });
 });
 
+describe("normalizeUkeplan text structure", () => {
+  it("keeps line breaks, trims lines, collapses spaces and blank runs", () => {
+    const text = "  Gjør oppgavene:  \r\n-  Les   side 41\n\n\n\n- Skriv tre setninger \n";
+    expect(uke([raw({ kind: "homework", text })])[0].text).toBe(
+      "Gjør oppgavene:\n- Les side 41\n\n- Skriv tre setninger",
+    );
+  });
+  it("caps the length as before", () => {
+    expect(uke([raw({ text: `a\n${"b".repeat(2000)}` })])[0].text).toHaveLength(1000);
+  });
+});
+
 describe("normalizeUkeplan", () => {
   it("keeps a valid dated item", () => {
     expect(uke([raw()])).toEqual([

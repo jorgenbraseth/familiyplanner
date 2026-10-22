@@ -2,6 +2,7 @@ import { t } from "@/lib/i18n";
 import type { PlanItemRow } from "@/lib/plan";
 import type { MyDayEntry } from "@/lib/plan-view";
 import { SchoolDoneCheckbox } from "./school-done-checkbox";
+import { StructuredText } from "./structured-text";
 
 export function SchoolHeading({ children }: { children: React.ReactNode }) {
   return <h4 className="mb-1 text-lg font-extrabold">{children}</h4>;
@@ -16,9 +17,8 @@ export function SchoolLines({ items }: { items: PlanItemRow[] }) {
     <ul className={listClass}>
       {items.map((item) => (
         <li key={item.id} className="py-2 text-lg break-words">
-          {item.subject && <span className="font-semibold">{item.subject}</span>}
-          {item.subject && " – "}
-          {item.text}
+          {item.subject && <span className="block font-semibold">{item.subject}</span>}
+          <StructuredText text={item.text} />
         </li>
       ))}
     </ul>

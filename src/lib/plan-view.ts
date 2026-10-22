@@ -2,6 +2,7 @@
 
 import { addDays, dayKey, parseDayKey, type CalendarDate } from "./dates";
 import { locale } from "./i18n";
+import { flattenItemText } from "./item-text";
 import type { PlanItemKind, PlanItemRow, TimetableDayRow, TimetablePeriodRow } from "./plan";
 
 // ---------- Audience ----------
@@ -411,7 +412,8 @@ export type EventEntry = {
 /** A ukeplan event as a calendar-like entry. Untimed events get `allDayLabel` and sort first. */
 export function schoolEventEntry(item: PlanItemRow, allDayLabel: string): EventEntry {
   const start = minutesOf(item.starts_at);
-  const title = item.subject?.trim() ? `${item.subject.trim()}: ${item.text}` : item.text;
+  const text = flattenItemText(item.text);
+  const title = item.subject?.trim() ? `${item.subject.trim()}: ${text}` : text;
   return {
     id: `school:${item.id}`,
     memberId: item.member_id,

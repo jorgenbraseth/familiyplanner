@@ -4,6 +4,7 @@
 
 import { addDays, dateInTimeZone, dayKey, formatTime, parseDayKey } from "../dates";
 import type { CalendarEvent } from "../calendar/events";
+import { flattenItemText } from "../item-text";
 import { formatHm, hoursForDate, minutesOf, periodsForDate, type SchoolHours, type Timetable } from "../plan-view";
 import { daysBetween, minutesNowCopenhagen, relativeDayLabel, weekdayName } from "./range";
 import { matchesSubject } from "./subject-match";
@@ -95,7 +96,8 @@ export function findNextOccurrence(search: NextSearch): NextResult {
 
   for (const e of search.schoolEvents ?? []) {
     if (e.whole_week || e.date < todayKey || e.date > lastKey) continue;
-    const title = e.subject?.trim() ? `${e.subject.trim()}: ${e.text}` : e.text;
+    const text = flattenItemText(e.text);
+    const title = e.subject?.trim() ? `${e.subject.trim()}: ${text}` : text;
     if (!matchesSubject(search.query, title)) continue;
     const start = minutesOf(e.starts_at);
     if (!upcoming(e.date, start)) continue;

@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { setPlanItemDone } from "@/app/(app)/school-actions";
+import { flattenItemText } from "@/lib/item-text";
 import { t } from "@/lib/i18n";
+import { StructuredText } from "./structured-text";
 
 /** A big tick box (44px+ touch target) with the item text. Updates at once, reverts if saving fails. */
 export function SchoolDoneCheckbox({
@@ -51,14 +53,14 @@ export function SchoolDoneCheckbox({
         checked={checked}
         disabled={readOnly}
         onChange={(e) => toggle(e.target.checked)}
-        aria-label={t.school.markDone(label)}
+        aria-label={t.school.markDone(flattenItemText(label))}
         className={`tick m-2 ${large ? "size-9" : "size-7"} shrink-0 ${readOnly ? "opacity-70" : "cursor-pointer"}`}
       />
-      <span className={`min-w-0 flex-1 break-words py-2 ${large ? "text-2xl font-semibold" : "text-lg"} ${checked ? "text-muted line-through" : ""}`}>
+      <div className={`min-w-0 flex-1 break-words py-2 ${large ? "text-2xl font-semibold" : "text-lg"} ${checked ? "text-muted line-through" : ""}`}>
         {detail && <span className={`block ${large ? "text-xl font-extrabold text-ink" : "text-sm font-semibold text-muted"}`}>{detail}</span>}
-        {label}
+        <StructuredText text={label} />
         {failed && <span className="block text-sm font-semibold text-danger no-underline">{t.school.saveFailed}</span>}
-      </span>
+      </div>
     </label>
   );
 }
