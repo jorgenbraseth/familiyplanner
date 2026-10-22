@@ -550,6 +550,32 @@ export const t = {
     button: "Installer appen",
     iosSteps: "Trykk Del-knappen og velg «Legg til på Hjem-skjerm».",
     dismiss: "Skjul",
+    menuItem: "Legg til på startskjermen",
+    sheetTitle: "Legg til på startskjermen",
+    iosSheet: [
+      "Trykk på Del-knappen (en firkant med en pil som peker oppover) i Safari. Den ligger nederst eller øverst på skjermen.",
+      "Bla ned og velg «Legg til på Hjem-skjerm».",
+      "Trykk «Legg til» øverst til høyre.",
+    ],
+    manualSheet: {
+      chromium: [
+        "Åpne menyen i nettleseren (de tre prikkene).",
+        "Velg «Installer app» eller «Legg til på startskjermen».",
+      ],
+      samsung: [
+        "Åpne menyen i nettleseren (de tre strekene).",
+        "Velg «Legg til side i» og så «Startskjerm».",
+      ],
+      firefox: [
+        "Åpne menyen i nettleseren (de tre prikkene).",
+        "Velg «Installer» eller «Legg til på startskjermen».",
+      ],
+      other: [
+        "Åpne menyen i nettleseren.",
+        "Velg «Installer app», «Legg til på startskjermen» eller «Legg til på Hjem-skjerm».",
+      ],
+    },
+    close: "Lukk",
   },
   avatar: {
     mine: "Ditt bilde",

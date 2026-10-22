@@ -1,24 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useInstall } from "@/lib/use-install";
 import { t } from "@/lib/i18n";
 
-type InstallPrompt = Event & { prompt: () => Promise<void> };
-type Mode = "hidden" | "prompt" | "ios";
-
 const DISMISS_KEY = "install-card-dismissed";
-
-function isStandalone(): boolean {
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (navigator as Navigator & { standalone?: boolean }).standalone === true
-  );
-}
-
-function isIos(): boolean {
-  // iPadOS 13+ reports itself as a Mac with touch.
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-}
 
 function readDismissed(): boolean {
   try {
@@ -30,29 +16,13 @@ function readDismissed(): boolean {
 
 /** "Installer appen" card: Chrome's install prompt on Android, short instructions on iPhone. Hidden once installed. */
 export function InstallCard() {
-  const [mode, setMode] = useState<Mode>("hidden");
-  const [promptEvent, setPromptEvent] = useState<InstallPrompt | null>(null);
+  const { state, promptInstall } = useInstall();
+  const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
-    if (isStandalone() || readDismissed()) return;
-    const onPrompt = (e: Event) => {
-      e.preventDefault();
-      setPromptEvent(e as InstallPrompt);
-      setMode("prompt");
-    };
-    const onInstalled = () => {
-      setPromptEvent(null);
-      setMode("hidden");
-    };
-    window.addEventListener("beforeinstallprompt", onPrompt);
-    window.addEventListener("appinstalled", onInstalled);
-    // Effect-time detection of the platform (needs the browser, so it cannot run during render).
+    // The stored choice needs the browser, so it is read after mount (hidden until then).
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (isIos()) setMode("ios");
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onPrompt);
-      window.removeEventListener("appinstalled", onInstalled);
-    };
+    setDismissed(readDismissed());
   }, []);
 
   function dismiss() {
@@ -61,23 +31,17 @@ export function InstallCard() {
     } catch {
       // Hidden for this visit only.
     }
-    setMode("hidden");
+    setDismissed(true);
   }
 
   async function install() {
-    if (!promptEvent) return;
-    try {
-      await promptEvent.prompt();
-    } catch {
-      // The browser refused; the card stays.
-      return;
-    }
-    // A prompt event can be used once.
-    setPromptEvent(null);
-    setMode("hidden");
+    await promptInstall();
+    // The prompt event is used up either way; the card goes.
+    setDismissed(true);
   }
 
-  if (mode === "hidden") return null;
+  const mode = state === "promptable" ? "prompt" : state === "ios" ? "ios" : "hidden";
+  if (dismissed || mode === "hidden") return null;
   return (
     <section className="space-y-2 rounded-2xl border border-line bg-surface p-4 shadow-(--card-shadow)">
       <h2 className="text-xl font-extrabold">{t.install.title}</h2>
