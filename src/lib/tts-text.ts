@@ -15,8 +15,17 @@ export function stripMarkdown(text: string): string {
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/[*_`#]+/g, "")
     .replace(/[ \t]+/g, " ")
+    .replace(/[ \t]*\n[ \t]*/g, "\n")
     .replace(/\n{2,}/g, "\n")
     .trim();
+}
+
+/** Lines (bullets, sections) become sentences so the voice pauses instead of running them together. */
+export function linesToSentences(text: string): string {
+  return text
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .reduce((out, line) => (out === "" ? line : /[.!?:;,]$/.test(out) ? `${out} ${line}` : `${out}. ${line}`), "");
 }
 
 /** Cuts at the last sentence end before `max`; falls back to a word boundary, then a hard cut. */
@@ -31,7 +40,7 @@ export function truncateAtSentence(text: string, max: number = TTS_MAX_CHARS): s
 
 /** Text to speak, or null when nothing speakable is left. */
 export function prepareSpeechText(raw: string): string | null {
-  const cleaned = truncateAtSentence(stripMarkdown(raw.trim()));
+  const cleaned = truncateAtSentence(linesToSentences(stripMarkdown(raw.trim())));
   return cleaned === "" ? null : cleaned;
 }
 

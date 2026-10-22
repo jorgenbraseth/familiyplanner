@@ -57,7 +57,11 @@ export const ukeplanSchema = z.object({
           "homework = work to do or prepare (lekser, innleveringer, prøver to prepare for); event = an important event (trip, test day, parents' meeting, theme day); message = an important message or something to remember or bring.",
         ),
       subject: z.string().nullable().describe("The school subject, in the document's own wording, or null."),
-      text: z.string().describe("The item text in the document's own language and wording; do not translate."),
+      text: z
+        .string()
+        .describe(
+          "The item text in the document's own language and wording; do not translate. Keep the source structure with line breaks (\\n): one point per line, list points as lines starting with '- ', a short section heading as a line ending with ':' followed by its bullets. No other markdown.",
+        ),
       audience: z
         .enum(["child", "parent", "both"])
         .nullable()

@@ -3,6 +3,7 @@
 
 import { formatTime } from "./dates";
 import { t } from "./i18n";
+import { flattenItemText } from "./item-text";
 
 export type DayMember = { id: string; name: string; colour: string };
 
@@ -77,7 +78,7 @@ function schoolEventEntry(e: DaySchoolEvent): Raw {
     startMin: from ? minutes(from) : null,
     endMin: from && to ? minutes(to) : null,
     kind: "school",
-    title: subject ? `${subject}: ${e.text}` : e.text,
+    title: subject ? `${subject}: ${flattenItemText(e.text)}` : flattenItemText(e.text),
     allDay: label === null,
     timeLabel: label ?? t.calendar.allDay,
     sortKey: minutes(from),

@@ -52,3 +52,14 @@ describe("buildSynthesizeBody", () => {
     expect(buildSynthesizeBody("Hei", null, 1.2).voice).toEqual({ languageCode: "nb-NO" });
   });
 });
+
+describe("speech of bullet lines", () => {
+  it("turns bullets and sections into sentences without symbols", async () => {
+    const { stripMarkdown, linesToSentences } = await import("./tts-text");
+    const say = (t: string) => linesToSentences(stripMarkdown(t));
+    expect(say("Gjør oppgavene:\n- Les side 41\n- Skriv tre setninger\n- Øv på gloser")).toBe(
+      "Gjør oppgavene: Les side 41. Skriv tre setninger. Øv på gloser",
+    );
+    expect(say("1. Les\n2) Skriv")).toBe("Les. Skriv");
+  });
+});

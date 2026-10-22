@@ -9,6 +9,7 @@ import { dayKey, mondayOfIsoWeek } from "@/lib/dates";
 import { ExtractionError, extractTimeplan, extractUkeplan } from "@/lib/extraction/extract";
 import type { TimeplanDay, TimeplanPeriod, UkeplanItem } from "@/lib/extraction/normalize";
 import { locale, t } from "@/lib/i18n";
+import { normalizeItemText } from "@/lib/item-text";
 import {
   DOCUMENT_TYPES,
   MAX_UPLOAD_BYTES,
@@ -347,7 +348,10 @@ const itemSchema = z.object({
   kind: z.enum(PLAN_ITEM_KINDS, e.kind),
   audience: z.enum(PLAN_AUDIENCES, e.audience),
   subject: subjectField,
-  text: z.string().trim().min(1, e.text).max(1000, e.text),
+  text: z
+    .string()
+    .transform(normalizeItemText)
+    .pipe(z.string().min(1, e.text).max(1000, e.text)),
   starts_at: timeField,
   ends_at: timeField,
 });

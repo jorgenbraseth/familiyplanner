@@ -1,5 +1,6 @@
 import { addDays, dayKey, mondayOfIsoWeek, parseDayKey } from "../dates";
 import type { PlanAudience } from "../plan";
+import { normalizeItemText } from "../item-text";
 import { ExtractionError } from "./errors";
 import { timeplanSchema, ukeplanSchema } from "./schema";
 
@@ -185,7 +186,7 @@ export function normalizeUkeplan(
   const seen = new Set<string>();
   const items: UkeplanItem[] = [];
   for (const raw of parsed.data.items) {
-    const text = raw.text.trim().slice(0, MAX_TEXT).trim();
+    const text = normalizeItemText(raw.text).slice(0, MAX_TEXT).trim();
     if (!text) continue;
     const subject = raw.subject?.trim().slice(0, MAX_SUBJECT).trim() || null;
 

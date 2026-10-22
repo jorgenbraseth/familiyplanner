@@ -2,6 +2,7 @@ import Link from "next/link";
 import { decideStar } from "@/app/(app)/stars/actions";
 import { MemberAvatar } from "@/components/member-avatar";
 import { ParentGiveStars } from "@/components/parent-give-stars";
+import { StructuredText } from "@/components/structured-text";
 import { dateInTimeZone, formatDayHeading, isoWeekOf, parseDayKey } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import type { ParentHome } from "@/lib/parent-home";
@@ -115,10 +116,10 @@ export function ParentHomeCards({ data, avatars = {} }: { data: ParentHome; avat
                       >
                         {item.done ? "✓" : "○"}
                       </span>
-                      <span className="min-w-0 break-words">
-                        {item.subject && <span className="font-extrabold">{item.subject} </span>}
-                        {item.text}
-                      </span>
+                      <div className="min-w-0 break-words">
+                        {item.subject && <span className="block font-extrabold">{item.subject}</span>}
+                        <StructuredText text={item.text} />
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -153,10 +154,10 @@ export function ParentHomeCards({ data, avatars = {} }: { data: ParentHome; avat
                                 .filter(Boolean)
                                 .join(" · ")}
                             </span>
-                            <span className="break-words">
-                              {item.subject && <span className="font-extrabold">{item.subject} </span>}
-                              {item.text}
-                            </span>
+                            <div className="break-words">
+                              {item.subject && <span className="block font-extrabold">{item.subject}</span>}
+                              <StructuredText text={item.text} />
+                            </div>
                           </li>
                         );
                       })}
