@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
+import { NavPendingScope, PendingContent } from "@/components/nav-pending";
 import { Notice } from "@/components/notice";
 import { SchoolWeekPlan } from "@/components/school-week-plan";
 import { WeekNav } from "@/components/week-nav";
 import { loadWeek, parseWeekOffset } from "@/lib/calendar/view";
-import { addDays, dayKey, isoWeekOf } from "@/lib/dates";
+import { addDays, dateInTimeZone, dayKey } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { filterByAudience, weekPlan, wholeWeekSection } from "@/lib/plan-view";
 import { loadSchoolWeek } from "@/lib/school";
@@ -34,9 +35,13 @@ export default async function WeekPlanPage({ searchParams }: PageProps<"/ukeplan
     <>
       <h1 className="text-4xl font-bold leading-tight">{t.school.weekPlanTitle}</h1>
       {previewing && <Notice>{t.preview.readOnly}</Notice>}
-      {calendar.failedNames.length > 0 && <Notice>{t.calendar.failed(calendar.failedNames.join(", "))}</Notice>}
-      <WeekNav path="/ukeplan" offset={offset} isoWeek={isoWeekOf(school.monday).isoWeek} />
-      <SchoolWeekPlan days={days} wholeWeek={wholeWeek} todayKey={todayKey} documents={documents} readOnly={previewing} />
+      <NavPendingScope className="space-y-12">
+        <WeekNav path="/ukeplan" offset={offset} today={dateInTimeZone(now)} />
+        <PendingContent className="space-y-12">
+          {calendar.failedNames.length > 0 && <Notice>{t.calendar.failed(calendar.failedNames.join(", "))}</Notice>}
+          <SchoolWeekPlan days={days} wholeWeek={wholeWeek} todayKey={todayKey} documents={documents} readOnly={previewing} />
+        </PendingContent>
+      </NavPendingScope>
     </>
   );
 }

@@ -41,6 +41,8 @@ export const t = {
     showWho: "Vis",
     weekEmpty: "Ingenting på kalenderen denne uken.",
   },
+  // Shown (and announced) while a day/week switch waits for the server.
+  loading: "Laster …",
   calendar: {
     untitled: "(uten tittel)",
     allDay: "Hele dagen",
