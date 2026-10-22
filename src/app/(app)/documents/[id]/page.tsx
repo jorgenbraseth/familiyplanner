@@ -231,7 +231,9 @@ export default async function DocumentPage({
         </p>
       </header>
 
-      <section className="space-y-3">
+      {/* Wide screens: the original on the left (stays in view), the extracted items and actions on the right. */}
+      <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start lg:gap-8 lg:space-y-0">
+      <section className="space-y-3 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto">
         {fileUrl ? (
           <a
             href={fileUrl}
@@ -256,6 +258,7 @@ export default async function DocumentPage({
         )}
       </section>
 
+      <div className="min-w-0 space-y-6">
       {doc.status === "failed" && (
         <section className="space-y-3 rounded-2xl bg-danger-soft p-3">
           <p className="break-words text-sm font-semibold text-on-danger-soft">
@@ -307,7 +310,7 @@ export default async function DocumentPage({
                 {dayPeriods.length === 0 && (
                   <p className="text-sm text-muted">{t.documents.noPeriods}</p>
                 )}
-                <ul className="space-y-3">
+                <ul className="grid gap-3 xl:grid-cols-2 xl:items-start">
                   {dayPeriods.map((p) => (
                     <li key={p.id} className="card space-y-2 p-3">
                       <p className="text-sm font-extrabold">
@@ -350,7 +353,7 @@ export default async function DocumentPage({
             <h3 className="font-display text-base font-extrabold">
               {t.documents.wholeWeek}
             </h3>
-            <ul className="space-y-3">
+            <ul className="grid gap-3 xl:grid-cols-2 xl:items-start">
               {wholeWeekItems.map((item) => (
                 <ItemCard
                   key={item.id}
@@ -366,7 +369,7 @@ export default async function DocumentPage({
               <h3 className="font-display text-base font-extrabold capitalize">
                 {formatDayHeading(parseDayKey(date))}
               </h3>
-              <ul className="space-y-3">
+              <ul className="grid gap-3 xl:grid-cols-2 xl:items-start">
                 {dayItems.map((item) => (
                   <ItemCard
                     key={item.id}
@@ -419,6 +422,8 @@ export default async function DocumentPage({
         )}
         <DeleteDocumentButton id={doc.id} />
       </section>
+      </div>
+      </div>
     </>
   );
 }

@@ -37,7 +37,7 @@ export default async function DocumentsPage() {
       {documents.length === 0 ? (
         <p className="text-sm text-muted">{t.documents.empty}</p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid gap-3 md:grid-cols-[repeat(auto-fill,minmax(20rem,1fr))]">
           {documents.map((doc) => (
             <li key={doc.id}>
               <Link

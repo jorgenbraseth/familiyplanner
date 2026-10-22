@@ -17,6 +17,7 @@ export function StarParentView({ rows }: { rows: ChildWithStars[] }) {
       <Link href="/stars/tasks" className="btn btn-secondary">
         {t.stars.parent.tasksLink}
       </Link>
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start 2xl:grid-cols-3">
       {rows.map(({ child, active, completed }) => {
         const pending = active?.stars.filter((s) => s.status === "pending").reverse() ?? [];
         const decided = active?.stars.filter((s) => s.status !== "pending") ?? [];
@@ -171,6 +172,7 @@ export function StarParentView({ rows }: { rows: ChildWithStars[] }) {
           </section>
         );
       })}
+      </div>
     </div>
   );
 }

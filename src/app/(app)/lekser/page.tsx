@@ -52,7 +52,7 @@ export default async function HomeworkPage() {
 
 function HomeworkList({ items, readOnly }: { items: Awaited<ReturnType<typeof loadSchoolWeek>>["items"]; readOnly: boolean }) {
   return (
-    <ul className="space-y-3">
+    <ul className="grid gap-3 md:grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] md:items-start">
       {items.map((item) => (
         <li key={item.id} className="card px-3 py-2">
           <SchoolDoneCheckbox id={item.id} done={item.done} label={item.text} detail={item.subject} readOnly={readOnly} large />

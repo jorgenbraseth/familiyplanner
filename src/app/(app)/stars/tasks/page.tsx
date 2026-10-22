@@ -28,13 +28,14 @@ export default async function StarTasksPage() {
   return (
     <>
       <h1 className="text-3xl font-extrabold">{a.title}</h1>
-      <p className="text-sm text-muted">{a.intro}</p>
+      <p className="max-w-[75ch] text-sm text-muted">{a.intro}</p>
 
-      <section className="card space-y-3 p-4">
+      <section className="card max-w-2xl space-y-3 p-4">
         <h2 className="text-lg font-extrabold">{a.addTitle}</h2>
         <TaskForm kids={children} />
       </section>
 
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start 2xl:grid-cols-3">
       {groups.map((group) => (
         <section key={group.key} className="card space-y-3 p-4">
           <h2 className="text-xl font-extrabold break-words">{group.title}</h2>
@@ -77,6 +78,7 @@ export default async function StarTasksPage() {
           )}
         </section>
       ))}
+      </div>
 
       <Link href="/stars" className="btn btn-secondary">
         {a.back}

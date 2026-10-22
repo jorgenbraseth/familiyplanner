@@ -83,17 +83,19 @@ export async function StartView({
       {member.calendar_ids.length === 0 && <Notice>{t.home.noCalendar}</Notice>}
       {failedNames.length > 0 && <Notice>{t.calendar.failed(failedNames.join(", "))}</Notice>}
 
-      <RoutineBar
-        key={slot}
-        slot={slot}
-        upcoming={upcoming}
-        items={slotData.items}
-        initialChecked={slotData.checkedIds}
-        hasStarTask={hasStarTask}
-        readOnly={previewing}
-      />
-
-      <div className="grid gap-4 md:grid-cols-2 md:items-start">
+      {/* Routine, "Min dag" and Lekser sit side by side on wide screens (1 column on phones, 2 from lg, 3 from xl). */}
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start xl:grid-cols-3">
+        <div className="max-lg:mb-2 lg:col-span-2 xl:col-span-1">
+          <RoutineBar
+            key={slot}
+            slot={slot}
+            upcoming={upcoming}
+            items={slotData.items}
+            initialChecked={slotData.checkedIds}
+            hasStarTask={hasStarTask}
+            readOnly={previewing}
+          />
+        </div>
         <StartSchool view={dayView} events={events} date={selected} today={today} />
         <StartHomework
           items={view.homeworkDue}

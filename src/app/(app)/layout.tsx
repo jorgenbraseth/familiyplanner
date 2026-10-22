@@ -34,7 +34,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <div className="sticky top-0 z-10">
         {previewing && (
           <div className="border-b-2 border-accent bg-accent text-on-accent">
-            <div className="mx-auto flex max-w-2xl items-center gap-3 px-3 py-1.5">
+            <div className="mx-auto flex max-w-[120rem] items-center gap-3 px-3 py-1.5 lg:px-7">
               <p className="min-w-0 flex-1 text-sm font-extrabold">{t.preview.banner(viewing.name)}</p>
               <form action={stopPreview}>
                 <button type="submit" className="btn btn-secondary min-h-11 border-on-accent">
@@ -48,7 +48,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <TopNav items={navItems} signOutAction={signOut} />
         </header>
       </div>
-      <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 p-4 pb-28">{children}</main>
+      <main className="mx-auto w-full max-w-[120rem] flex-1 space-y-6 p-4 pb-28 lg:px-8">{children}</main>
       {/* The assistant answers as the signed-in member, so it is not part of a "Se som barn" preview. */}
       {!previewing && <AssistantButton />}
     </>

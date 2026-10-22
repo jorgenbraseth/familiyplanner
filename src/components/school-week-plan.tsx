@@ -28,6 +28,7 @@ export function SchoolWeekPlan({
       {hasWhole && (
         <section className="card space-y-3 p-3" aria-labelledby="whole-week-title">
           <h2 id="whole-week-title" className="text-2xl font-extrabold">{t.school.wholeWeek}</h2>
+          <div className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
           {wholeWeek.homework.length > 0 && (
             <div>
               <SchoolHeading>{t.school.homework}</SchoolHeading>
@@ -40,10 +41,11 @@ export function SchoolWeekPlan({
               <SchoolLines items={wholeWeek.messages} />
             </div>
           )}
+          </div>
         </section>
       )}
       <TimelineLegend legend={weekLegend(days)} label={t.start.myDay} />
-      <ol className="space-y-4">
+      <ol className="grid gap-4 md:grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] md:items-start">
         {days.map((day) => {
           const isToday = day.key === todayKey;
           return (

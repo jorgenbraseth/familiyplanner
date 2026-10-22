@@ -41,7 +41,7 @@ export default async function FamilyPage({ searchParams }: PageProps<"/family">)
         members={members.map((m) => ({ id: m.id, name: m.name, colour: m.colour, avatarUrl: avatars[m.id] ?? null }))}
       />
       {mine && (
-        <section className="card space-y-2 p-4" aria-labelledby="my-avatar-title">
+        <section className="card max-w-2xl space-y-2 p-4" aria-labelledby="my-avatar-title">
           <h2 id="my-avatar-title" className="text-xl font-extrabold">{t.avatar.mine}</h2>
           <AvatarEditor memberId={mine.id} colour={mine.colour} url={avatars[mine.id]} hasAvatar={!!mine.avatar_path} />
         </section>

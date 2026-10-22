@@ -49,7 +49,7 @@ export default async function AssistantLogPage({ searchParams }: PageProps<"/ass
     <>
       <div>
         <h1 className="text-3xl font-extrabold">{l.title}</h1>
-        <p className="mt-1 text-muted">{l.intro}</p>
+        <p className="mt-1 max-w-[75ch] text-muted">{l.intro}</p>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
@@ -87,7 +87,7 @@ export default async function AssistantLogPage({ searchParams }: PageProps<"/ass
         [...days.entries()].map(([key, dayRows]) => (
           <section key={key} className="space-y-3">
             <h2 className="text-xl font-extrabold capitalize">{formatDayHeading(parseDayKey(key))}</h2>
-            <ul className="space-y-3">
+            <ul className="grid gap-3 lg:grid-cols-2 lg:items-start 2xl:grid-cols-3">
               {dayRows.map((row) => {
                 const member = byId.get(row.member_id);
                 return (
@@ -101,7 +101,7 @@ export default async function AssistantLogPage({ searchParams }: PageProps<"/ass
                       <span className="sr-only">{l.questionLabel}: </span>
                       {row.question}
                     </p>
-                    <p className="whitespace-pre-wrap">
+                    <p className="max-w-[75ch] whitespace-pre-wrap">
                       <span className="sr-only">{l.answerLabel}: </span>
                       {row.answer}
                     </p>

@@ -46,7 +46,7 @@ export default async function ChildRoutinesPage({ params }: PageProps<"/stars/ro
   return (
     <>
       <h1 className="text-3xl font-extrabold">{a.title(child.name as string)}</h1>
-      <p className="text-sm text-muted">{a.explain}</p>
+      <p className="max-w-[75ch] text-sm text-muted">{a.explain}</p>
       {!starTasks && (
         <p className="text-sm">
           <Link href={`/stars/new?child=${childId}`} className="font-bold text-primary-strong underline underline-offset-4">
@@ -54,6 +54,7 @@ export default async function ChildRoutinesPage({ params }: PageProps<"/stars/ro
           </Link>
         </p>
       )}
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
       {SLOTS.map((slot) => (
         <RoutineForm
           key={slot}
@@ -64,6 +65,7 @@ export default async function ChildRoutinesPage({ params }: PageProps<"/stars/ro
           starTasks={starTasks}
         />
       ))}
+      </div>
       <Link href="/stars" className="btn btn-secondary">
         {a.back}
       </Link>
