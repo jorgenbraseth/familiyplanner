@@ -16,3 +16,6 @@ service-account*.json
 *.pem
 *.tsbuildinfo
 next-env.d.ts
+
+# mock stack state, logs and screenshots (docs/MOCK.md)
+.mock/

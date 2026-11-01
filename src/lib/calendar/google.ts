@@ -3,6 +3,7 @@ import { JWT } from "google-auth-library";
 import { unstable_cache } from "next/cache";
 import { z } from "zod";
 import { t } from "../i18n";
+import { isMockMode } from "../mock-mode";
 import {
   assembleEvents,
   distinctCalendarIds,
@@ -10,6 +11,7 @@ import {
   type CalendarEvent,
   type CalendarFetch,
 } from "./events";
+import { mockCalendarItems } from "./mock-events";
 
 // Reads members' calendars with the service account they shared them with (docs/SETUP.md 3B).
 
@@ -81,6 +83,11 @@ export type CalendarResult = { events: CalendarEvent[]; failedMemberIds: string[
  */
 export async function getEvents(members: MemberCalendar[], from: Date, to: Date): Promise<CalendarResult> {
   const ids = distinctCalendarIds(members);
+  if (isMockMode()) {
+    // Local mock stack (docs/MOCK.md): made-up events instead of calling Google.
+    const fetched = new Map<string, CalendarFetch>(ids.map((id) => [id, { ok: true, items: mockCalendarItems(id, from, to) }]));
+    return assembleEvents(members, fetched, t.calendar.untitled);
+  }
   const results = await Promise.allSettled(ids.map((id) => cachedEvents(id, from.toISOString(), to.toISOString())));
 
   const fetched = new Map<string, CalendarFetch>();

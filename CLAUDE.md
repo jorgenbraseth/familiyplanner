@@ -38,6 +38,7 @@ For every task: plan the work with Opus (the main session), then hand it off to 
 ## Rules
 
 - **Wide screens use the full width:** no app-wide max width (only a generous `max-w-[120rem]` cap), content flows into columns (`md`/`lg`/`xl` grids) and mobile stays as is; forms and dialogs keep a readable width (`max-w-2xl`), running text ~75ch.
+- **Every page is mockable; show the owner pictures (owner rule).** The owner often wants to see a page before it ships. Every page must render in the mock stack (`npm run mock`, `docs/MOCK.md`): the real Supabase queries and RLS run on a throwaway Postgres built from `supabase/migrations/` + `supabase/mock/seed.sql` (a made-up family: Kari, Ola, Emma, Jonas; dates relative to today), through the mini PostgREST/auth/storage gateway in `scripts/mock/`. Screenshots: `npm run shot -- --as <name> --path <url> --viewport phone|tablet|tablet-portrait|desktop [--screen] [--full-page]` or `--config <json>`. When the owner asks for a picture of a page, or a task changes the UI, take screenshots of the affected pages (the relevant viewports and people), look at them yourself, and send them to the owner (SendUserFile) before pushing design changes. Keep it working: a new table, column or feature gets seed data in `supabase/mock/seed.sql`; anything external at render time (Google Calendar etc.) gets a made-up stand-in behind `isMockMode()` (`src/lib/mock-mode.ts`, never active on Vercel production); a `MOCK_UNSUPPORTED` in `.mock/gateway.log` is fixed in `scripts/mock/query.mjs` (+ tests), not by changing app code. Never put real data in the seed or in screenshots.
 - **Secrets are server-only.** `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GOOGLE_SERVICE_ACCOUNT_KEY`, `VAPID_PRIVATE_KEY` are read only in server code (`import "server-only"` in those modules). Never prefix them with `NEXT_PUBLIC_`.
 - **Authorization lives in the database.** Every table has RLS enabled; policies use `current_member_id()` and `is_parent()`. App code uses the user-scoped Supabase client by default. Use the service-role client only where RLS can't apply (sending push to another member, allowlist check before a session exists) and keep those call sites few and obvious.
 - **The voice assistant's tools run as the signed-in user** (user-scoped client), so RLS limits what Claude can read. Don't widen this with the service-role client.
@@ -66,6 +67,8 @@ npm run lint
 npm run typecheck  # next typegen && tsc --noEmit
 npm test           # vitest
 npm run build
+npm run mock       # app on mock data (docs/MOCK.md)
+npm run shot -- --as Emma --path / --viewport phone   # screenshot to .mock/shots/
 ```
 
 Run lint, typecheck and tests before committing (and `bash supabase/tests/run.sh` when migrations change).
