@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { Fragment } from "react";
+import { DaySwitcher } from "@/components/day-switcher";
 import { Linger } from "@/components/linger";
 import { MemberAvatar } from "@/components/member-avatar";
+import { NavPendingScope, PendingContent } from "@/components/nav-pending";
 import { Notice } from "@/components/notice";
 import { ScreenRefresh } from "@/components/screen-refresh";
 import { RoutineBar } from "@/components/routine-bar";
@@ -19,8 +22,9 @@ import { wallClockMinutes, type RoutineSlot } from "@/lib/routines";
 import { loadSchoolWeek } from "@/lib/school";
 import { loadChildStars } from "@/lib/star-data";
 import { rewardTextAt } from "@/lib/stars";
-import { isTomorrow, slotView } from "@/lib/start-view";
-import { dayStillActive, homeworkVisible, inWindow, visibleRoutineSlots } from "@/lib/start-visibility";
+import { overviewForDay } from "@/lib/overview-day";
+import { slotView } from "@/lib/start-view";
+import { dayStillActive, inWindow, visibleRoutineSlots } from "@/lib/start-visibility";
 import { getNow } from "@/lib/now";
 
 /** The children's start page (also shown when a parent previews a child). */
@@ -53,7 +57,6 @@ export async function StartView({
       : loadWeek([member], dayOffset, now, { weekdayOnly: true, schoolEvents: { view: "kid", memberIds: [member.id] } }),
     loadAvatarUrls([member]),
   ]);
-  const view = todayView(school.items, school.today, school.timetable, school.hoursOverrides, "kid");
   // Which lists show now: inside their window (the parents set it per child), with items, and not finished.
   const slots: RoutineSlot[] = ["morning", "evening"];
   const slotData = Object.fromEntries(slots.map((s) => [s, slotView(routines.items, routines.checks, s)])) as Record<RoutineSlot, ReturnType<typeof slotView>>;
@@ -66,33 +69,43 @@ export async function StartView({
   const nowMinutes = wallClockMinutes(now);
   const renderSlots = slots.filter((s) => inWindow(nowMinutes, routines.windows[s]) && slotData[s].progress.total > 0);
 
-  // "Min dag" follows the selected day; routines, stars and homework stay on today.
+  // The whole overview follows the selected day: its school day, events, messages and the homework to do that day.
+  // Today also has the routines, the carried-over homework and the hiding rules (see overviewForDay).
   const daySchool = selSchool ?? school;
   const dayView = todayView(daySchool.items, selected, daySchool.timetable, daySchool.hoursOverrides, "kid");
   const selectedKey = dayKey(selected);
   const events = (selWeek ?? week).days.find((d) => d.key === selectedKey)?.events ?? [];
   const failedNames = [...new Set([...week.failedNames, ...(selWeek?.failedNames ?? [])])];
-  const showToday = daysBetween(today, selected) === 0;
-  // Today: "Min dag" goes away when nothing more happens (the other days always show).
-  const showDay = !showToday || dayStillActive(now, { hours: view.hours, periods: view.periods }, events);
-  const showHomework = homeworkVisible(
-    school.carriedOver.map((c) => c.item),
-    view.homeworkDue,
-    view.weekHomework,
-  );
+  const overview = overviewForDay({
+    today,
+    selected,
+    dayActive: dayStillActive(now, { hours: dayView.hours, periods: dayView.periods }, events),
+    visibleRoutineCount: visibleSlots.length,
+    carriedOver: school.carriedOver,
+    homeworkDue: dayView.homeworkDue,
+    weekHomework: dayView.weekHomework,
+    nextSchoolDay: dayView.nextSchoolDay,
+  });
+  const showToday = overview.isToday;
+  const showDay = overview.showDay;
+  const homework = overview.homework;
   const hasStarTask = (slot: RoutineSlot) => routines.starTaskIds[slot] !== null && stars !== null;
-  const allClear = visibleSlots.length === 0 && !showDay && !showHomework;
+  const allClear = overview.allClear;
   const pendingRequests = stars ? stars.stars.filter((s) => s.status === "pending").length : 0;
   const dayBase = screen ? { path: "/skjerm", params: { person: member.id } } : undefined;
-  const tomorrow = isTomorrow(school.today, view.nextSchoolDay);
   const nextReward =
     stars && stars.progress.nextMilestone !== null
       ? rewardTextAt(stars.track, stars.progress.nextMilestone) || t.stars.rewardFallback
       : null;
   const starPercent = stars && stars.progress.goal > 0 ? Math.min(100, Math.round((stars.progress.approved / stars.progress.goal) * 100)) : 0;
 
+  // The family screen already has the scope and the dimming around the page; the kids' page gets its own.
+  const Scope = screen ? Fragment : NavPendingScope;
+  const Body = screen ? "div" : PendingContent;
+  const switcher = <DaySwitcher date={selected} today={today} base={dayBase} size={screen ? "screen" : "page"} />;
+
   return (
-    <>
+    <Scope {...(screen ? {} : { className: "space-y-8" })}>
       {!screen && (
       <header className="flex items-center gap-4">
         {avatars[member.id] ? (
@@ -108,16 +121,19 @@ export async function StartView({
         )}
         <div className="min-w-0">
           <h1 className="break-words text-4xl font-bold leading-tight">{member.name}</h1>
-          <p className="text-base font-semibold capitalize text-muted">{formatDayHeading(today)}</p>
+          <p className="text-base font-semibold capitalize text-muted">{formatDayHeading(selected)}</p>
         </div>
       </header>
       )}
+      {/* One day switcher for the whole overview (on the screen the page puts it under the person's header). */}
+      {!screen && switcher}
       {/* Things appear and disappear with the clock, so the page refreshes itself (the family screen does the same). */}
       {!screen && <ScreenRefresh />}
       {previewing && <Notice>{t.preview.readOnly}</Notice>}
       {member.calendar_ids.length === 0 && <Notice>{t.home.noCalendar}</Notice>}
       {failedNames.length > 0 && <Notice>{t.calendar.failed(failedNames.join(", "))}</Notice>}
 
+      <Body className={screen ? "space-y-10" : "space-y-12"}>
       {/* Stars + routine, "Min dag" and Lekser sit side by side on wide screens (1 column on phones, 2 from lg, 3 from xl). */}
       <div className={screen ? "grid gap-10 md:grid-cols-2 md:items-start 2xl:grid-cols-3" : "grid gap-12 lg:grid-cols-2 lg:items-start xl:grid-cols-3"}>
         <div className="space-y-8">
@@ -164,7 +180,7 @@ export async function StartView({
           ) : (
             <StartStarSheet tasks={[]} previewing={previewing} memberId={screen ? member.id : undefined} />
           )}
-          {renderSlots.map((slot) => (
+          {overview.showRoutines && renderSlots.map((slot) => (
             <Linger key={slot} show={!slotData[slot].progress.complete} finished={slotData[slot].progress.complete}>
               <RoutineBar
                 slot={slot}
@@ -189,21 +205,22 @@ export async function StartView({
             events={events}
             date={selected}
             today={today}
-            base={dayBase}
             now={showToday ? { minutes: nowMinutes, time: formatTime(now) } : undefined}
           />
         )}
-        <Linger show={showHomework} finished={!showHomework}>
+        <Linger show={homework.show} finished={!homework.show}>
           <StartHomework
-            carried={school.carriedOver}
-            items={view.homeworkDue}
-            weekItems={view.weekHomework.filter((i) => !i.done)}
-            tomorrow={tomorrow}
-            weekday={formatWeekday(view.nextSchoolDay).toLocaleLowerCase()}
+            carried={homework.carried}
+            items={homework.items}
+            weekItems={homework.weekItems}
+            tomorrow={homework.tomorrow}
+            weekday={formatWeekday(dayView.nextSchoolDay).toLocaleLowerCase()}
             readOnly={previewing}
+            otherDay={homework.otherDay}
           />
         </Linger>
       </div>
-    </>
+      </Body>
+    </Scope>
   );
 }

@@ -24,9 +24,12 @@ export function screenHref(personId: string): string {
   return `/skjerm?person=${personId}`;
 }
 
-/** The next `count` days after today, taken from this week's and next week's days (in any order) so a Sunday still shows the coming week. */
-export function upcomingDays<T extends { key: string }>(weeks: readonly (readonly T[])[], todayKey: string, count = 6): T[] {
+/**
+ * The next `count` days after the selected day (`afterKey`, today by default in the caller), taken from the selected
+ * day's week and the week after (in any order) so a Sunday still shows the coming week.
+ */
+export function upcomingDays<T extends { key: string }>(weeks: readonly (readonly T[])[], afterKey: string, count = 6): T[] {
   const byKey = new Map<string, T>();
-  for (const day of weeks.flat()) if (day.key > todayKey && !byKey.has(day.key)) byKey.set(day.key, day);
+  for (const day of weeks.flat()) if (day.key > afterKey && !byKey.has(day.key)) byKey.set(day.key, day);
   return [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key)).slice(0, count);
 }

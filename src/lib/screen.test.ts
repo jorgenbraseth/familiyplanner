@@ -40,6 +40,11 @@ describe("upcomingDays", () => {
       "2026-11-06", "2026-11-07", "2026-11-08", "2026-11-09", "2026-11-10", "2026-11-11",
     ]);
   });
+  it("follows a selected day in another week (weeks loaded from that week on)", () => {
+    expect(upcomingDays([nextWeek, thisWeek], "2026-11-10").map((x) => x.key)).toEqual([
+      "2026-11-11", "2026-11-12", "2026-11-13", "2026-11-14", "2026-11-15",
+    ]);
+  });
   it("gives fewer days when next week is missing and ignores duplicates", () => {
     expect(upcomingDays([thisWeek, thisWeek], "2026-11-06").map((x) => x.key)).toEqual(["2026-11-07", "2026-11-08"]);
   });
