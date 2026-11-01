@@ -36,9 +36,28 @@ export function starsLeft(approved: number, nextMilestone: number | null): numbe
   return nextMilestone === null ? 0 : Math.max(0, nextMilestone - approved);
 }
 
-/** "3 stjerner igjen til Velge kveldsmat"; null when there is no next reward (goal reached). */
-export function starsLeftText(approved: number, nextMilestone: number | null, reward: string | null): string | null {
-  if (nextMilestone === null || reward === null) return null;
+export type StarGrid = {
+  /** Approved stars shown filled (never more than `total`). */
+  filled: number;
+  /** Grey stars up to the next milestone. */
+  empty: number;
+  /** Icons in the grid: the next milestone, or the goal once everything is reached. */
+  total: number;
+  /** No next milestone: the goal is reached. */
+  reached: boolean;
+};
+
+/** The star grid of the start page: one icon per star up to the next milestone (all goal stars once the goal is reached). */
+export function starGrid(approved: number, nextMilestone: number | null, goal: number): StarGrid {
+  const reached = nextMilestone === null;
+  const total = Math.max(0, reached ? goal : nextMilestone);
+  const filled = Math.min(Math.max(0, approved), total);
+  return { filled, empty: total - filled, total, reached };
+}
+
+/** "5 stjerner igjen!"; null when there is no next reward (goal reached). */
+export function starsLeftText(approved: number, nextMilestone: number | null): string | null {
+  if (nextMilestone === null) return null;
   const left = starsLeft(approved, nextMilestone);
-  return left > 0 ? t.start.starsLeft(left, reward) : null;
+  return left > 0 ? t.start.starsLeftShort(left) : null;
 }

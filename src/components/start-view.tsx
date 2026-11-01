@@ -9,6 +9,7 @@ import { ScreenRefresh } from "@/components/screen-refresh";
 import { RoutineBar } from "@/components/routine-bar";
 import { StartHomework } from "@/components/start-homework";
 import { StartSchool } from "@/components/start-school";
+import { StarIcon } from "@/components/star-icon";
 import { StartStarSheet } from "@/components/start-star-sheet";
 import { loadAvatarUrls } from "@/lib/avatar-urls";
 import { addDays, dateInTimeZone, dayKey, formatDayHeading, formatTime, daysBetween, mondayOf, parseDayParam } from "@/lib/dates";
@@ -23,7 +24,7 @@ import { loadSchoolWeek } from "@/lib/school";
 import { loadChildStars } from "@/lib/star-data";
 import { rewardTextAt } from "@/lib/stars";
 import { overviewForDay } from "@/lib/overview-day";
-import { slotView, starsLeftText } from "@/lib/start-view";
+import { slotView, starGrid, starsLeftText } from "@/lib/start-view";
 import { dayStillActive, inWindow, visibleRoutineSlots } from "@/lib/start-visibility";
 import { getNow } from "@/lib/now";
 
@@ -92,12 +93,23 @@ export async function StartView({
   const hasStarTask = (slot: RoutineSlot) => routines.starTaskIds[slot] !== null && stars !== null;
   const allClear = overview.allClear;
   const dayBase = screen ? { path: "/skjerm", params: { person: member.id } } : undefined;
-  const nextReward =
-    stars && stars.progress.nextMilestone !== null
-      ? rewardTextAt(stars.track, stars.progress.nextMilestone) || t.stars.rewardFallback
-      : null;
-  const starsLine = stars ? starsLeftText(stars.progress.approved, stars.progress.nextMilestone, nextReward) : null;
-  const starPercent = stars && stars.progress.goal > 0 ? Math.min(100, Math.round((stars.progress.approved / stars.progress.goal) * 100)) : 0;
+  // Stars widget: a grid up to the next reward, the reward, and how many are left.
+  const nextMilestone = stars?.progress.nextMilestone ?? null;
+  const grid = starGrid(stars?.progress.approved ?? 0, nextMilestone, stars?.progress.goal ?? 0);
+  const rewardName = !stars
+    ? ""
+    : nextMilestone !== null
+      ? rewardTextAt(stars.track, nextMilestone) || t.stars.rewardFallback
+      : stars.track.big_reward || t.stars.rewardFallback;
+  const gridLabel = t.start.starsGridLabel(grid.filled, grid.total, rewardName);
+  const leftText = stars ? starsLeftText(stars.progress.approved, nextMilestone) : null;
+  const gridEl = (
+    <div role="img" aria-label={gridLabel} className="grid grid-cols-10 gap-x-1 gap-y-2 @md:gap-x-2">
+      {Array.from({ length: grid.total }, (_, i) => (
+        <StarIcon key={i} filled={i < grid.filled} className="aspect-square w-full" />
+      ))}
+    </div>
+  );
 
   // The family screen already has the scope and the dimming around the page; the kids' page gets its own.
   const Scope = screen ? Fragment : NavPendingScope;
@@ -138,38 +150,22 @@ export async function StartView({
       <div className={screen ? "grid gap-10 md:grid-cols-2 md:items-start 2xl:grid-cols-3" : "grid gap-12 lg:grid-cols-2 lg:items-start xl:grid-cols-3"}>
         <div className="space-y-8">
           {stars ? (
-            <section className="space-y-3 rounded-3xl bg-warning-soft p-5 text-on-warning-soft" aria-labelledby="stars-title">
+            <section className="@container space-y-6 rounded-3xl bg-warning-soft p-5 text-on-warning-soft" aria-labelledby="stars-title">
               <h2 id="stars-title" className="sr-only">{t.stars.title}</h2>
-              {screen ? (
-                <p aria-label={t.start.stars(stars.progress.approved, stars.progress.goal)} className="flex items-baseline gap-3">
-                  <span aria-hidden className="font-display text-6xl font-bold leading-none">{stars.progress.approved} ★</span>
-                  <span aria-hidden className="text-base font-bold">{t.start.starsWord}</span>
-                </p>
-              ) : (
-                <Link
-                  href="/stars"
-                  aria-label={`${t.start.stars(stars.progress.approved, stars.progress.goal)}. ${t.start.starsLink}`}
-                  className="flex items-baseline gap-3"
-                >
-                  <span aria-hidden className="font-display text-6xl font-bold leading-none">{stars.progress.approved} ★</span>
-                  <span aria-hidden className="text-base font-bold">{t.start.starsWord}</span>
+              {screen ? gridEl : (
+                <Link href="/stars" aria-label={`${gridLabel}. ${t.start.starsLink}`} className="block">
+                  {gridEl}
                 </Link>
               )}
-              <p className="text-lg font-bold text-ink">
-                {starsLine ?? t.start.stars(stars.progress.approved, stars.progress.goal)}
-              </p>
-              <div
-                role="progressbar"
-                aria-label={t.start.stars(stars.progress.approved, stars.progress.goal)}
-                aria-valuemin={0}
-                aria-valuemax={stars.progress.goal}
-                aria-valuenow={stars.progress.approved}
-                className="h-3 w-full overflow-hidden rounded-full bg-surface/80"
-              >
-                <div className="h-full rounded-full bg-accent" style={{ width: `${starPercent}%` }} />
-              </div>
-              <div className="pt-2">
-                <StartStarSheet tasks={stars.tasks} previewing={previewing} memberId={screen ? member.id : undefined} />
+              <div className="flex flex-col gap-5 @md:flex-row @md:items-center @md:justify-between">
+                <div className="flex min-w-0 items-center gap-4">
+                  <StarIcon filled={grid.reached} className="size-16 shrink-0 @md:size-20" />
+                  <p className="min-w-0 break-words font-display text-3xl font-bold leading-tight text-ink">{rewardName}</p>
+                </div>
+                <div className="space-y-3 @md:shrink-0 @md:text-right">
+                  <p className="font-display text-xl font-bold text-ink">{leftText ?? t.start.goalReached}</p>
+                  <StartStarSheet tasks={stars.tasks} previewing={previewing} memberId={screen ? member.id : undefined} />
+                </div>
               </div>
             </section>
           ) : (

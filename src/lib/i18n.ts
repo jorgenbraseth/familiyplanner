@@ -364,8 +364,9 @@ export const t = {
   start: {
     stars: (approved: number, goal: number) => `${approved} av ${goal} stjerner`,
     starsLink: "Se stjernene dine",
-    starsWord: "stjerner",
-    starsLeft: (left: number, reward: string) => `${left} ${left === 1 ? "stjerne" : "stjerner"} igjen til ${reward}`,
+    starsLeftShort: (left: number) => `${left} ${left === 1 ? "stjerne" : "stjerner"} igjen!`,
+    starsGridLabel: (approved: number, total: number, reward: string) => `${approved} av ${total} stjerner til ${reward}`,
+    goalReached: "Målet er nådd! 🎉",
     registerStar: "Be om stjerne",
     registerStarTitle: "Registrer stjerne",
     close: "Lukk",
