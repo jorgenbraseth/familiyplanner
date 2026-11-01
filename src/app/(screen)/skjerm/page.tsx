@@ -2,6 +2,7 @@ import { signOut } from "@/app/auth/actions";
 import { MemberAvatar } from "@/components/member-avatar";
 import { NavPendingScope, PendingContent } from "@/components/nav-pending";
 import { Notice } from "@/components/notice";
+import { ScreenAssistant } from "@/components/screen-assistant";
 import { ScreenParentView } from "@/components/screen-parent";
 import { ScreenRefresh } from "@/components/screen-refresh";
 import { ScreenSwitcher } from "@/components/screen-switcher";
@@ -9,11 +10,13 @@ import { StartView } from "@/components/start-view";
 import { ThemeSync } from "@/components/theme-sync";
 import { requireScreen } from "@/lib/auth";
 import { loadAvatarUrls } from "@/lib/avatar-urls";
+import { firstNameOf } from "@/lib/assistant/prompt";
 import { loadWeek } from "@/lib/calendar/view";
 import { textOnColour, tintStyle } from "@/lib/colour";
 import { dateInTimeZone, formatDayHeading } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { MEMBER_COLUMNS, type Member } from "@/lib/members";
+import { getNow } from "@/lib/now";
 import { pickPerson, screenPeople, upcomingDays } from "@/lib/screen";
 import { loadPendingCount } from "@/lib/star-data";
 import { createClient } from "@/lib/supabase/server";
@@ -35,7 +38,7 @@ export default async function ScreenPage({ searchParams }: PageProps<"/skjerm">)
     );
   }
 
-  const now = new Date();
+  const now = await getNow();
   const today = dateInTimeZone(now);
   const avatars = await loadAvatarUrls(people);
   const isChild = person.role === "child";
@@ -55,7 +58,7 @@ export default async function ScreenPage({ searchParams }: PageProps<"/skjerm">)
         signOutAction={signOut}
       />
       <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden" style={tintStyle(person.colour, 0.07)}>
-        <PendingContent key={person.id} className="space-y-10 px-5 pb-12 pt-5 min-[640px]:landscape:px-8">
+        <PendingContent key={person.id} className="space-y-10 px-5 pb-40 pt-5 min-[640px]:landscape:px-8">
           <header className="flex items-center gap-6 rounded-3xl p-5 sm:p-6" style={tintStyle(person.colour, 0.2)}>
             {avatars[person.id] ? (
               <MemberAvatar colour={person.colour} url={avatars[person.id]} size={112} className="border-4" />
@@ -92,6 +95,8 @@ export default async function ScreenPage({ searchParams }: PageProps<"/skjerm">)
           )}
         </PendingContent>
       </main>
+      {/* Keyed on the person: switching person closes the assistant, so it never asks as the wrong one. */}
+      <ScreenAssistant key={person.id} person={{ id: person.id, name: firstNameOf(person.name), colour: person.colour }} />
     </NavPendingScope>
   );
 }

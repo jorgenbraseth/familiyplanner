@@ -86,8 +86,8 @@ export type CarriedHomeworkResult = {
 };
 
 /**
- * Unfinished homework from earlier days (see carriedOverHomework: due today or earlier, at most 14 days back, oldest
- * first) for "Du har også igjen ...". `rows` are the member's homework rows; `skip` drops rows the answer already lists.
+ * Unfinished homework from earlier days (see carriedOverHomework: due earlier in the current ISO week up to today, oldest
+ * first; never from earlier weeks) for "Du har også igjen ...". `rows` are the member's homework rows; `skip` drops rows the answer already lists.
  */
 export function shapeCarriedHomework(
   rows: readonly PlanItemInput[],

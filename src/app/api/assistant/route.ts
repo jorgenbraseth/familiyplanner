@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getSessionEmail, isScreenSession } from "@/lib/auth";
 import { questionsLeftToday } from "@/lib/assistant-limit";
 import { buildSystemPrompt, firstNameOf } from "@/lib/assistant/prompt";
+import { pickAsPerson } from "@/lib/assistant/as-person";
 import { AssistantAiError, runAssistant } from "@/lib/assistant/run";
 import { MEMBER_COLUMNS, type Member } from "@/lib/members";
 import { createClient } from "@/lib/supabase/server";
@@ -9,7 +10,11 @@ import { getViewer } from "@/lib/view-as";
 
 export const maxDuration = 60;
 
-const bodySchema = z.object({ question: z.string().trim().min(1).max(500) });
+const bodySchema = z.object({
+  question: z.string().trim().min(1).max(500),
+  /** Family screen only: the person selected on the tablet, whom the question is asked as. */
+  asPerson: z.unknown().optional(),
+});
 
 function json(body: Record<string, unknown>, status: number) {
   return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
@@ -28,9 +33,10 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (memberError) throw new Error("Could not read the member row");
     if (!memberData) return json({ error: "unauthorized" }, 401);
-    const me = memberData as Member;
-    // No assistant on the shared family screen (a parent's session entered as Familieskjerm).
-    if (await isScreenSession()) return json({ error: "forbidden" }, 403);
+    const signedIn = memberData as Member;
+    // On the shared family screen (a parent's session entered as Familieskjerm) the question is asked as
+    // the person selected on the tablet; see `asker` below. The signed-in row is still the parent.
+    const screen = await isScreenSession();
 
     // The family list, read with the asker's own client (every member may read all members).
     const { data: familyData, error: familyError } = await supabase.from("members").select(MEMBER_COLUMNS).order("created_at");
@@ -50,8 +56,15 @@ export async function POST(request: Request) {
     if (!parsed.success) return json({ error: "invalid" }, 400);
     const { question } = parsed.data;
 
+    // Outside a screen session `asPerson` is ignored. On the screen it must name a parent or child; the tools
+    // still run on this session's user-scoped client (RLS: family-wide reads, never parent-only items).
+    const asker = screen ? pickAsPerson(family, parsed.data.asPerson) : signedIn;
+    if (!asker) return json({ error: "invalid" }, 400);
+    const me = asker;
+    const countArgs = screen ? { p_for: me.id } : undefined;
+
     if (me.role === "child") {
-      const { data: count, error } = await supabase.rpc("assistant_questions_today");
+      const { data: count, error } = await supabase.rpc("assistant_questions_today", countArgs);
       if (error) throw new Error("Could not count today's questions");
       if (questionsLeftToday(Number(count ?? 0), me.role) === 0) return json({ error: "limit" }, 429);
     }
@@ -85,7 +98,8 @@ export async function POST(request: Request) {
     }
 
     const { error: logError } = await supabase.from("assistant_log").insert({
-      member_id: me.id,
+      member_id: signedIn.id,
+      asked_for: screen ? me.id : null,
       question,
       answer: result.answer.slice(0, 4000),
       tools_used: result.toolsUsed,
@@ -97,7 +111,7 @@ export async function POST(request: Request) {
 
     let questionsLeft: number | null = null;
     if (me.role === "child") {
-      const { data: count, error } = await supabase.rpc("assistant_questions_today");
+      const { data: count, error } = await supabase.rpc("assistant_questions_today", countArgs);
       questionsLeft = error ? null : questionsLeftToday(Number(count ?? 0), me.role);
     }
     return json({ answer: result.answer, questionsLeft }, 200);

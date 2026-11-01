@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getSessionEmail, isScreenSession } from "@/lib/auth";
+import { getSessionEmail } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { TtsError, synthesize } from "@/lib/tts";
 import { TTS_MAX_INPUT_CHARS, prepareSpeechText } from "@/lib/tts-text";
@@ -23,7 +23,6 @@ export async function POST(request: Request) {
     const { data: member, error } = await supabase.from("members").select("id").eq("email", email).maybeSingle();
     if (error) throw new Error("Could not read the member row");
     if (!member) return json({ error: "unauthorized" }, 401);
-    if (await isScreenSession()) return json({ error: "forbidden" }, 403);
 
     let body: unknown;
     try {

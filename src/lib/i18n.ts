@@ -3,6 +3,11 @@
 export const locale = "nb-NO";
 export const htmlLang = "nb";
 
+/** Norwegian genitive of a name: "Emma" -> "Emmas", "Jonas" -> "Jonas'". */
+export function genitive(name: string): string {
+  return /[sxz]$/i.test(name) ? `${name}'` : `${name}s`;
+}
+
 export const t = {
   appName: "Familieplanlegger",
   appDescription: "Kalendere, ukeplaner, lekser og stjerner for familien.",
@@ -365,6 +370,10 @@ export const t = {
     registerStarTitle: "Registrer stjerne",
     close: "Lukk",
     myDay: "Min dag",
+    now: "Nå",
+    nowAt: (time: string) => `Nå ${time}`,
+    seeTomorrow: "Se i morgen ›",
+    allDone: "Alt er gjort for i dag! ⭐",
     schoolHours: (hours: string) => `Skolen ${hours}`,
     breakLabel: "friminutt",
     legendSchool: "Skole",
@@ -391,7 +400,11 @@ export const t = {
     title: "Familieskjerm",
     switchPerson: "Bytt person",
     people: "Familien",
-    thisIs: (name: string) => `Dette er ${/[sxz]$/i.test(name) ? `${name}'` : `${name}s`} side`,
+    thisIs: (name: string) => `Dette er ${genitive(name)} side`,
+    // The big assistant button (Spør meg + whose day), always visible on the screen.
+    askButton: "Spør meg",
+    askContext: (name: string) => `Spør om ${genitive(name)} dag`,
+    askLabel: (name: string) => `Spør assistenten som ${name}`,
     requestSent: "Sendt! En voksen må godkjenne på mobilen sin.",
     pendingStars: (n: number) => (n === 1 ? "1 stjerne venter på godkjenning" : `${n} stjerner venter på godkjenning`),
     parentPending: (n: number) =>
@@ -474,7 +487,10 @@ export const t = {
       back: "Tilbake til stjerner",
       notFound: "Fant ikke barnet.",
       explain:
-        "Listene nullstilles hver dag. Morgenstell vises til skolen starter (eller til klokka 12), Kveldstell på ettermiddagen og kvelden. Når barnet har krysset av alt, sendes én stjerneforespørsel per liste per dag.",
+        "Listene nullstilles hver dag. Hver liste vises på oversikten bare i tidsrommet du velger, og forsvinner når barnet har krysset av alt. Da sendes én stjerneforespørsel per liste per dag.",
+      visibleFrom: "Vises fra",
+      visibleUntil: "Vises til",
+      visibleHint: "Klokkeslett (norsk tid). Til 23:59 betyr ut dagen.",
       itemsLabel: "Punkter",
       itemName: "Navn på punkt",
       itemPlaceholder: "F.eks. Pusse tenner",
@@ -502,6 +518,7 @@ export const t = {
         itemCount: (max: number) => `Det kan være høyst ${max} punkter i en liste.`,
         itemDuplicate: "To punkter har samme navn.",
         star: "Stjerneoppgaven gjelder ikke dette barnet.",
+        window: "Velg klokkeslett, og «Vises fra» må være før «Vises til».",
       },
     },
   },
@@ -511,6 +528,9 @@ export const t = {
     open: "Spør assistenten",
     close: "Lukk",
     title: "Spør meg om hva som helst",
+    // On the family screen: the question is asked as the selected person.
+    titleFor: (name: string) => `Hei ${name}! Hva lurer du på?`,
+    askingAs: (name: string) => `Du spør som ${name}`,
     hold: "Hold inne og snakk",
     holdHint: "Hold knappen inne mens du snakker, eller trykk én gang for å starte og stoppe.",
     listening: "Jeg lytter…",
@@ -564,6 +584,7 @@ export const t = {
       clearYes: "Ja, slett alt",
       clearCancel: "Avbryt",
       unknownMember: "Ukjent",
+      viaScreen: (name: string) => `Familieskjerm – spurt som ${name}`,
     },
   },
   // Push notifications and app install.

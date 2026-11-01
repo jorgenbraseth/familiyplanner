@@ -10,7 +10,22 @@ import { formatSchoolHours, myDayEntries, timelineLegend, type EventEntry, type 
  * "Min dag": the selected day's (default today) school periods and events (calendar and school events) in one chronological list, school
  * periods green and everything else orange (with a legend), plus today's messages ("Husk").
  */
-export function StartSchool({ view, events, date, today, base }: { view: TodayView; events: EventEntry[]; date: CalendarDate; today: CalendarDate; base?: DayHrefBase }) {
+export function StartSchool({
+  view,
+  events,
+  date,
+  today,
+  base,
+  now,
+}: {
+  view: TodayView;
+  events: EventEntry[];
+  date: CalendarDate;
+  today: CalendarDate;
+  base?: DayHrefBase;
+  /** Today only: the clock, for the "now" marker in the timeline. */
+  now?: { minutes: number; time: string };
+}) {
   const hoursLabel = formatSchoolHours(view.hours?.starts_at, view.hours?.ends_at);
   const entries = myDayEntries(view.periods, view.hours, events);
   const legend = timelineLegend(entries);
@@ -27,7 +42,7 @@ export function StartSchool({ view, events, date, today, base }: { view: TodayVi
         <PendingContent className="space-y-4">
           {hoursLabel && <p className="-mt-3 text-lg font-bold text-muted">{t.start.schoolHours(hoursLabel)}</p>}
 
-          {entries.length === 0 ? <p className="text-base text-muted">{daysBetween(today, date) === 0 ? t.start.nothingToday : t.start.nothingOnDay}</p> : <MyDayList entries={entries} />}
+          {entries.length === 0 ? <p className="text-base text-muted">{daysBetween(today, date) === 0 ? t.start.nothingToday : t.start.nothingOnDay}</p> : <MyDayList entries={entries} now={now} />}
 
           <div className="pl-[4.25rem]">
             <TimelineLegend legend={legend} label={t.start.myDay} />

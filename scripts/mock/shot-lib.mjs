@@ -22,3 +22,10 @@ export function shotFileName({ as, path, viewport, fullPage }) {
   const who = String(as ?? "anon").split("@")[0].toLowerCase();
   return `${who}-${slug}-${String(viewport ?? "phone")}${fullPage ? "-full" : ""}.png`;
 }
+
+/** `--click` value: one selector, an array of them, or "a;;b" (clicked in order before the screenshot). */
+export function clickList(value) {
+  if (value === undefined || value === null || value === false || value === true) return [];
+  const list = Array.isArray(value) ? value : String(value).split(";;");
+  return list.map((v) => String(v).trim()).filter(Boolean);
+}

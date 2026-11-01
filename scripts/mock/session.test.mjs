@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAX_CHUNK_SIZE, authCookies, emailFor, mintSession, parseArgs, parseRefreshToken, stableUuid, storageKey, verifyJwt } from "./session.mjs";
-import { resolveViewport, shotFileName } from "./shot-lib.mjs";
+import { clickList, resolveViewport, shotFileName } from "./shot-lib.mjs";
 
 describe("session", () => {
   it("mints verifiable tokens with the claims RLS needs", () => {
@@ -34,6 +34,13 @@ describe("shot helpers", () => {
     expect(resolveViewport("tablet")).toMatchObject({ width: 1180, height: 820 });
     expect(resolveViewport("800x600")).toMatchObject({ width: 800, height: 600 });
     expect(() => resolveViewport("huge")).toThrow();
+  });
+  it("lists the clicks", () => {
+    expect(clickList(undefined)).toEqual([]);
+    expect(clickList(true)).toEqual([]);
+    expect(clickList("button.a")).toEqual(["button.a"]);
+    expect(clickList("button.a ;; text=Hei")).toEqual(["button.a", "text=Hei"]);
+    expect(clickList(["x", " "])).toEqual(["x"]);
   });
   it("names files", () => {
     expect(shotFileName({ as: "Emma", path: "/documents/abc?x=1", viewport: "phone" })).toBe("emma-documents-abc-x-1-phone.png");

@@ -1,5 +1,5 @@
 import "server-only";
-import { carriedItems, carryQueryFromKey, type CarriedItem } from "./homework-carry";
+import { carriedItems, type CarriedItem } from "./homework-carry";
 import { addDays, dateInTimeZone, dayKey, mondayOf, type CalendarDate } from "./dates";
 import type { DocumentRow, DocumentType, PlanItemRow } from "./plan";
 import type { SchoolHours, Timetable } from "./plan-view";
@@ -13,7 +13,7 @@ export type SchoolWeek = {
   today: CalendarDate;
   /** Ukeplan items of published documents (no legacy lessons), including the Monday after the week. */
   items: PlanItemRow[];
-  /** Unfinished homework due today or earlier (see `carriedOverHomework`); only for the current week (offset 0). */
+  /** Unfinished homework from earlier days of this week (see `carriedOverHomework`); only for the current week (offset 0). */
   carriedOver: CarriedItem[];
   /** The member's timetable (latest published timeplan); empty when there is none. */
   timetable: Timetable;
@@ -47,10 +47,8 @@ export async function loadSchoolWeek(memberId: string, weekOffset = 0, now = new
     .eq("member_id", memberId)
     .neq("kind", "lesson")
     .lte("date", dayKey(addDays(monday, 7)));
-  // Current week: also homework from the look-back window before Monday (nothing else from before the week).
-  itemsQuery = carry
-    ? itemsQuery.gte("date", carryQueryFromKey(today)).or(`date.gte.${mondayKey},kind.eq.homework`)
-    : itemsQuery.gte("date", mondayKey);
+  // Unfinished homework is carried over within the week only, so nothing before Monday is needed.
+  itemsQuery = itemsQuery.gte("date", mondayKey);
 
   const [itemsResult, timetable, hoursOverrides] = await Promise.all([
     itemsQuery.order("date").order("sort"),
@@ -60,7 +58,7 @@ export async function loadSchoolWeek(memberId: string, weekOffset = 0, now = new
   if (itemsResult.error) throw new Error("Could not read the plan items");
   // Rows also carry the joined `documents` column, which is only there for the filter.
   const rows = (itemsResult.data ?? []) as unknown as PlanItemRow[];
-  const items = rows.filter((i) => i.date >= mondayKey);
+  const items = rows;
   const carriedOver = carry ? carriedItems(rows, today) : [];
 
   const documentIds = [...new Set(items.map((i) => i.document_id))];

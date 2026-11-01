@@ -4,6 +4,7 @@ import { requireParent } from "@/lib/auth";
 import { t } from "@/lib/i18n";
 import { parseViewAsId } from "@/lib/preview";
 import type { RoutineItemRow, RoutineSettingsRow, RoutineSlot } from "@/lib/routines";
+import { clockOf, resolveWindows } from "@/lib/start-visibility";
 import { taskScopeFilter } from "@/lib/stars";
 import { createClient } from "@/lib/supabase/server";
 import { RoutineForm, type StarTaskOption } from "./routine-form";
@@ -21,13 +22,13 @@ export default async function ChildRoutinesPage({ params }: PageProps<"/stars/ro
 
   const [itemsResult, settingsResult, trackResult] = await Promise.all([
     supabase.from("routine_items").select("id, slot, name, sort, created_at").eq("member_id", childId).order("sort").order("created_at"),
-    supabase.from("routine_settings").select("slot, star_task_id").eq("member_id", childId),
+    supabase.from("routine_settings").select("slot, star_task_id, visible_from, visible_until").eq("member_id", childId),
     supabase.from("star_tracks").select("id").eq("member_id", childId).eq("status", "active").maybeSingle(),
   ]);
   if (itemsResult.error) throw new Error("Could not read the routine items");
   if (settingsResult.error) throw new Error("Could not read the routine settings");
   const items = (itemsResult.data ?? []) as Pick<RoutineItemRow, "id" | "slot" | "name">[];
-  const settings = (settingsResult.data ?? []) as Pick<RoutineSettingsRow, "slot" | "star_task_id">[];
+  const settings = (settingsResult.data ?? []) as Pick<RoutineSettingsRow, "slot" | "star_task_id" | "visible_from" | "visible_until">[];
 
   let starTasks: StarTaskOption[] | null = null;
   const trackId = (trackResult.data as { id: string } | null)?.id;
@@ -42,6 +43,7 @@ export default async function ChildRoutinesPage({ params }: PageProps<"/stars/ro
     starTasks = (data ?? []) as StarTaskOption[];
   }
 
+  const windows = resolveWindows(settings);
   const a = t.routines.admin;
   return (
     <>
@@ -63,6 +65,8 @@ export default async function ChildRoutinesPage({ params }: PageProps<"/stars/ro
           items={items.filter((i) => i.slot === slot).map(({ id, name }) => ({ id, name }))}
           starTaskId={settings.find((s) => s.slot === slot)?.star_task_id ?? null}
           starTasks={starTasks}
+          visibleFrom={clockOf(windows[slot].from)}
+          visibleUntil={clockOf(windows[slot].until)}
         />
       ))}
       </div>

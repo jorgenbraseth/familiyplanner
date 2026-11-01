@@ -1,6 +1,6 @@
 // `npm run shot` - screenshots of app pages from the mock stack (docs/MOCK.md).
 //   npm run shot -- --as Emma --path / --viewport phone --out .mock/shots/home.png [--full-page]
-//                   [--session-id <uuid>] [--screen] [--wait-for <selector>] [--scale 2]
+//                   [--session-id <uuid>] [--screen] [--now <ISO>] [--wait-for <selector>] [--click "<selector>;;<selector>"] [--scale 2]
 //   npm run shot -- --config shots.json     (array of the same options, or { "defaults": {...}, "shots": [...] })
 // Reuses a running stack (.mock/state.json) or starts one for the run and stops it afterwards.
 import fs from "node:fs";
@@ -9,7 +9,7 @@ import { createRequire } from "node:module";
 import { ROOT, runPsql } from "./pg.mjs";
 import { MOCK_DIR, readRunningStack, startStack, waitFor } from "./stack.mjs";
 import { authCookies, emailFor, mintSession, parseArgs } from "./session.mjs";
-import { resolveViewport, shotFileName } from "./shot-lib.mjs";
+import { clickList, resolveViewport, shotFileName } from "./shot-lib.mjs";
 
 const require = createRequire(import.meta.url);
 
@@ -23,7 +23,9 @@ function normalize(raw) {
     sessionId: raw.sessionId ?? null,
     screen: raw.screen === true || raw.screen === "true",
     waitFor: raw.waitFor ?? null,
+    click: clickList(raw.click),
     scale: raw.scale ? Number(raw.scale) : 1,
+    now: raw.now ? String(raw.now) : null,
     anonymous: raw.anonymous === true || raw.as === undefined,
   };
 }
@@ -81,6 +83,11 @@ try {
           }
           await context.addCookies(authCookies(state.gateway.url, session).map((c) => ({ ...c, url: app, httpOnly: false, sameSite: "Lax" })));
         }
+        // --now <ISO date-time>: the app's clock for this shot (a mock-only cookie, see src/lib/now.ts).
+        if (shot.now) {
+          if (Number.isNaN(new Date(shot.now).getTime())) throw new Error(`--now "${shot.now}" is not an ISO date-time`);
+          await context.addCookies([{ name: "mock_now", value: encodeURIComponent(shot.now), url: app }]);
+        }
         const page = await context.newPage();
         const problems = [];
         page.on("pageerror", (e) => problems.push(`pageerror: ${e.message}`));
@@ -92,6 +99,11 @@ try {
         // The Next.js dev indicator (round "N" button) is not part of the page.
         await page.addStyleTag({ content: "nextjs-portal, #__next-build-watcher { display: none !important; }" }).catch(() => {});
         if (shot.waitFor) await page.waitForSelector(shot.waitFor, { timeout: 30_000 });
+        // --click: Playwright selectors clicked in order (e.g. to open a dialog) before the shot.
+        for (const selector of shot.click) {
+          await page.click(selector, { timeout: 30_000 });
+          await page.waitForTimeout(800);
+        }
         await page.waitForTimeout(250);
         const finalPath = new URL(page.url()).pathname + new URL(page.url()).search;
         const file = path.resolve(shot.out ?? path.join(shot.outDir ?? path.join(MOCK_DIR, "shots"), shotFileName(shot)));

@@ -14,8 +14,8 @@ node scripts/mock/session.mjs --as Emma [--session-id <uuid>]     # prints the a
 
 `shot` reuses a running stack (`.mock/state.json`) or starts one for the run and stops it afterwards. Options: `--as`
 (seeded first name or email), `--path`, `--viewport` (`phone` 390x844, `tablet` 1180x820, `tablet-portrait` 820x1180,
-`desktop` 1440x900, or `WxH`), `--out`, `--full-page`, `--wait-for <selector>`, `--session-id`, `--screen` (registers
-the JWT's session in `screen_sessions` so the parent session acts as Familieskjerm), `--scale`. Output defaults to
+`desktop` 1440x900, or `WxH`), `--out`, `--full-page`, `--wait-for <selector>`, `--click <selector>[;;<selector>]` (clicked in order before the shot, e.g. to open a dialog), `--session-id`, `--screen` (registers
+the JWT's session in `screen_sessions` so the parent session acts as Familieskjerm), `--scale`, `--now <ISO date-time>` (the app's clock for the shot, e.g. `2026-10-28T07:30:00+01:00`: a `mock_now` cookie read by `getNow()` in `src/lib/now.ts`, honoured only in the mock stack; the seed's dates follow the real today, so pick a weekday of the current week for school views). Output defaults to
 `.mock/shots/`; logs are `.mock/gateway.log` (unsupported queries are logged there loudly) and `.mock/next.log`.
 
 ## Parts

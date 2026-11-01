@@ -150,7 +150,7 @@ begin
 
   -- Ukeplan items, current week: Emma ------------------------------------------------------------------------
   insert into public.plan_items (document_id, member_id, date, kind, subject, text, done, sort, audience, whole_week, starts_at, ends_at) values
-    (d_uk_emma, emma, monday,     'homework', 'Matte',  E'Gjør oppgave 3 og 4 i Multi:\n- Side 45\n- Side 46', (today > monday), 0, 'both', false, null, null),
+    (d_uk_emma, emma, monday,     'homework', 'Matte',  E'Gjør oppgave 3 og 4 i Multi:\n- Side 45\n- Side 46', false, 0, 'both', false, null, null),
     (d_uk_emma, emma, monday + 1, 'homework', 'Norsk',  E'Les kapittel 5 i lesebok\nSkriv tre setninger om det du leste', (today > monday + 1), 0, 'both', false, null, null),
     (d_uk_emma, emma, monday + 2, 'homework', 'Engelsk', E'Glosene på side 32:\n1. apple\n2. banana\n3. cherry\n4. lemon', false, 0, 'both', false, null, null),
     (d_uk_emma, emma, monday + 3, 'homework', 'Naturfag', 'Forbered en kort presentasjon om et dyr du liker', false, 0, 'both', false, null, null),
@@ -164,6 +164,7 @@ begin
     (d_uk_emma, emma, monday,     'homework', 'Lesing', 'Les 20 minutter hver dag og skriv det i leseloggen', false, 3, 'both', true, null, null);
   -- Last week's plan: unfinished homework that carries over
   insert into public.plan_items (document_id, member_id, date, kind, subject, text, done, sort, audience, whole_week) values
+    -- Last week's unfinished homework: must NOT show anywhere (carry-over is within the current ISO week only).
     (d_old_emma, emma, lastmon + 3, 'homework', 'Matte', 'Gjør oppgave 7 side 40', false, 0, 'both', false),
     (d_old_emma, emma, lastmon + 4, 'homework', 'Norsk', E'Skriv ferdig fortellingen:\n- Innledning\n- Hendelse\n- Avslutning', false, 0, 'both', false),
     (d_old_emma, emma, lastmon + 4, 'homework', 'Engelsk', 'Lær glosene', true, 1, 'both', false);
@@ -190,9 +191,10 @@ begin
     (d_rev_emma, emma, nextmon,     'message', null, E'Ukas tema:\n- Brøk\n- Høstens farger', false, 0, 'both', true, null, null);
 
   -- Assistant log (parents' log) ------------------------------------------------------------------------------
-  insert into public.assistant_log (member_id, question, answer, tools_used, created_at) values
-    (emma, 'Hva er leksene mine i dag?', 'I dag har du matte: gjør oppgave 3 og 4 i Multi.', array['homework_for_day'], now() - interval '2 hours'),
-    (jonas, 'Når slutter skolen i morgen?', 'Skolen slutter klokka 13:45.', array['school_hours'], now() - interval '1 day'),
-    (kari, 'Hvor mange stjerner har Emma?', 'Emma har 17 stjerner av 30.', array['star_progress'], now() - interval '3 days');
+  insert into public.assistant_log (member_id, asked_for, question, answer, tools_used, created_at) values
+    (kari, emma, 'Hva skal jeg ha med på skolen i morgen?', 'I morgen skal du ha med gymtøy og niste.', array['get_plan_items'], now() - interval '30 minutes'),
+    (emma, null, 'Hva er leksene mine i dag?', 'I dag har du matte: gjør oppgave 3 og 4 i Multi.', array['homework_for_day'], now() - interval '2 hours'),
+    (jonas, null, 'Når slutter skolen i morgen?', 'Skolen slutter klokka 13:45.', array['school_hours'], now() - interval '1 day'),
+    (kari, null, 'Hvor mange stjerner har Emma?', 'Emma har 17 stjerner av 30.', array['star_progress'], now() - interval '3 days');
 end
 $seed$;

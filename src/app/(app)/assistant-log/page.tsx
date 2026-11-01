@@ -7,6 +7,7 @@ import { clearAssistantLog } from "./actions";
 type LogRow = {
   id: string;
   member_id: string;
+  asked_for: string | null;
   question: string;
   answer: string;
   tools_used: string[] | null;
@@ -29,10 +30,10 @@ export default async function AssistantLogPage({ searchParams }: PageProps<"/ass
 
   let query = supabase
     .from("assistant_log")
-    .select("id, member_id, question, answer, tools_used, created_at")
+    .select("id, member_id, asked_for, question, answer, tools_used, created_at")
     .order("created_at", { ascending: false })
     .limit(100);
-  if (memberParam) query = query.eq("member_id", memberParam);
+  if (memberParam) query = query.or(`member_id.eq.${memberParam},asked_for.eq.${memberParam}`);
   const { data, error } = await query;
   if (error) throw new Error("Could not read the assistant log");
   const rows = data as LogRow[];
@@ -89,12 +90,15 @@ export default async function AssistantLogPage({ searchParams }: PageProps<"/ass
             <h2 className="text-xl font-extrabold capitalize">{formatDayHeading(parseDayKey(key))}</h2>
             <ul className="grid gap-4 lg:grid-cols-2 lg:items-start 2xl:grid-cols-3">
               {dayRows.map((row) => {
-                const member = byId.get(row.member_id);
+                // On the family screen the row belongs to the signed-in parent, but the person is who it was asked as.
+                const member = byId.get(row.asked_for ?? row.member_id);
                 return (
                   <li key={row.id} className="space-y-2 rounded-3xl bg-chip p-4">
                     <p className="flex items-center gap-2 text-sm text-muted">
                       <span aria-hidden className="size-3 shrink-0 rounded-full" style={{ backgroundColor: member?.colour ?? "#999999" }} />
-                      <span className="font-bold text-ink">{member?.name ?? l.unknownMember}</span>
+                      <span className="font-bold text-ink">
+                        {row.asked_for ? l.viaScreen(member?.name ?? l.unknownMember) : (member?.name ?? l.unknownMember)}
+                      </span>
                       <span>{formatTime(new Date(row.created_at))}</span>
                     </p>
                     <p className="font-bold">

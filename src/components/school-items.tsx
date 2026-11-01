@@ -1,6 +1,7 @@
 import { t } from "@/lib/i18n";
 import type { PlanItemRow } from "@/lib/plan";
 import type { MyDayEntry } from "@/lib/plan-view";
+import { nowSpot } from "@/lib/start-visibility";
 import { SchoolDoneCheckbox } from "./school-done-checkbox";
 import { StructuredText } from "./structured-text";
 
@@ -53,10 +54,31 @@ const TIME_COLUMN = "w-14 shrink-0 text-right text-sm font-bold tabular-nums tex
  * inside school hours, tinted like a pause). Strips only show their own time when they have no markers
  * (overlapping or all-day entries).
  */
-export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
+export function MyDayList({ entries, now }: { entries: MyDayEntry[]; now?: { minutes: number; time: string } }) {
   const rows: React.ReactNode[] = [];
   let time: string | null = null;
+  const spot = now ? nowSpot(entries, now.minutes) : null;
+  const nowLabel = now ? t.start.nowAt(now.time) : "";
+  // The marker: a line of its own between rows, or (inside) a line across the card/gap that is going on right now.
+  const nowRow = (
+    <li key="now" aria-label={nowLabel} className="flex h-6 items-center gap-3">
+      <span className={`${TIME_COLUMN} font-extrabold text-danger`}>{t.start.now}</span>
+      <span aria-hidden className="h-0.5 flex-1 rounded-full bg-danger" />
+    </li>
+  );
+  const nowInside = (i: number) =>
+    spot && "inside" in spot && spot.inside === i ? (
+      <>
+        <span className="sr-only">{nowLabel}</span>
+        {/* Only across the time column up to the card's edge, so the card's text is never struck through. */}
+        <span aria-hidden className="pointer-events-none absolute left-0 flex w-[4.75rem] -translate-y-1/2 items-center" style={{ top: `${Math.round(spot.fraction * 100)}%` }}>
+          <span className="h-0.5 flex-1 bg-danger" />
+          <span className="size-3.5 shrink-0 rounded-full bg-danger" />
+        </span>
+      </>
+    ) : null;
   entries.forEach((entry, i) => {
+    if (spot && "before" in spot && spot.before === i) rows.push(nowRow);
     if (entry.type === "divider") {
       const next = entries[i + 1];
       if (next && next.type !== "divider" && next.type !== "gap") {
@@ -73,7 +95,7 @@ export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
     if (entry.type === "gap") {
       // Fixed height whatever the length of the break: it only marks that nothing happens.
       rows.push(
-        <li key={`g${i}`} className="flex h-8 items-center gap-3">
+        <li key={`g${i}`} className="relative flex h-8 items-center gap-3">
           <span className={TIME_COLUMN} aria-hidden />
           <span
             className={`flex h-full min-w-0 flex-1 items-center justify-center rounded-2xl text-xs font-bold ${
@@ -82,6 +104,7 @@ export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
           >
             {entry.school ? t.start.breakLabel : null}
           </span>
+          {nowInside(i)}
         </li>,
       );
       return;
@@ -91,19 +114,20 @@ export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
     if (entry.type === "event") {
       const { event } = entry;
       rows.push(
-        <li key={event.id} className="flex items-center gap-3">
+        <li key={event.id} className="relative flex items-center gap-3">
           <span className={TIME_COLUMN}>{left}</span>
           <div className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-2xl bg-event-soft px-4 py-2 text-lg text-on-event-soft">
             {entry.showTime && <span className="shrink-0 text-base font-extrabold">{event.timeLabel}</span>}
             <span className="min-w-0 flex-1 break-words font-extrabold">{event.title}</span>
           </div>
+          {nowInside(i)}
         </li>,
       );
       return;
     }
     const pause = entry.type === "pause";
     rows.push(
-      <li key={entry.line.id} className="flex items-center gap-3">
+      <li key={entry.line.id} className="relative flex items-center gap-3">
         <span className={TIME_COLUMN}>{left}</span>
         <div
           className={`flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-2xl px-4 py-2 text-lg ${
@@ -113,9 +137,11 @@ export function MyDayList({ entries }: { entries: MyDayEntry[] }) {
           <span className="min-w-0 flex-1 break-words font-extrabold">{entry.line.title}</span>
           {entry.showTime && entry.line.time && <span className="shrink-0 text-base font-extrabold">{entry.line.time}</span>}
         </div>
+        {nowInside(i)}
       </li>,
     );
   });
+  if (spot && "before" in spot && spot.before === entries.length) rows.push(nowRow);
   return <ol className="space-y-1.5">{rows}</ol>;
 }
 

@@ -13,7 +13,6 @@ import { routineCollapsed, type RoutineSlot } from "@/lib/routines";
  */
 export function RoutineBar({
   slot,
-  upcoming,
   items,
   initialChecked,
   hasStarTask,
@@ -21,7 +20,6 @@ export function RoutineBar({
   tint,
 }: {
   slot: RoutineSlot;
-  upcoming: boolean;
   items: { id: string; name: string }[];
   initialChecked: string[];
   /** The slot gives a star (a task is set and the child has an active track). */
@@ -75,7 +73,7 @@ export function RoutineBar({
   return (
     <section aria-label={t.routines[slot]} className="space-y-3">
       <div
-        id="routine-list"
+        id={`routine-list-${slot}`}
         aria-hidden={collapsed}
         inert={collapsed}
         className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${
@@ -85,19 +83,14 @@ export function RoutineBar({
         <div className="min-h-0 overflow-hidden">
           <div className={`space-y-4 rounded-3xl p-5 ${tint ? "" : "bg-chip"}`} style={tint ? tintStyle(tint) : undefined}>
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-              <h2 id="routine-title" className="text-3xl font-bold">
+              <h2 id={`routine-title-${slot}`} className="text-3xl font-bold">
                 {t.routines[slot]}
-                {upcoming && (
-                  <span className="ml-2 rounded-full bg-surface/80 px-2.5 py-0.5 align-middle text-sm font-bold text-chip-ink">
-                    {t.routines.tonight}
-                  </span>
-                )}
               </h2>
               {complete && (
                 <button
                   type="button"
                   aria-expanded={!collapsed}
-                  aria-controls="routine-list"
+                  aria-controls={`routine-list-${slot}`}
                   onClick={() => setExpanded(!expanded)}
                   className="btn btn-text text-base"
                 >
@@ -180,7 +173,7 @@ export function RoutineBar({
           <button
             type="button"
             aria-expanded={false}
-            aria-controls="routine-list"
+            aria-controls={`routine-list-${slot}`}
             onClick={() => setExpanded(true)}
             className="btn btn-text text-base"
           >
