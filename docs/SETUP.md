@@ -113,6 +113,8 @@ Everyone else can then be added from the app's members page.
 
 **Familieskjerm (shared tablet):** there is no separate account. On the tablet a parent signs in with their own Google account and chooses **Logg inn som familieskjerm** (instead of *Logg inn*). That session opens `/skjerm`, where everyone picks their own name; it has only the screen's rights in the database (children can tick routines and homework and ask for stars, but the stars stay pending until a parent approves them on their own phone; it can never approve, give stars or open the parent pages). The parent's phone is unaffected. The tablet is then locked as a family screen (a cookie plus a row in `screen_devices`): after "Logg ut" the login page there only offers the family-screen sign-in, so children cannot sign in as the parent. A parent frees the tablet from their own phone under **Profil → Familieskjermer → Frigi** (this does not sign the screen out). Needs the Supabase JWT to carry `session_id` (standard in current Supabase Auth).
 
+The app keeps the display on while `/skjerm` is open (Screen Wake Lock; needs https, works in Chrome/Edge/Safari 16.4+; on iOS the first tap enables it). For a wall/kitchen tablet also set the OS auto-lock to "never" or use the tablet's guided-access/kiosk mode, and keep it on the charger.
+
 ## 8. Database migrations (GitHub Actions)
 
 The workflow `.github/workflows/supabase.yml` ("Supabase migrations") runs `supabase db push` when `supabase/migrations/**` changes on `main`. It never runs the seed. Add three repo secrets (GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**):

@@ -399,6 +399,7 @@ export const t = {
   screen: {
     title: "Familieskjerm",
     switchPerson: "Bytt person",
+    keepAwakeNote: "Skjermen kan slå seg av. Slå av automatisk skjermlås i nettbrettets innstillinger.",
     people: "Familien",
     thisIs: (name: string) => `Dette er ${genitive(name)} side`,
     // The big assistant button (Spør meg + whose day), always visible on the screen.
