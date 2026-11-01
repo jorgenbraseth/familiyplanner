@@ -20,9 +20,6 @@
   --color-on-primary: var(--on-primary);
   --color-accent: var(--accent);
   --color-on-accent: var(--on-accent);
-  --color-star-line: var(--star-line);
-  --color-star-empty: var(--star-empty);
-  --color-star-empty-line: var(--star-empty-line);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-on-danger-soft: var(--on-danger-soft);

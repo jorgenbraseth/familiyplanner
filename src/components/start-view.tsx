@@ -104,7 +104,7 @@ export async function StartView({
   const gridLabel = t.start.starsGridLabel(grid.filled, grid.total, rewardName);
   const leftText = stars ? starsLeftText(stars.progress.approved, nextMilestone) : null;
   const gridEl = (
-    <div role="img" aria-label={gridLabel} className="grid grid-cols-10 gap-x-1 gap-y-2 @md:gap-x-2">
+    <div role="img" aria-label={gridLabel} className="grid grid-cols-10 gap-x-0.5 gap-y-1 @md:gap-x-2 @md:gap-y-2">
       {Array.from({ length: grid.total }, (_, i) => (
         <StarIcon key={i} filled={i < grid.filled} className="aspect-square w-full" />
       ))}
