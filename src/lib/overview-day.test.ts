@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { carriedItems } from "./homework-carry";
-import { overviewForDay } from "./overview-day";
+import { overviewForDay, weekOffsetFor } from "./overview-day";
 import type { PlanItemRow } from "./plan";
 import { todayView } from "./plan-view";
 import type { CalendarDate } from "./dates";
@@ -128,5 +128,14 @@ describe("overviewForDay", () => {
     expect(none.homework.items).toEqual([]);
     expect(none.homework.show).toBe(true);
     expect(none.homework.otherDay).toBe(true);
+  });
+});
+
+describe("weekOffsetFor", () => {
+  it("is 0 within the week, including Sunday, and counts whole weeks", () => {
+    expect(weekOffsetFor(d("2026-10-28"), d("2026-10-26"))).toBe(0);
+    expect(weekOffsetFor(d("2026-10-28"), d("2026-11-01"))).toBe(0);
+    expect(weekOffsetFor(d("2026-10-30"), d("2026-11-02"))).toBe(1);
+    expect(weekOffsetFor(d("2026-10-28"), d("2026-10-25"))).toBe(-1);
   });
 });

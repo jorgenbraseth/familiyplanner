@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useSyncExternalStore, type CSSProperties } from "react";
 import { MemberAvatar } from "@/components/member-avatar";
 import { PendingContent } from "@/components/nav-pending";
 import { buildTracksFromEntries } from "@/lib/parent-day";
@@ -40,12 +40,13 @@ const readSaved = (): string => {
 export function ParentDayCard({
   day,
   isToday,
-  switcher,
+  label,
   avatars = {},
 }: {
   day: ParentDay;
   isToday: boolean;
-  switcher: ReactNode;
+  /** The selected day's label ("I morgen", "fredag 30. oktober"), used in the heading when it is not today. */
+  label: string;
   avatars?: Record<string, string>;
 }) {
   // Everyone is visible on the server and first paint; the saved selection is read after hydration.
@@ -92,10 +93,9 @@ export function ParentDayCard({
 
   return (
     <section className="space-y-3" aria-labelledby="day-title">
-      <div className="flex flex-wrap items-center justify-between gap-x-4">
-        <h2 id="day-title" className="text-2xl font-bold">{isToday ? t.parentDay.title : t.parentDay.titleOtherDay}</h2>
-        {switcher}
-      </div>
+      <h2 id="day-title" className="flex min-h-11 items-center text-2xl font-bold first-letter:uppercase">
+        {isToday ? t.parentDay.title : t.parentDay.titleOtherDay(label)}
+      </h2>
       <PendingContent className="space-y-3">
       {day.failedNames.length > 0 && <p className="text-sm text-muted">{t.parentDay.failed(day.failedNames.join(", "))}</p>}
       {day.members.length > 1 && (

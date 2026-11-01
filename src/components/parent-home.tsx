@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PendingContent } from "@/components/nav-pending";
 import { decideStar } from "@/app/(app)/stars/actions";
 import { MemberAvatar } from "@/components/member-avatar";
 import { ParentGiveStars } from "@/components/parent-give-stars";
@@ -69,6 +70,7 @@ export function ParentHomeTop({ data, avatars = {} }: { data: ParentHome; avatar
 
       <section aria-labelledby="end-title">
         <h2 id="end-title" className={`${sectionTitle} flex min-h-11 items-center`}>{t.parentHome.endTitle}</h2>
+        <PendingContent>
         <ul className="mt-1 flex flex-wrap gap-3">
           {children.map(({ child, schoolEnd }) => (
             <li key={child.id} className="min-w-32 flex-1 rounded-3xl px-5 py-4" style={tintStyle(child.colour)}>
@@ -80,12 +82,13 @@ export function ParentHomeTop({ data, avatars = {} }: { data: ParentHome; avatar
                 <p className="font-display text-4xl font-bold leading-tight tabular-nums">{schoolEnd.time}</p>
               ) : (
                 <p className="mt-1 text-lg font-bold text-muted">
-                  {schoolEnd.kind === "unknown" ? t.parentHome.endUnknown : t.parentHome.endNone}
+                  {schoolEnd.kind === "unknown" ? t.parentHome.endUnknown : data.isToday ? t.parentHome.endNone : t.parentHome.endNoneOtherDay}
                 </p>
               )}
             </li>
           ))}
         </ul>
+        </PendingContent>
       </section>
 
       <section aria-labelledby="give-title">
@@ -125,7 +128,8 @@ export function ParentHomeCards({ data, avatars = {} }: { data: ParentHome; avat
   return (
     <div className="grid gap-12 lg:grid-cols-2 lg:items-start 2xl:grid-cols-3">
       <section aria-labelledby="homework-title" className="space-y-4">
-        <h2 id="homework-title" className={sectionTitle}>{t.parentHome.homeworkTitle}</h2>
+        <h2 id="homework-title" className={sectionTitle}>{data.isToday ? t.parentHome.homeworkTitle : t.parentHome.homeworkTitleOtherDay}</h2>
+        <PendingContent>
         <ul className="space-y-6">
           {children.map(({ child, homework, carried, homeworkTomorrow, nextSchoolDay }) => (
             <li key={child.id} className="space-y-1">
@@ -160,6 +164,7 @@ export function ParentHomeCards({ data, avatars = {} }: { data: ParentHome; avat
             </li>
           ))}
         </ul>
+        </PendingContent>
       </section>
 
       <section aria-labelledby="notes-title" className="space-y-4">

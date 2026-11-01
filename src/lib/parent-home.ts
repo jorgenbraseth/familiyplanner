@@ -1,5 +1,6 @@
 import "server-only";
-import { dateInTimeZone } from "./dates";
+import { dateInTimeZone, dayKey } from "./dates";
+import { overviewForDay, weekOffsetFor } from "./overview-day";
 import type { CarriedItem } from "./homework-carry";
 import type { Member } from "./members";
 import { MEMBER_COLUMNS } from "./members";
@@ -10,7 +11,6 @@ import { loadParentNoteItems, loadSchoolWeek } from "./school";
 import { loadAllChildStars, type ChildStars } from "./star-data";
 import type { StarRow } from "./stars";
 import { createClient } from "./supabase/server";
-import { isTomorrow } from "./start-view";
 import type { CalendarDate, IsoWeek } from "./dates";
 
 export type ParentHomeChild = {
@@ -19,9 +19,9 @@ export type ParentHomeChild = {
   stars: ChildStars | null;
   /** Pending star requests of this child. */
   pending: StarRow[];
-  /** Homework due on the next school day, from published documents only (as the child sees it). */
+  /** Homework due on the next school day after the selected day, from published documents only (as the child sees it). */
   homework: PlanItemRow[];
-  /** Unfinished homework from earlier days with its label ("Fra mandag"), oldest first. */
+  /** Unfinished homework from earlier days with its label ("Fra mandag"), oldest first (today only). */
   carried: CarriedItem[];
   nextSchoolDay: CalendarDate;
   homeworkTomorrow: boolean;
@@ -31,12 +31,19 @@ export type ParentHomeChild = {
 };
 
 export type ParentHome = {
+  /** The day the day-dependent parts (school end, homework) are about. */
+  selected: CalendarDate;
+  /** The selected day is today. */
+  isToday: boolean;
   children: ParentHomeChild[];
   uploadWeek: IsoWeek;
 };
 
 /** Everything the parents' home page shows about the children. Uses the user-scoped client only (RLS applies). */
-export async function loadParentHome(now = new Date()): Promise<ParentHome> {
+export async function loadParentHome(now = new Date(), selectedDay?: CalendarDate): Promise<ParentHome> {
+  const today = dateInTimeZone(now);
+  const selected = selectedDay ?? today;
+  const dayOffset = weekOffsetFor(today, selected);
   const supabase = await createClient();
   const { data, error } = await supabase.from("members").select(MEMBER_COLUMNS).eq("role", "child").order("created_at");
   if (error) throw new Error("Could not read members");
@@ -45,20 +52,36 @@ export async function loadParentHome(now = new Date()): Promise<ParentHome> {
   const starRows = await loadAllChildStars(kids);
   const children = await Promise.all(
     starRows.map(async ({ child, active }): Promise<ParentHomeChild> => {
-      const [school, noteItems] = await Promise.all([loadSchoolWeek(child.id, 0, now), loadParentNoteItems(child.id, now)]);
-      const view = todayView(school.items, school.today, school.timetable, school.hoursOverrides, "parent");
+      const [school, selSchool, noteItems] = await Promise.all([
+        loadSchoolWeek(child.id, 0, now),
+        dayOffset === 0 ? null : loadSchoolWeek(child.id, dayOffset, now),
+        loadParentNoteItems(child.id, now),
+      ]);
+      const daySchool = selSchool ?? school;
+      const view = todayView(daySchool.items, selected, daySchool.timetable, daySchool.hoursOverrides, "parent");
+      // The same rules as the kids' overview: today = carried over + due; another day = only what is due the next school day.
+      const { homework } = overviewForDay({
+        today,
+        selected,
+        dayActive: false,
+        visibleRoutineCount: 0,
+        carriedOver: school.carriedOver,
+        homeworkDue: view.homeworkDue,
+        weekHomework: view.weekHomework,
+        nextSchoolDay: view.nextSchoolDay,
+      });
       return {
         child,
         stars: active,
         pending: active?.stars.filter((s) => s.status === "pending").reverse() ?? [],
-        homework: view.homeworkDue,
-        carried: school.carriedOver,
+        homework: homework.items,
+        carried: homework.carried,
         nextSchoolDay: view.nextSchoolDay,
-        homeworkTomorrow: isTomorrow(school.today, view.nextSchoolDay),
+        homeworkTomorrow: homework.tomorrow,
         schoolEnd: schoolEndSummary(view.hours, view.periods.length),
         notes: parentNoteWeeks(noteItems),
       };
     }),
   );
-  return { children, uploadWeek: uploadWeekFor(dateInTimeZone(now)) };
+  return { selected, isToday: dayKey(selected) === dayKey(today), children, uploadWeek: uploadWeekFor(today) };
 }

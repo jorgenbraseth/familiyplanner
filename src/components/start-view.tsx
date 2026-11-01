@@ -12,7 +12,7 @@ import { StartSchool } from "@/components/start-school";
 import { StarIcon } from "@/components/star-icon";
 import { StartStarSheet } from "@/components/start-star-sheet";
 import { loadAvatarUrls } from "@/lib/avatar-urls";
-import { addDays, dateInTimeZone, dayKey, formatDayHeading, formatTime, daysBetween, mondayOf, parseDayParam } from "@/lib/dates";
+import { addDays, dateInTimeZone, dayKey, formatDayHeading, formatTime, parseDayParam } from "@/lib/dates";
 import { dayHref } from "@/lib/day-nav";
 import { loadWeek } from "@/lib/calendar/view";
 import { t } from "@/lib/i18n";
@@ -23,7 +23,7 @@ import { wallClockMinutes, type RoutineSlot } from "@/lib/routines";
 import { loadSchoolWeek } from "@/lib/school";
 import { loadChildStars } from "@/lib/star-data";
 import { rewardTextAt } from "@/lib/stars";
-import { overviewForDay } from "@/lib/overview-day";
+import { overviewForDay, weekOffsetFor } from "@/lib/overview-day";
 import { slotView, starGrid, starsLeftText } from "@/lib/start-view";
 import { dayStillActive, inWindow, visibleRoutineSlots } from "@/lib/start-visibility";
 import { getNow } from "@/lib/now";
@@ -46,7 +46,7 @@ export async function StartView({
   const today = dateInTimeZone(now);
   const selected = parseDayParam(dag, today);
   // Whole weeks between this week and the selected day's week (0 unless the day is in another week).
-  const dayOffset = Math.round(daysBetween(mondayOf(today), mondayOf(selected)) / 7);
+  const dayOffset = weekOffsetFor(today, selected);
   const [school, routines, stars, week, selSchool, selWeek, avatars] = await Promise.all([
     loadSchoolWeek(member.id, 0, now),
     loadRoutineToday(member.id, now),

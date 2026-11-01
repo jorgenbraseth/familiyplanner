@@ -424,7 +424,7 @@ export const t = {
   // Parents' home page (replaces the parents' Meg page).
   parentDay: {
     title: "Dagen i dag",
-    titleOtherDay: "Dagen",
+    titleOtherDay: (label: string) => `Dagen ${label.toLocaleLowerCase("nb-NO")}`,
     school: "Skole",
     empty: "Ingenting på programmet i dag.",
     emptyOtherDay: "Ingenting på programmet denne dagen.",
@@ -452,11 +452,13 @@ export const t = {
     uploadFor: (name: string, week: number) => `${name} · uke ${week}`,
     uploadLink: (name: string, week: number) => `Last opp for ${name}, uke ${week} ›`,
     homeworkTitle: "Lekser i dag",
+    homeworkTitleOtherDay: "Lekser",
     homeworkNone: "Ingen lekser",
     homeworkDone: "Ferdig",
     homeworkNotDone: "Ikke ferdig",
     endTitle: "Skolen slutter",
     endNone: "Ingen skole i dag",
+    endNoneOtherDay: "Ingen skole",
     endUnknown: "Ukjent",
     notesTitle: "Beskjeder til foreldre",
     notesNone: "Ingen beskjeder",
