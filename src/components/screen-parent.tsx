@@ -1,11 +1,9 @@
 import { DayList, type MemberDot } from "@/components/day-list";
-import type { WeekView } from "@/lib/calendar/view";
+import type { DayView } from "@/lib/calendar/view";
 import { t } from "@/lib/i18n";
 
-/** A parent's own things on the family screen: the calendar today and the rest of the week, read-only. */
-export function ScreenParentView({ week, me, pending }: { week: WeekView; me: MemberDot; pending: number }) {
-  const today = week.days.filter((d) => d.isToday);
-  const rest = week.days.filter((d) => d.key > week.todayKey);
+/** A parent's own things on the family screen: the calendar today and the next days, read-only. */
+export function ScreenParentView({ today, upcoming, me, pending }: { today: DayView[]; upcoming: DayView[]; me: MemberDot; pending: number }) {
   return (
     <div className="space-y-12">
       {pending > 0 && <p className="rounded-3xl bg-warning-soft p-5 text-lg font-bold text-on-warning-soft">{t.screen.parentPending(pending)}</p>}
@@ -17,12 +15,12 @@ export function ScreenParentView({ week, me, pending }: { week: WeekView; me: Me
           <DayList days={today} members={[me]} />
         )}
       </section>
-      <section className="space-y-4" aria-labelledby="screen-rest">
-        <h2 id="screen-rest" className="text-3xl font-bold">{t.screen.restOfWeek}</h2>
-        {rest.every((d) => d.events.length === 0) ? (
-          <p className="text-lg text-muted">{t.screen.nothingRestOfWeek}</p>
+      <section className="space-y-4" aria-labelledby="screen-upcoming">
+        <h2 id="screen-upcoming" className="text-3xl font-bold">{t.screen.nextDays}</h2>
+        {upcoming.every((d) => d.events.length === 0) ? (
+          <p className="text-lg text-muted">{t.screen.nothingNextDays}</p>
         ) : (
-          <DayList days={rest.filter((d) => d.events.length > 0)} members={[me]} />
+          <DayList days={upcoming.filter((d) => d.events.length > 0)} members={[me]} />
         )}
       </section>
     </div>

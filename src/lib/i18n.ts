@@ -399,9 +399,9 @@ export const t = {
         ? "1 stjerne venter på godkjenning – godkjennes på mobilen"
         : `${n} stjerner venter på godkjenning – godkjennes på mobilen`,
     today: "I dag",
-    restOfWeek: "Resten av uken",
+    nextDays: "De neste dagene",
     nothingToday: "Ingenting på kalenderen i dag.",
-    nothingRestOfWeek: "Ingenting resten av uken.",
+    nothingNextDays: "Ingenting de neste dagene.",
     nobody: "Det er ingen i familien å vise ennå.",
     noCalendar: "Ingen kalender er koblet til.",
   },

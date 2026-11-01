@@ -14,7 +14,7 @@ import { textOnColour, tintStyle } from "@/lib/colour";
 import { dateInTimeZone, formatDayHeading } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { MEMBER_COLUMNS, type Member } from "@/lib/members";
-import { pickPerson, screenPeople } from "@/lib/screen";
+import { pickPerson, screenPeople, upcomingDays } from "@/lib/screen";
 import { loadPendingCount } from "@/lib/star-data";
 import { createClient } from "@/lib/supabase/server";
 import { parseThemeId } from "@/lib/themes";
@@ -39,9 +39,10 @@ export default async function ScreenPage({ searchParams }: PageProps<"/skjerm">)
   const today = dateInTimeZone(now);
   const avatars = await loadAvatarUrls(people);
   const isChild = person.role === "child";
-  const [week, pending] = isChild
+  const [weeks, pending] = isChild
     ? [null, 0]
-    : await Promise.all([loadWeek([person], 0, now), loadPendingCount()]);
+    : await Promise.all([Promise.all([loadWeek([person], 0, now), loadWeek([person], 1, now)]), loadPendingCount()]);
+  const failedNames = weeks ? [...new Set(weeks.flatMap((w) => w.failedNames))] : [];
 
   return (
     <NavPendingScope className="flex h-dvh flex-col min-[640px]:landscape:flex-row">
@@ -78,10 +79,11 @@ export default async function ScreenPage({ searchParams }: PageProps<"/skjerm">)
           ) : (
             <>
               {person.calendar_ids.length === 0 && <Notice>{t.screen.noCalendar}</Notice>}
-              {week && week.failedNames.length > 0 && <Notice>{t.calendar.failed(week.failedNames.join(", "))}</Notice>}
-              {week && (
+              {failedNames.length > 0 && <Notice>{t.calendar.failed(failedNames.join(", "))}</Notice>}
+              {weeks && (
                 <ScreenParentView
-                  week={week}
+                  today={weeks[0].days.filter((d) => d.isToday)}
+                  upcoming={upcomingDays([weeks[0].days, weeks[1].days], weeks[0].todayKey)}
                   me={{ id: person.id, name: person.name, colour: person.colour, avatarUrl: avatars[person.id] ?? null }}
                   pending={pending}
                 />
