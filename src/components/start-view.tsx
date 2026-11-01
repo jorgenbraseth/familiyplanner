@@ -23,7 +23,7 @@ import { loadSchoolWeek } from "@/lib/school";
 import { loadChildStars } from "@/lib/star-data";
 import { rewardTextAt } from "@/lib/stars";
 import { overviewForDay } from "@/lib/overview-day";
-import { slotView } from "@/lib/start-view";
+import { slotView, starsLeftText } from "@/lib/start-view";
 import { dayStillActive, inWindow, visibleRoutineSlots } from "@/lib/start-visibility";
 import { getNow } from "@/lib/now";
 
@@ -91,12 +91,12 @@ export async function StartView({
   const homework = overview.homework;
   const hasStarTask = (slot: RoutineSlot) => routines.starTaskIds[slot] !== null && stars !== null;
   const allClear = overview.allClear;
-  const pendingRequests = stars ? stars.stars.filter((s) => s.status === "pending").length : 0;
   const dayBase = screen ? { path: "/skjerm", params: { person: member.id } } : undefined;
   const nextReward =
     stars && stars.progress.nextMilestone !== null
       ? rewardTextAt(stars.track, stars.progress.nextMilestone) || t.stars.rewardFallback
       : null;
+  const starsLine = stars ? starsLeftText(stars.progress.approved, stars.progress.nextMilestone, nextReward) : null;
   const starPercent = stars && stars.progress.goal > 0 ? Math.min(100, Math.round((stars.progress.approved / stars.progress.goal) * 100)) : 0;
 
   // The family screen already has the scope and the dimming around the page; the kids' page gets its own.
@@ -156,9 +156,7 @@ export async function StartView({
                 </Link>
               )}
               <p className="text-lg font-bold text-ink">
-                {nextReward !== null
-                  ? t.start.starsToward(stars.progress.approved, stars.progress.goal, nextReward)
-                  : t.start.stars(stars.progress.approved, stars.progress.goal)}
+                {starsLine ?? t.start.stars(stars.progress.approved, stars.progress.goal)}
               </p>
               <div
                 role="progressbar"
@@ -170,9 +168,6 @@ export async function StartView({
               >
                 <div className="h-full rounded-full bg-accent" style={{ width: `${starPercent}%` }} />
               </div>
-              {screen && pendingRequests > 0 && (
-                <p className="text-base font-bold text-ink">{t.screen.pendingStars(pendingRequests)}</p>
-              )}
               <div className="pt-2">
                 <StartStarSheet tasks={stars.tasks} previewing={previewing} memberId={screen ? member.id : undefined} />
               </div>

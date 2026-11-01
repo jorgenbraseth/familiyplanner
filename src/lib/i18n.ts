@@ -365,7 +365,7 @@ export const t = {
     stars: (approved: number, goal: number) => `${approved} av ${goal} stjerner`,
     starsLink: "Se stjernene dine",
     starsWord: "stjerner",
-    starsToward: (approved: number, goal: number, reward: string) => `${approved} av ${goal} til ${reward}`,
+    starsLeft: (left: number, reward: string) => `${left} ${left === 1 ? "stjerne" : "stjerner"} igjen til ${reward}`,
     registerStar: "Be om stjerne",
     registerStarTitle: "Registrer stjerne",
     close: "Lukk",
@@ -408,7 +408,6 @@ export const t = {
     askContext: (name: string) => `Spør om ${genitive(name)} dag`,
     askLabel: (name: string) => `Spør assistenten som ${name}`,
     requestSent: "Sendt! En voksen må godkjenne på mobilen sin.",
-    pendingStars: (n: number) => (n === 1 ? "1 stjerne venter på godkjenning" : `${n} stjerner venter på godkjenning`),
     parentPending: (n: number) =>
       n === 1
         ? "1 stjerne venter på godkjenning – godkjennes på mobilen"

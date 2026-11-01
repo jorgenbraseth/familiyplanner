@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RoutineItemRow } from "./routines";
-import { isTomorrow, slotView } from "./start-view";
+import { isTomorrow, slotView, starsLeft, starsLeftText } from "./start-view";
 
 const item = (id: string, slot: "morning" | "evening", sort: number, name = id): RoutineItemRow => ({
   id,
@@ -36,5 +36,20 @@ describe("isTomorrow", () => {
   it("is true for the next day and false across a weekend", () => {
     expect(isTomorrow({ year: 2026, month: 10, day: 21 }, { year: 2026, month: 10, day: 22 })).toBe(true);
     expect(isTomorrow({ year: 2026, month: 10, day: 23 }, { year: 2026, month: 10, day: 26 })).toBe(false);
+  });
+});
+
+describe("starsLeftText", () => {
+  it("counts the stars left to the next reward", () => {
+    expect(starsLeft(16, 30)).toBe(14);
+    expect(starsLeftText(27, 30, "Velge kveldsmat")).toBe("3 stjerner igjen til Velge kveldsmat");
+  });
+  it("uses the singular for one star", () => {
+    expect(starsLeftText(29, 30, "Velge kveldsmat")).toBe("1 stjerne igjen til Velge kveldsmat");
+  });
+  it("is null when there is no next reward or nothing is left", () => {
+    expect(starsLeft(30, null)).toBe(0);
+    expect(starsLeftText(30, null, null)).toBeNull();
+    expect(starsLeftText(30, 30, "X")).toBeNull();
   });
 });

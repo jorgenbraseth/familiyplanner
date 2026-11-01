@@ -1,5 +1,6 @@
 // Pure helpers for the children's start page. No database or server access here.
 
+import { t } from "./i18n";
 import { addDays, dayKey, type CalendarDate } from "./dates";
 import { routineProgress, type RoutineCheckRow, type RoutineItemRow, type RoutineSlot } from "./routines";
 
@@ -28,4 +29,16 @@ export function slotView(
 /** Whether the next school day is tomorrow (otherwise the heading names the weekday, e.g. "mandag"). */
 export function isTomorrow(today: CalendarDate, nextSchoolDay: CalendarDate): boolean {
   return dayKey(nextSchoolDay) === dayKey(addDays(today, 1));
+}
+
+/** Stars left to the next reward (0 when there is none or it is already reached). */
+export function starsLeft(approved: number, nextMilestone: number | null): number {
+  return nextMilestone === null ? 0 : Math.max(0, nextMilestone - approved);
+}
+
+/** "3 stjerner igjen til Velge kveldsmat"; null when there is no next reward (goal reached). */
+export function starsLeftText(approved: number, nextMilestone: number | null, reward: string | null): string | null {
+  if (nextMilestone === null || reward === null) return null;
+  const left = starsLeft(approved, nextMilestone);
+  return left > 0 ? t.start.starsLeft(left, reward) : null;
 }
