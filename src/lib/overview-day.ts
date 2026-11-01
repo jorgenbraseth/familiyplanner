@@ -1,7 +1,7 @@
 // Which sections of the kids' overview (start page and Familieskjerm) show for the selected day, and which homework.
 // Pure helpers, no database or server access.
 
-import { dayKey, type CalendarDate } from "./dates";
+import { daysBetween, dayKey, mondayOf, type CalendarDate } from "./dates";
 import type { CarriedItem } from "./homework-carry";
 import type { PlanItemRow } from "./plan";
 import { isTomorrow } from "./start-view";
@@ -83,4 +83,9 @@ export function overviewForDay(input: {
     },
     allClear: input.visibleRoutineCount === 0 && !input.dayActive && !show,
   };
+}
+
+/** Whole weeks between this week and the selected day's week (0 unless the day is in another week). */
+export function weekOffsetFor(today: CalendarDate, selected: CalendarDate): number {
+  return Math.round(daysBetween(mondayOf(today), mondayOf(selected)) / 7);
 }
