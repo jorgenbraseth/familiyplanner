@@ -17,3 +17,13 @@ describe("hexToRgba", () => {
     expect(tintStyle("#f7801f")).toEqual({ backgroundColor: "rgba(247, 128, 31, 0.12)" });
   });
 });
+
+describe("textOnColour", () => {
+  it("uses white on dark and black on light colours", async () => {
+    const { textOnColour } = await import("./colour");
+    expect(textOnColour("#1e3a8a")).toBe("text-white");
+    expect(textOnColour("#fde047")).toBe("text-black");
+    expect(textOnColour("#ffffff")).toBe("text-black");
+    expect(textOnColour("#000000")).toBe("text-white");
+  });
+});

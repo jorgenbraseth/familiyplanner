@@ -2,6 +2,7 @@ import "server-only";
 import { dateInTimeZone, dayKey } from "./dates";
 import type { RoutineCheckRow, RoutineItemRow, RoutineSlot } from "./routines";
 import { createClient } from "./supabase/server";
+import { resolveWindows, type RoutineWindows } from "./start-visibility";
 
 export type RoutineToday = {
   /** "YYYY-MM-DD" in the family's time zone. */
@@ -14,6 +15,8 @@ export type RoutineToday = {
   starTaskIds: Record<RoutineSlot, string | null>;
   /** Slots whose star was already requested today. */
   requested: Record<RoutineSlot, boolean>;
+  /** When each list shows on the overview (the child's settings, defaults without a row). */
+  windows: RoutineWindows;
 };
 
 const ITEM_COLUMNS = "id, member_id, slot, name, sort, created_at";
@@ -26,7 +29,7 @@ export async function loadRoutineToday(memberId: string, now = new Date()): Prom
   const [itemsResult, checksResult, settingsResult, starsResult] = await Promise.all([
     supabase.from("routine_items").select(ITEM_COLUMNS).eq("member_id", memberId).order("sort").order("created_at"),
     supabase.from("routine_checks").select(CHECK_COLUMNS).eq("member_id", memberId).eq("date", todayKey),
-    supabase.from("routine_settings").select("slot, star_task_id").eq("member_id", memberId),
+    supabase.from("routine_settings").select("slot, star_task_id, visible_from, visible_until").eq("member_id", memberId),
     supabase.from("stars").select("routine_slot").eq("member_id", memberId).eq("routine_date", todayKey),
   ]);
   if (itemsResult.error) throw new Error("Could not read the routine items");
@@ -35,7 +38,13 @@ export async function loadRoutineToday(memberId: string, now = new Date()): Prom
   if (starsResult.error) throw new Error("Could not read today's routine stars");
 
   const starTaskIds: Record<RoutineSlot, string | null> = { morning: null, evening: null };
-  for (const row of (settingsResult.data ?? []) as { slot: RoutineSlot; star_task_id: string | null }[]) {
+  const settingsRows = (settingsResult.data ?? []) as {
+    slot: RoutineSlot;
+    star_task_id: string | null;
+    visible_from: string | null;
+    visible_until: string | null;
+  }[];
+  for (const row of settingsRows) {
     starTaskIds[row.slot] = row.star_task_id;
   }
   const requested: Record<RoutineSlot, boolean> = { morning: false, evening: false };
@@ -48,5 +57,6 @@ export async function loadRoutineToday(memberId: string, now = new Date()): Prom
     checks: (checksResult.data ?? []) as RoutineCheckRow[],
     starTaskIds,
     requested,
+    windows: resolveWindows(settingsRows),
   };
 }

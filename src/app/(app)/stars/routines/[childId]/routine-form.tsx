@@ -28,12 +28,17 @@ export function RoutineForm({
   items,
   starTaskId,
   starTasks,
+  visibleFrom,
+  visibleUntil,
 }: {
   childId: string;
   slot: RoutineSlot;
   items: { id: string; name: string }[];
   starTaskId: string | null;
   starTasks: StarTaskOption[] | null;
+  /** "HH:MM" window in which the list shows on the overview. */
+  visibleFrom: string;
+  visibleUntil: string;
 }) {
   const a = t.routines.admin;
   const [state, formAction, pending] = useActionState(saveRoutine, initial);
@@ -173,6 +178,20 @@ export function RoutineForm({
           </div>
         </div>
       )}
+
+      <fieldset className="space-y-1">
+        <div className="grid grid-cols-2 gap-3">
+          <label className={label}>
+            <span>{a.visibleFrom}</span>
+            <input type="time" name="visibleFrom" required defaultValue={visibleFrom} onChange={() => setDirty(true)} className="field" />
+          </label>
+          <label className={label}>
+            <span>{a.visibleUntil}</span>
+            <input type="time" name="visibleUntil" required defaultValue={visibleUntil} onChange={() => setDirty(true)} className="field" />
+          </label>
+        </div>
+        <p className="text-xs text-muted">{a.visibleHint}</p>
+      </fieldset>
 
       {starTasks ? (
         <label className={label}>

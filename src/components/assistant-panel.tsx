@@ -62,7 +62,10 @@ function recognitionConstructor(): SpeechRecognitionConstructorLike | undefined 
   return window.SpeechRecognition ?? window.webkitSpeechRecognition;
 }
 
-export function AssistantPanel({ onClose }: { onClose: () => void }) {
+/** Family screen: the question is asked as this person (the one selected on the tablet). */
+export type AskAs = { id: string; name: string; colour: string };
+
+export function AssistantPanel({ onClose, askAs, autoListen = false }: { onClose: () => void; askAs?: AskAs; autoListen?: boolean }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [heard, setHeard] = useState("");
   const [question, setQuestion] = useState("");
@@ -251,7 +254,7 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
       const response = await fetch("/api/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q }),
+        body: JSON.stringify(askAs ? { question: q, asPerson: askAs.id } : { question: q }),
         signal: controller.signal,
       });
       const body: unknown = await response.json().catch(() => null);
@@ -535,6 +538,14 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
+  useEffect(() => {
+    // Opened by the big button on the family screen: one tap starts listening straight away.
+    if (!autoListen || !canListen) return;
+    const timer = setTimeout(() => void startListening(), 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on open
+  }, []);
+
   const hasSynthesis = typeof Audio !== "undefined" || typeof speechSynthesis !== "undefined";
   const shownQuestion = listening ? heard : question;
 
@@ -546,12 +557,13 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
         aria-modal="true"
         aria-labelledby="assistant-title"
         onClick={(event) => event.stopPropagation()}
-        className="flex h-[min(42rem,92dvh)] w-full max-w-2xl flex-col rounded-t-3xl bg-surface"
+        className="flex h-[min(42rem,92dvh)] w-full max-w-2xl flex-col rounded-t-3xl bg-surface min-[640px]:h-[min(46rem,92dvh)] min-[640px]:max-w-3xl"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="flex items-center gap-2 px-4 pt-3">
-          <h2 id="assistant-title" className="min-w-0 flex-1 text-xl font-extrabold">
-            {t.assistant.title}
+        <div className="flex items-center gap-2 px-4 pt-3 min-[640px]:px-6 min-[640px]:pt-5">
+          {askAs && <span aria-hidden className="size-4 shrink-0 rounded-full" style={{ backgroundColor: askAs.colour }} />}
+          <h2 id="assistant-title" className="min-w-0 flex-1 text-xl font-extrabold min-[640px]:text-3xl">
+            {askAs ? t.assistant.titleFor(askAs.name) : t.assistant.title}
           </h2>
           {hasSynthesis && (
             <button
@@ -570,14 +582,14 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Fixed-size answer area; long answers scroll inside it. */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3" aria-live="polite">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 min-[640px]:px-6" aria-live="polite">
           {phase === "idle" && (
             <div className="space-y-3">
-              <p className="text-lg text-muted">{t.assistant.examplesTitle}</p>
+              <p className="text-lg text-muted min-[640px]:text-xl">{t.assistant.examplesTitle}</p>
               <ul className="flex flex-col gap-2">
                 {t.assistant.examples.map((example) => (
                   <li key={example}>
-                    <button type="button" onClick={() => void ask(example)} className="btn btn-secondary min-h-12 w-full justify-start text-left text-base">
+                    <button type="button" onClick={() => void ask(example)} className="btn btn-secondary min-h-12 w-full justify-start text-left text-base min-[640px]:min-h-14 min-[640px]:text-lg">
                       {example}
                     </button>
                   </li>
@@ -592,10 +604,10 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
             </p>
           )}
           {listening && !heard && (
-            <p className="text-2xl font-extrabold">{capturing ? t.assistant.listening : t.assistant.starting}</p>
+            <p className="text-2xl font-extrabold min-[640px]:text-4xl">{capturing ? t.assistant.listening : t.assistant.starting}</p>
           )}
-          {phase === "thinking" && <p className="text-2xl font-extrabold">{t.assistant.thinking}</p>}
-          {phase === "answer" && <p className="whitespace-pre-wrap text-2xl font-bold leading-snug">{answer}</p>}
+          {phase === "thinking" && <p className="text-2xl font-extrabold min-[640px]:text-4xl">{t.assistant.thinking}</p>}
+          {phase === "answer" && <p className="whitespace-pre-wrap text-2xl font-bold leading-snug min-[640px]:text-3xl">{answer}</p>}
           {phase === "answer" && noVoice && (
             <p className="mt-3 space-y-1 text-base text-muted">
               <span className="block font-bold">{t.assistant.noVoice}</span>
@@ -614,7 +626,7 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <div className="space-y-3 px-4 pt-3 pb-3">
+        <div className="space-y-3 px-4 pt-3 pb-3 min-[640px]:px-6 min-[640px]:pb-5">
           <div className="flex min-h-11 items-center justify-between gap-2">
             <p className="text-sm font-bold text-muted">{left !== null ? t.assistant.questionsLeft(left) : ""}</p>
             {hasSynthesis && phase === "answer" && !noVoice && (
@@ -643,12 +655,12 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
                 disabled={phase === "thinking"}
                 aria-pressed={listening}
                 aria-label={t.assistant.hold}
-                className={`relative flex size-20 shrink-0 touch-none select-none items-center justify-center rounded-full bg-primary text-on-primary outline-offset-4 focus-visible:outline-4 focus-visible:outline-accent disabled:opacity-60 ${
+                className={`relative flex size-20 shrink-0 touch-none min-[640px]:size-28 select-none items-center justify-center rounded-full bg-primary text-on-primary outline-offset-4 focus-visible:outline-4 focus-visible:outline-accent disabled:opacity-60 ${
                   capturing ? "ring-4 ring-accent" : ""
                 }`}
               >
                 {capturing && <span aria-hidden className="assistant-pulse absolute inset-0 rounded-full bg-accent/50" />}
-                <MicIcon className="relative size-10" />
+                <MicIcon className="relative size-10 min-[640px]:size-14" />
               </button>
             ) : null}
             <form
@@ -676,7 +688,7 @@ export function AssistantPanel({ onClose }: { onClose: () => void }) {
               </button>
             </form>
           </div>
-          <p className="min-h-5 text-sm text-muted">{canListen ? t.assistant.holdHint : t.assistant.noSpeech}</p>
+          <p className="min-h-5 text-sm text-muted">{askAs ? `${t.assistant.askingAs(askAs.name)}. ` : ""}{canListen ? t.assistant.holdHint : t.assistant.noSpeech}</p>
         </div>
       </div>
     </div>

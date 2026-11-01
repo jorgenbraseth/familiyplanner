@@ -2,7 +2,12 @@ import { z } from "zod";
 import { t } from "./i18n";
 import type { ThemeId } from "./themes";
 
-export type Role = "parent" | "child";
+/**
+ * "parent" and "child" are the only roles stored in `members.role`. "screen" is only ever the
+ * EFFECTIVE role `getCurrentMember` returns for a parent whose auth session was entered as
+ * Familieskjerm (the shared tablet); nothing stores it and no member row has it.
+ */
+export type Role = "parent" | "child" | "screen";
 
 export type Member = {
   id: string;

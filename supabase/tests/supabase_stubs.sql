@@ -25,6 +25,17 @@ as $$
 $$;
 grant execute on function auth.email() to anon, authenticated;
 
+-- Supabase's auth.jwt(): the claims of the current request's JWT (tests set request.jwt.claims,
+-- e.g. with a session_id claim).
+create or replace function auth.jwt()
+returns jsonb
+language sql
+stable
+as $$
+  select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb
+$$;
+grant execute on function auth.jwt() to anon, authenticated;
+
 -- Supabase grants everything on public to anon/authenticated by default; RLS does the limiting.
 grant usage on schema public to anon, authenticated;
 alter default privileges in schema public grant all on tables to anon, authenticated;

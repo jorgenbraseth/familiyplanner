@@ -11,9 +11,12 @@ const initial: StarActionState = { ok: false };
 export function RequestStarForm({
   tasks,
   previewing,
+  memberId,
 }: {
   tasks: StarTaskRow[];
   previewing: boolean;
+  /** Family screen only: the child the request is for (the screen's own account is not a child). */
+  memberId?: string;
 }) {
   const [state, formAction, pending] = useActionState(requestStar, initial);
   const disabled = previewing || pending;
@@ -24,6 +27,7 @@ export function RequestStarForm({
       {previewing && <p className="text-sm font-semibold text-muted">{t.stars.request.readOnly}</p>}
       {tasks.length > 0 ? (
         <form action={formAction} className="space-y-2">
+          {memberId && <input type="hidden" name="member" value={memberId} />}
           <p className="text-sm font-bold">{t.stars.request.tasksLabel}</p>
           <div className="grid grid-cols-2 gap-2">
             {tasks.map((task) => (
@@ -52,6 +56,7 @@ export function RequestStarForm({
           {t.stars.request.otherSummary}
         </summary>
         <form action={formAction} className="space-y-2 pt-1">
+          {memberId && <input type="hidden" name="member" value={memberId} />}
           <label className="block space-y-1 text-sm font-bold">
             <span>{t.stars.request.otherLabel}</span>
             <input
@@ -76,7 +81,7 @@ export function RequestStarForm({
       )}
       {!pending && state.ok && (
         <p role="status" className="text-sm font-bold text-primary-strong">
-          {t.stars.request.sent}
+          {memberId ? t.screen.requestSent : t.stars.request.sent}
         </p>
       )}
     </section>

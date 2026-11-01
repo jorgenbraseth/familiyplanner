@@ -38,7 +38,7 @@ export default async function MembersPage() {
                   )}
                 </p>
                 <p className="truncate text-sm text-muted">
-                  {member.email} · {t.members.roles[member.role]}
+                  {member.email} · {member.role === "child" ? t.members.roles.child : t.members.roles.parent}
                 </p>
               </div>
             </div>

@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "mock": "node scripts/mock/start.mjs",
+    "shot": "node scripts/mock/shot.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.137.0",

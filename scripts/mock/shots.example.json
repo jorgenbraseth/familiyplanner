@@ -1,0 +1,17 @@
+{
+  "defaults": { "viewport": "phone", "fullPage": true },
+  "shots": [
+    { "as": "Emma", "path": "/", "out": ".mock/shots/emma-home.png" },
+    { "as": "Kari", "path": "/", "out": ".mock/shots/kari-home.png" },
+    { "as": "Kari", "path": "/stars", "out": ".mock/shots/kari-stars.png" },
+    { "as": "Emma", "path": "/stars", "out": ".mock/shots/emma-stars.png" },
+    { "as": "Ola", "path": "/family", "viewport": "desktop", "out": ".mock/shots/ola-family.png" },
+    { "as": "Emma", "path": "/lekser", "out": ".mock/shots/emma-lekser.png" },
+    { "as": "Emma", "path": "/ukeplan", "out": ".mock/shots/emma-ukeplan.png" },
+    { "as": "Kari", "path": "/profil", "out": ".mock/shots/kari-profil.png" },
+    { "as": "Kari", "path": "/members", "viewport": "desktop", "out": ".mock/shots/kari-members.png" },
+    { "as": "Kari", "path": "/documents", "viewport": "desktop", "out": ".mock/shots/kari-documents.png" },
+    { "as": "Kari", "path": "/documents/aaaaaaaa-0000-4000-8000-000000000005", "viewport": "desktop", "fullPage": true, "out": ".mock/shots/kari-document-review.png" },
+    { "as": "Kari", "path": "/skjerm?person=33333333-3333-4333-8333-333333333333", "viewport": "tablet", "screen": true, "out": ".mock/shots/screen-emma.png" }
+  ]
+}

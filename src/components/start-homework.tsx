@@ -14,6 +14,7 @@ export function StartHomework({
   tomorrow,
   weekday,
   readOnly,
+  otherDay = false,
 }: {
   /** Unfinished homework from earlier days, oldest first, shown above the rest. */
   carried?: CarriedItem[];
@@ -24,6 +25,8 @@ export function StartHomework({
   /** Lower-case weekday of the next school day, e.g. "mandag". */
   weekday: string;
   readOnly: boolean;
+  /** Not today: a muted "Ingen lekser" when empty. */
+  otherDay?: boolean;
 }) {
   return (
     <section className="space-y-4" aria-labelledby="homework-title">
@@ -41,11 +44,14 @@ export function StartHomework({
         </ul>
       )}
       {items.length === 0 ? (
-        carried.length === 0 && (
+        carried.length === 0 &&
+        (otherDay ? (
+          <p className="text-base text-muted">{t.start.homeworkNone}</p>
+        ) : (
           <p className="text-xl font-extrabold">
             {tomorrow ? t.start.homeworkEmptyTomorrow : t.start.homeworkEmptyFor(weekday)}
           </p>
-        )
+        ))
       ) : (
         <div className="space-y-4">
           {bySubject(items).map((group) => (

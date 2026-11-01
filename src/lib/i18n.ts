@@ -3,6 +3,11 @@
 export const locale = "nb-NO";
 export const htmlLang = "nb";
 
+/** Norwegian genitive of a name: "Emma" -> "Emmas", "Jonas" -> "Jonas'". */
+export function genitive(name: string): string {
+  return /[sxz]$/i.test(name) ? `${name}'` : `${name}s`;
+}
+
 export const t = {
   appName: "Familieplanlegger",
   appDescription: "Kalendere, ukeplaner, lekser og stjerner for familien.",
@@ -20,6 +25,11 @@ export const t = {
     intro: "Logg inn med Google-kontoen din.",
     button: "Logg inn med Google",
     failed: "Innloggingen feilet. Prøv igjen.",
+    screenButton: "Logg inn som familieskjerm",
+    screenHint: "For et delt nettbrett i stua. Bare for voksne. Stjerner må fortsatt godkjennes på en voksens telefon.",
+    screenParentsOnly: "Bare voksne kan starte familieskjermen.",
+    screenFailed: "Kunne ikke starte familieskjermen. Prøv igjen.",
+    lockedDevice: "Denne enheten er satt opp som familieskjerm. En voksen kan frigi den under Profil på sin egen telefon.",
   },
   notInvited: {
     title: "Ikke invitert",
@@ -354,12 +364,17 @@ export const t = {
   start: {
     stars: (approved: number, goal: number) => `${approved} av ${goal} stjerner`,
     starsLink: "Se stjernene dine",
-    starsWord: "stjerner",
-    starsToward: (approved: number, goal: number, reward: string) => `${approved} av ${goal} til ${reward}`,
+    starsLeftShort: (left: number) => `${left} ${left === 1 ? "stjerne" : "stjerner"} igjen!`,
+    starsGridLabel: (approved: number, total: number, reward: string) => `${approved} av ${total} stjerner til ${reward}`,
+    goalReached: "Målet er nådd! 🎉",
     registerStar: "Be om stjerne",
     registerStarTitle: "Registrer stjerne",
     close: "Lukk",
     myDay: "Min dag",
+    now: "Nå",
+    nowAt: (time: string) => `Nå ${time}`,
+    seeTomorrow: "Se i morgen ›",
+    allDone: "Alt er gjort for i dag! ⭐",
     schoolHours: (hours: string) => `Skolen ${hours}`,
     breakLabel: "friminutt",
     legendSchool: "Skole",
@@ -369,7 +384,8 @@ export const t = {
     nothingOnDay: "Ingen skole eller avtaler denne dagen.",
     previousDay: "Forrige dag",
     nextDay: "Neste dag",
-    toToday: "I dag",
+    backToToday: "Tilbake til i dag",
+    homeworkNone: "Ingen lekser",
     dayToday: "I dag",
     dayTomorrow: "I morgen",
     dayYesterday: "I går",
@@ -380,6 +396,30 @@ export const t = {
     homeworkEmptyFor: (day: string) => `Ingen lekser til ${day} 🎉`,
     homeworkThisWeek: "Denne uken",
     remember: "Husk",
+  },
+  // Familieskjerm: the shared tablet.
+  screen: {
+    title: "Familieskjerm",
+    switchPerson: "Bytt person",
+    keepAwakeNote: "Skjermen kan slå seg av. Slå av automatisk skjermlås i nettbrettets innstillinger.",
+    people: "Familien",
+    thisIs: (name: string) => `Dette er ${genitive(name)} side`,
+    // The big assistant button (Spør meg + whose day), always visible on the screen.
+    askButton: "Spør meg",
+    askContext: (name: string) => `Spør om ${genitive(name)} dag`,
+    askLabel: (name: string) => `Spør assistenten som ${name}`,
+    requestSent: "Sendt! En voksen må godkjenne på mobilen sin.",
+    parentPending: (n: number) =>
+      n === 1
+        ? "1 stjerne venter på godkjenning – godkjennes på mobilen"
+        : `${n} stjerner venter på godkjenning – godkjennes på mobilen`,
+    today: "I dag",
+    nextDays: "De neste dagene",
+    nothingToday: "Ingenting på kalenderen i dag.",
+    nothingOnDay: "Ingenting på kalenderen denne dagen.",
+    nothingNextDays: "Ingenting de neste dagene.",
+    nobody: "Det er ingen i familien å vise ennå.",
+    noCalendar: "Ingen kalender er koblet til.",
   },
   // Parents' home page (replaces the parents' Meg page).
   parentDay: {
@@ -450,7 +490,10 @@ export const t = {
       back: "Tilbake til stjerner",
       notFound: "Fant ikke barnet.",
       explain:
-        "Listene nullstilles hver dag. Morgenstell vises til skolen starter (eller til klokka 12), Kveldstell på ettermiddagen og kvelden. Når barnet har krysset av alt, sendes én stjerneforespørsel per liste per dag.",
+        "Listene nullstilles hver dag. Hver liste vises på oversikten bare i tidsrommet du velger, og forsvinner når barnet har krysset av alt. Da sendes én stjerneforespørsel per liste per dag.",
+      visibleFrom: "Vises fra",
+      visibleUntil: "Vises til",
+      visibleHint: "Klokkeslett (norsk tid). Til 23:59 betyr ut dagen.",
       itemsLabel: "Punkter",
       itemName: "Navn på punkt",
       itemPlaceholder: "F.eks. Pusse tenner",
@@ -478,6 +521,7 @@ export const t = {
         itemCount: (max: number) => `Det kan være høyst ${max} punkter i en liste.`,
         itemDuplicate: "To punkter har samme navn.",
         star: "Stjerneoppgaven gjelder ikke dette barnet.",
+        window: "Velg klokkeslett, og «Vises fra» må være før «Vises til».",
       },
     },
   },
@@ -487,6 +531,9 @@ export const t = {
     open: "Spør assistenten",
     close: "Lukk",
     title: "Spør meg om hva som helst",
+    // On the family screen: the question is asked as the selected person.
+    titleFor: (name: string) => `Hei ${name}! Hva lurer du på?`,
+    askingAs: (name: string) => `Du spør som ${name}`,
     hold: "Hold inne og snakk",
     holdHint: "Hold knappen inne mens du snakker, eller trykk én gang for å starte og stoppe.",
     listening: "Jeg lytter…",
@@ -540,6 +587,7 @@ export const t = {
       clearYes: "Ja, slett alt",
       clearCancel: "Avbryt",
       unknownMember: "Ukjent",
+      viaScreen: (name: string) => `Familieskjerm – spurt som ${name}`,
     },
   },
   // Push notifications and app install.
@@ -596,6 +644,15 @@ export const t = {
     account: "Din konto",
     name: "Navn",
     email: "E-post",
+    screens: {
+      title: "Familieskjermer",
+      intro:
+        "Nettbrett som er satt opp som familieskjerm, kan bare logge inn som familieskjerm. Frigi et nettbrett for å bruke det til vanlig innlogging etter at skjermen er logget ut. Frigivelsen logger ikke ut skjermen.",
+      setUp: (date: string, by: string | null) => (by ? `Satt opp ${date} av ${by}` : `Satt opp ${date}`),
+      release: "Frigi",
+      failed: "Kunne ikke frigi nettbrettet. Prøv igjen.",
+      none: "Ingen nettbrett er låst som familieskjerm.",
+    },
     theme: {
       title: "Tema",
       legend: "Velg tema",

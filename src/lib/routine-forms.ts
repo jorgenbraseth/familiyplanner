@@ -50,13 +50,18 @@ export const itemsFieldSchema = z
   })
   .pipe(routineItemListSchema);
 
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 export const saveRoutineSchema = z.object({
   childId: z.uuid(e.invalid),
   slot: z.enum(["morning", "evening"], e.invalid),
   items: itemsFieldSchema,
   /** "" means no star. */
   starTaskId: z.union([z.literal(""), z.uuid(e.star)]),
-});
+  /** "HH:MM" from/until when the list shows on the overview (from must be before until). */
+  visibleFrom: z.string().regex(TIME_RE, e.window),
+  visibleUntil: z.string().regex(TIME_RE, e.window),
+}).refine((v) => v.visibleFrom < v.visibleUntil, { message: e.window, path: ["visibleUntil"] });
 
 export type SaveRoutineInput = z.infer<typeof saveRoutineSchema>;
 
@@ -70,6 +75,8 @@ export function parseRoutineForm(formData: FormData) {
     slot: get("slot"),
     items: get("items"),
     starTaskId: get("starTaskId"),
+    visibleFrom: get("visibleFrom"),
+    visibleUntil: get("visibleUntil"),
   });
 }
 

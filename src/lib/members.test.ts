@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeEmail, parseMemberForm } from "./members";
+import { memberInputSchema, normalizeEmail, parseMemberForm } from "./members";
 
 function form(values: Record<string, string | string[]>) {
   const data = new FormData();
@@ -61,5 +61,18 @@ describe("parseMemberForm", () => {
 describe("normalizeEmail", () => {
   it("trims and lowercases", () => {
     expect(normalizeEmail("  Kari@Example.COM ")).toBe("kari@example.com");
+  });
+});
+
+describe("member roles", () => {
+  const base = { name: "Stua", email: "a@example.com", calendar_ids: [], colour: "#112233", locale: "nb-NO" };
+
+  it("accepts parent and child", () => {
+    expect(memberInputSchema.safeParse({ ...base, role: "parent" }).success).toBe(true);
+    expect(memberInputSchema.safeParse({ ...base, role: "child" }).success).toBe(true);
+  });
+
+  it("does not accept screen: there are no screen accounts", () => {
+    expect(memberInputSchema.safeParse({ ...base, role: "screen" }).success).toBe(false);
   });
 });

@@ -27,6 +27,7 @@ function field(formData: FormData, name: string): string {
 function refresh() {
   revalidatePath("/stars");
   revalidatePath("/");
+  revalidatePath("/skjerm");
 }
 
 function dbError(action: string, error: { code?: string; message?: string }): string {
@@ -96,11 +97,25 @@ async function notifyApproved(
   ]);
 }
 
-/** A child asks for stars on their active track: a task (one tap) or a free-text reason (1 star). */
+/**
+ * A child asks for stars on their active track: a task (one tap) or a free-text reason (1 star).
+ * The shared family screen asks on behalf of the child named in the `member` field; the request is
+ * pending and a parent still has to approve it (the database allows the screen nothing else).
+ */
 export async function requestStar(_prev: StarActionState, formData: FormData): Promise<StarActionState> {
   const me = await getCurrentMember();
   const viewer = await getViewer();
-  if (me.role !== "child" || viewer.previewing) return { ok: false, error: t.stars.errors.notAllowed };
+  if ((me.role !== "child" && me.role !== "screen") || viewer.previewing) return { ok: false, error: t.stars.errors.notAllowed };
+
+  const supabase = await createClient();
+  let child: { id: string; name: string } = me;
+  if (me.role === "screen") {
+    const memberId = idSchema.safeParse(field(formData, "member"));
+    if (!memberId.success) return { ok: false, error: t.stars.errors.notAllowed };
+    const { data: target } = await supabase.from("members").select("id, name, role").eq("id", memberId.data).maybeSingle();
+    if (!target || target.role !== "child") return { ok: false, error: t.stars.errors.notAllowed };
+    child = { id: target.id as string, name: target.name as string };
+  }
 
   const taskId = field(formData, "task");
   const taskIdParsed = taskId === "" ? null : idSchema.safeParse(taskId);
@@ -108,11 +123,10 @@ export async function requestStar(_prev: StarActionState, formData: FormData): P
   const freeReason = taskIdParsed ? null : reasonSchema.safeParse(field(formData, "reason"));
   if (freeReason && !freeReason.success) return { ok: false, error: t.stars.errors.reason };
 
-  const supabase = await createClient();
   const { data: track, error: trackError } = await supabase
     .from("star_tracks")
     .select("id")
-    .eq("member_id", me.id)
+    .eq("member_id", child.id)
     .eq("status", "active")
     .maybeSingle();
   if (trackError) return { ok: false, error: dbError("requestStar", trackError) };
@@ -122,7 +136,7 @@ export async function requestStar(_prev: StarActionState, formData: FormData): P
   let amount = 1;
   let task: { id: string } | null = null;
   if (taskIdParsed?.success) {
-    task = await readTask(supabase, me.id, taskIdParsed.data);
+    task = await readTask(supabase, child.id, taskIdParsed.data);
     if (!task) return { ok: false, error: t.stars.errors.taskGone };
     const full = task as { id: string; name: string; stars: number };
     reason = full.name;
@@ -134,7 +148,7 @@ export async function requestStar(_prev: StarActionState, formData: FormData): P
   // The database sets the amount from the task (and forces 1 without one); `amount` here is for the push text only.
   const { error } = await supabase.from("stars").insert({
     track_id: track.id,
-    member_id: me.id,
+    member_id: child.id,
     reason,
     task_id: task?.id ?? null,
     status: "pending",
@@ -144,7 +158,7 @@ export async function requestStar(_prev: StarActionState, formData: FormData): P
 
   await notifyParents({
     title: t.stars.push.requestTitle,
-    body: t.stars.push.requestBodyAmount(me.name, amount, reason),
+    body: t.stars.push.requestBodyAmount(child.name, amount, reason),
     url: "/stars",
     tag: "star-request",
   });

@@ -87,7 +87,7 @@ export async function saveRoutine(
   const parsed = parseRoutineForm(formData);
   if (!parsed.success)
     return { ok: false, error: parsed.error.issues[0]?.message ?? e.invalid };
-  const { childId, slot, items, starTaskId } = parsed.data;
+  const { childId, slot, items, starTaskId, visibleFrom, visibleUntil } = parsed.data;
 
   const supabase = await createClient();
   const { data: child } = await supabase
@@ -120,6 +120,8 @@ export async function saveRoutine(
         member_id: childId,
         slot,
         star_task_id: starTaskId === "" ? null : starTaskId,
+        visible_from: visibleFrom,
+        visible_until: visibleUntil,
       },
       { onConflict: "member_id,slot" },
     );

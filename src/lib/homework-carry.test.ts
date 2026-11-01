@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { carriedItems, carriedOverHomework, carryLabel, CARRY_OVER_DAYS, dueKeyOf, type CarryCandidate } from "./homework-carry";
+import { carriedItems, carriedOverHomework, carryLabel, carryQueryFromKey, dueKeyOf, type CarryCandidate } from "./homework-carry";
 import type { PlanItemRow } from "./plan";
 
 // Wednesday 2026-10-21.
@@ -26,23 +26,27 @@ describe("carriedOverHomework", () => {
     expect(result).toHaveLength(1);
   });
 
-  it("only reaches back CARRY_OVER_DAYS days", () => {
-    expect(CARRY_OVER_DAYS).toBe(14);
-    const result = carriedOverHomework([hw("2026-10-07"), hw("2026-10-06")], today);
-    expect(result.map((i) => i.date)).toEqual(["2026-10-07"]);
+  it("only carries within the current ISO week (Monday of this week to today)", () => {
+    // Monday 2026-10-19 is in; the Sunday before is not.
+    const result = carriedOverHomework([hw("2026-10-18"), hw("2026-10-19"), hw("2026-10-12")], today);
+    expect(result.map((i) => i.date)).toEqual(["2026-10-19"]);
+    // On a Monday only today's own items count, nothing from last week.
+    expect(carriedOverHomework([hw("2026-10-23"), hw("2026-10-26")], { year: 2026, month: 10, day: 26 }).map((i) => i.date)).toEqual(["2026-10-26"]);
+    // On a Sunday the week's Monday still counts.
+    expect(carriedOverHomework([hw("2026-10-19")], { year: 2026, month: 10, day: 25 })).toHaveLength(1);
   });
 
-  it("carries a whole-week item only once its week is over", () => {
-    // Week of Monday 2026-10-19 is the current week: it stays in "Denne uken".
+  it("never carries a whole-week item, not even once its week is over", () => {
     expect(carriedOverHomework([hw("2026-10-19", { whole_week: true })], today)).toEqual([]);
-    expect(carriedOverHomework([hw("2026-10-19", { whole_week: true })], { year: 2026, month: 10, day: 26 })).toHaveLength(1);
-    // Not on the Sunday itself.
-    expect(carriedOverHomework([hw("2026-10-19", { whole_week: true })], { year: 2026, month: 10, day: 25 })).toEqual([]);
+    expect(carriedOverHomework([hw("2026-10-19", { whole_week: true })], { year: 2026, month: 10, day: 26 })).toEqual([]);
     expect(dueKeyOf(hw("2026-10-19", { whole_week: true }))).toBe("2026-10-25");
   });
+});
 
-  it("drops a whole-week item older than the window", () => {
-    expect(carriedOverHomework([hw("2026-09-28", { whole_week: true })], today)).toEqual([]);
+describe("carryQueryFromKey", () => {
+  it("is Monday of the current week", () => {
+    expect(carryQueryFromKey(today)).toBe("2026-10-19");
+    expect(carryQueryFromKey({ year: 2026, month: 10, day: 25 })).toBe("2026-10-19");
   });
 });
 
@@ -52,7 +56,6 @@ describe("carryLabel", () => {
     expect(carryLabel(hw("2026-10-20"), today)).toBe("Fra i går");
     expect(carryLabel(hw("2026-10-19"), today)).toBe("Fra mandag");
     expect(carryLabel(hw("2026-10-12"), today)).toBe("Fra mandag 12. oktober");
-    expect(carryLabel(hw("2026-10-12", { whole_week: true }), today)).toBe("Fra uke 42");
   });
 });
 

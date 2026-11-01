@@ -1,5 +1,6 @@
 // Pure helpers for the children's start page. No database or server access here.
 
+import { t } from "./i18n";
 import { addDays, dayKey, type CalendarDate } from "./dates";
 import { routineProgress, type RoutineCheckRow, type RoutineItemRow, type RoutineSlot } from "./routines";
 
@@ -28,4 +29,35 @@ export function slotView(
 /** Whether the next school day is tomorrow (otherwise the heading names the weekday, e.g. "mandag"). */
 export function isTomorrow(today: CalendarDate, nextSchoolDay: CalendarDate): boolean {
   return dayKey(nextSchoolDay) === dayKey(addDays(today, 1));
+}
+
+/** Stars left to the next reward (0 when there is none or it is already reached). */
+export function starsLeft(approved: number, nextMilestone: number | null): number {
+  return nextMilestone === null ? 0 : Math.max(0, nextMilestone - approved);
+}
+
+export type StarGrid = {
+  /** Approved stars shown filled (never more than `total`). */
+  filled: number;
+  /** Grey stars up to the next milestone. */
+  empty: number;
+  /** Icons in the grid: the next milestone, or the goal once everything is reached. */
+  total: number;
+  /** No next milestone: the goal is reached. */
+  reached: boolean;
+};
+
+/** The star grid of the start page: one icon per star up to the next milestone (all goal stars once the goal is reached). */
+export function starGrid(approved: number, nextMilestone: number | null, goal: number): StarGrid {
+  const reached = nextMilestone === null;
+  const total = Math.max(0, reached ? goal : nextMilestone);
+  const filled = Math.min(Math.max(0, approved), total);
+  return { filled, empty: total - filled, total, reached };
+}
+
+/** "5 stjerner igjen!"; null when there is no next reward (goal reached). */
+export function starsLeftText(approved: number, nextMilestone: number | null): string | null {
+  if (nextMilestone === null) return null;
+  const left = starsLeft(approved, nextMilestone);
+  return left > 0 ? t.start.starsLeftShort(left) : null;
 }

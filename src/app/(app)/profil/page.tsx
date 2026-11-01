@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AvatarEditor } from "@/components/avatar-editor";
 import { PushCard } from "@/components/push-card";
+import { ScreenDevices } from "@/components/screen-devices";
 import { ThemePicker } from "@/components/theme-picker";
 import { loadAvatarUrls } from "@/lib/avatar-urls";
 import { t } from "@/lib/i18n";
@@ -32,6 +33,7 @@ export default async function ProfilePage() {
             <AvatarEditor memberId={me.id} colour={me.colour} url={avatars[me.id]} hasAvatar={!!me.avatar_path} />
           </section>
           <PushCard />
+          {me.role === "parent" && <ScreenDevices />}
         </div>
         <section className="space-y-3" aria-labelledby="profile-theme-title">
           <h2 id="profile-theme-title" className="text-2xl font-bold">{t.profile.theme.title}</h2>

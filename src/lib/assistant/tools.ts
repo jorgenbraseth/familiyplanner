@@ -64,7 +64,7 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
   {
     name: "get_plan_items",
     description:
-      "School plan for a day range of at most 31 days: ukeplan items (homework, events, messages) plus the school hours and periods (timetable) of each school day. Homework dates are the day it is due. Items with whole_week true belong to the whole week: their date is the Monday of that week. When the range reaches today or later, the result may also hold unfinished_earlier_homework: homework not ticked off that was due today or earlier (oldest first); always mention it when answering about homework (\"Du har også igjen ...\").",
+      "School plan for a day range of at most 31 days: ukeplan items (homework, events, messages) plus the school hours and periods (timetable) of each school day. Homework dates are the day it is due. Items with whole_week true belong to the whole week: their date is the Monday of that week. When the range reaches today or later, the result may also hold unfinished_earlier_homework: homework not ticked off that was due earlier this week up to today (oldest first; never from earlier weeks); always mention it when answering about homework (\"Du har også igjen ...\").",
     input_schema: {
       type: "object",
       properties: {

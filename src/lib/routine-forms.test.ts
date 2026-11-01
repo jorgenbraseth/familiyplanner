@@ -55,6 +55,8 @@ describe("parseRoutineForm", () => {
       childId,
       slot: "morning",
       items: JSON.stringify([{ name: "Stå opp" }]),
+      visibleFrom: "00:00",
+      visibleUntil: "10:00",
     };
     expect(parseRoutineForm(form({ ...base, starTaskId: "" })).success).toBe(
       true,
@@ -64,7 +66,7 @@ describe("parseRoutineForm", () => {
     ).toBe(true);
   });
   it("rejects a bad slot, child id or star id", () => {
-    const base = { childId, slot: "morning", items: "[]", starTaskId: "" };
+    const base = { childId, slot: "morning", items: "[]", starTaskId: "", visibleFrom: "00:00", visibleUntil: "10:00" };
     expect(parseRoutineForm(form({ ...base, slot: "noon" })).success).toBe(
       false,
     );
@@ -74,6 +76,19 @@ describe("parseRoutineForm", () => {
     expect(parseRoutineForm(form({ ...base, starTaskId: "x" })).success).toBe(
       false,
     );
+  });
+});
+
+describe("parseRoutineForm visibility window", () => {
+  const base = { childId, slot: "evening", items: "[]", starTaskId: "" };
+  it("accepts an ordered window, including to 23:59", () => {
+    expect(parseRoutineForm(form({ ...base, visibleFrom: "18:00", visibleUntil: "23:59" })).success).toBe(true);
+  });
+  it("rejects a reversed, empty, missing or malformed window", () => {
+    expect(parseRoutineForm(form({ ...base, visibleFrom: "10:00", visibleUntil: "09:00" })).success).toBe(false);
+    expect(parseRoutineForm(form({ ...base, visibleFrom: "10:00", visibleUntil: "10:00" })).success).toBe(false);
+    expect(parseRoutineForm(form({ ...base })).success).toBe(false);
+    expect(parseRoutineForm(form({ ...base, visibleFrom: "25:00", visibleUntil: "26:00" })).success).toBe(false);
   });
 });
 
