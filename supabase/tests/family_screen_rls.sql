@@ -1,17 +1,24 @@
--- Tests for the family screen (members.role = 'screen'). Made-up data only.
+-- Tests for the family screen: a PARENT's auth session put into screen mode (screen_sessions),
+-- plus the device lock. Made-up data only.
 begin;
 
 insert into public.members (name, email, role) values
   ('Screen Child A', 'screen.child.a@example.com', 'child'),
-  ('Screen Child B', 'screen.child.b@example.com', 'child'),
-  ('Family Screen', 'screen.tablet@example.com', 'screen');
+  ('Screen Child B', 'screen.child.b@example.com', 'child');
 
-create function pg_temp.act_as(p_email text, p_role text) returns void
+-- Session ids: the parent's normal session (phone) and the session that enters screen mode (tablet).
+create function pg_temp.act_as(p_email text, p_role text, p_session text default null) returns void
 language plpgsql as $$
 begin
-  perform set_config('request.jwt.claims', json_build_object('email', p_email)::text, true);
+  perform set_config('request.jwt.claims',
+    json_strip_nulls(json_build_object('email', p_email, 'session_id', p_session))::text, true);
   execute format('set local role %I', p_role);
 end $$;
+
+create function pg_temp.act_normal() returns void language sql as
+  $$ select pg_temp.act_as('jorgen.braseth@gmail.com', 'authenticated', '00000000-0000-4000-8000-000000000001') $$;
+create function pg_temp.act_screen() returns void language sql as
+  $$ select pg_temp.act_as('jorgen.braseth@gmail.com', 'authenticated', '00000000-0000-4000-8000-000000000002') $$;
 
 create function pg_temp.done() returns void
 language plpgsql as $$
@@ -20,20 +27,23 @@ begin
   perform set_config('request.jwt.claims', '', true);
 end $$;
 
-grant execute on function pg_temp.act_as(text, text), pg_temp.done() to public;
+grant execute on function pg_temp.act_as(text, text, text), pg_temp.act_normal(), pg_temp.act_screen(),
+  pg_temp.done() to public;
 
 create temp table ids (k text primary key, v uuid);
 grant all on ids to public;
 
--- 1. Parent sets up tracks, tasks, routine, a published ukeplan with homework and a parent-only item.
+-- 1. Parent (normal session) sets up tracks, tasks, routine, a published ukeplan with homework and a
+--    parent-only item, a document in review, and a child's assistant log row.
 do $$
-declare a uuid; b uuid; p uuid; s uuid; ta uuid; tb uuid; ka uuid; ia uuid; ib uuid; doc uuid;
+declare a uuid; b uuid; p uuid; ta uuid; tb uuid; ka uuid; ia uuid; ib uuid; doc uuid;
 begin
   select id into a from public.members where email = 'screen.child.a@example.com';
   select id into b from public.members where email = 'screen.child.b@example.com';
-  select id into s from public.members where email = 'screen.tablet@example.com';
   select id into p from public.members where email = 'jorgen.braseth@gmail.com';
-  perform pg_temp.act_as('jorgen.braseth@gmail.com', 'authenticated');
+  perform pg_temp.act_normal();
+
+  if not public.is_parent() or public.is_screen() then raise exception 'normal session must be a parent'; end if;
 
   insert into public.star_tracks (member_id, name, goal, milestone_every) values (a, 'Screen A', 10, 5) returning id into ta;
   insert into public.star_tracks (member_id, name, goal, milestone_every) values (b, 'Screen B', 10, 5) returning id into tb;
@@ -47,81 +57,195 @@ begin
   insert into public.plan_items (document_id, member_id, date, kind, text, audience) values
     (doc, a, '2026-10-26', 'homework', 'Screen homework', 'both'),
     (doc, a, '2026-10-26', 'message', 'Screen parent only', 'parent');
+  insert into public.documents (member_id, type, iso_week, iso_year, file_path, mime_type, status)
+    values (a, 'ukeplan', 45, 2026, 'screen/a/review.pdf', 'application/pdf', 'review');
 
-  -- a screen can't own tracks, routine items or settings
-  begin
-    insert into public.star_tracks (member_id, name) values (s, 'Screen track');
-    raise exception 'track for a screen accepted';
-  exception when check_violation then null;
-  end;
-  begin
-    insert into public.routine_items (member_id, slot, name) values (s, 'morning', 'x');
-    raise exception 'routine item for a screen accepted';
-  exception when check_violation then null;
-  end;
+  -- a pending star (made by the owner) and an approved one, to attack from the screen
+  insert into public.stars (track_id, member_id, reason, requested_by, status)
+    values (ta, a, 'Screen pending owner', p, 'pending');
+  insert into public.stars (track_id, member_id, reason, requested_by, status)
+    values (ta, a, 'Screen approved owner', p, 'approved');
 
   perform pg_temp.done();
-  insert into ids values ('a', a), ('b', b), ('s', s), ('p', p), ('ta', ta), ('tb', tb), ('ka', ka),
+  insert into public.assistant_log (member_id, question, answer) values (a, 'Screen child question', 'x');
+  insert into ids values ('a', a), ('b', b), ('p', p), ('ta', ta), ('tb', tb), ('ka', ka),
     ('ia', ia), ('ib', ib), ('doc', doc);
 end $$;
 
--- 2. Stars: the screen only requests pending stars for children.
+-- 2. Entering screen mode: parents only, idempotent, no claim -> refused, child refused.
 do $$
-declare a uuid; b uuid; p uuid; s uuid; ta uuid; tb uuid; n int; st record;
+declare n int; sid uuid := '00000000-0000-4000-8000-000000000002';
+begin
+  -- no session_id claim
+  perform pg_temp.act_as('jorgen.braseth@gmail.com', 'authenticated');
+  begin
+    perform public.enter_screen_mode();
+    raise exception 'entered screen mode without a session_id';
+  exception when insufficient_privilege then null;
+  end;
+  -- invalid session_id claim
+  perform pg_temp.act_as('jorgen.braseth@gmail.com', 'authenticated', 'not-a-uuid');
+  begin
+    perform public.enter_screen_mode();
+    raise exception 'entered screen mode with a bad session_id';
+  exception when insufficient_privilege then null;
+  end;
+  if public.current_session_is_screen() then raise exception 'bad claim counts as screen'; end if;
+
+  -- a child cannot
+  perform pg_temp.act_as('screen.child.a@example.com', 'authenticated', '00000000-0000-4000-8000-000000000003');
+  begin
+    perform public.enter_screen_mode();
+    raise exception 'a child entered screen mode';
+  exception when insufficient_privilege then null;
+  end;
+  perform pg_temp.done();
+
+  -- anon cannot call it at all
+  perform pg_temp.act_as('jorgen.braseth@gmail.com', 'anon', '00000000-0000-4000-8000-000000000009');
+  begin
+    perform public.enter_screen_mode();
+    raise exception 'anon entered screen mode';
+  exception when insufficient_privilege then null;
+  end;
+  perform pg_temp.done();
+
+  -- the parent's normal session is untouched until it enters
+  perform pg_temp.act_normal();
+  if public.current_session_is_screen() or not public.is_parent() then raise exception 'normal session changed too early'; end if;
+
+  perform pg_temp.act_screen();
+  perform public.enter_screen_mode();
+  perform public.enter_screen_mode(); -- idempotent
+  if not public.is_screen() or public.is_parent() or not public.current_session_is_screen() then
+    raise exception 'screen session: is_screen/is_parent wrong';
+  end if;
+  select count(*) into n from public.screen_sessions;
+  if n <> 1 then raise exception 'screen session rows: %', n; end if;
+
+  -- the screen session cannot delete, update or insert screen_sessions rows
+  begin
+    delete from public.screen_sessions;
+    raise exception 'screen deleted its screen_sessions row';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into public.screen_sessions (session_id, member_id)
+      values (gen_random_uuid(), (select id from public.members where email = 'jorgen.braseth@gmail.com'));
+    raise exception 'screen inserted a screen_sessions row';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    update public.screen_sessions set created_at = now();
+    raise exception 'screen updated a screen_sessions row';
+  exception when insufficient_privilege then null;
+  end;
+  perform pg_temp.done();
+
+  -- the parent's normal session keeps every right, and does not see the screen row of another session
+  perform pg_temp.act_normal();
+  if not public.is_parent() or public.is_screen() then raise exception 'normal session lost parent rights'; end if;
+  select count(*) into n from public.members;
+  if n < 3 then raise exception 'parent cannot read members'; end if;
+  perform pg_temp.done();
+end $$;
+
+-- 3. Parent in a normal session keeps all rights (even though a screen session exists).
+do $$
+declare a uuid; ta uuid; n int; sid uuid;
+begin
+  select v into a from ids where k = 'a'; select v into ta from ids where k = 'ta';
+  perform pg_temp.act_normal();
+  update public.stars set status = 'approved' where reason = 'Screen pending owner';
+  get diagnostics n = row_count;
+  if n <> 1 then raise exception 'normal parent cannot approve'; end if;
+  update public.stars set status = 'pending' where reason = 'Screen pending owner';
+  insert into public.members (name, email, role) values ('Screen Extra', 'screen.extra@example.com', 'child');
+  update public.members set name = 'Screen Extra 2' where email = 'screen.extra@example.com';
+  delete from public.members where email = 'screen.extra@example.com';
+  select count(*) into n from public.documents where status = 'review';
+  if n <> 1 then raise exception 'normal parent cannot read documents in review'; end if;
+  perform pg_temp.done();
+end $$;
+
+-- 4. Stars: the screen session only requests pending stars for children.
+do $$
+declare a uuid; b uuid; p uuid; ta uuid; tb uuid; n int; st record;
 begin
   select v into a from ids where k = 'a'; select v into b from ids where k = 'b';
-  select v into p from ids where k = 'p'; select v into s from ids where k = 's';
+  select v into p from ids where k = 'p';
   select v into ta from ids where k = 'ta'; select v into tb from ids where k = 'tb';
-  perform pg_temp.act_as('screen.tablet@example.com', 'authenticated');
+  perform pg_temp.act_screen();
 
-  if not public.is_screen() or public.is_parent() then raise exception 'is_screen/is_parent wrong'; end if;
-
-  insert into public.stars (track_id, member_id, reason, requested_by) values (ta, a, 'Screen helped', s);
-  insert into public.stars (track_id, member_id, reason, requested_by) values (tb, b, 'Screen helped too', s);
+  insert into public.stars (track_id, member_id, reason, requested_by) values (ta, a, 'Screen helped', p);
+  insert into public.stars (track_id, member_id, reason, requested_by) values (tb, b, 'Screen helped too', p);
   select * into st from public.stars where reason = 'Screen helped';
-  if st.status <> 'pending' or st.requested_by <> s or st.amount <> 1 or st.decided_by is not null then
+  if st.status <> 'pending' or st.requested_by <> p or st.amount <> 1 or st.decided_by is not null then
     raise exception 'unexpected screen star %', st;
   end if;
 
   begin
-    insert into public.stars (track_id, member_id, reason, requested_by, status) values (ta, a, 'Auto approved', s, 'approved');
+    insert into public.stars (track_id, member_id, reason, requested_by, status) values (ta, a, 'Auto approved', p, 'approved');
     raise exception 'approved star accepted';
   exception when insufficient_privilege then null;
   end;
+  begin
+    -- a bigger amount is reset to 1 for a non-parent request; an approved/given amount never sticks
+    insert into public.stars (track_id, member_id, reason, requested_by, amount) values (ta, a, 'Screen ten', p, 10);
+    select count(*) into n from public.stars where reason = 'Screen ten' and amount = 1 and status = 'pending';
+    if n <> 1 then raise exception 'screen star amount not forced to 1'; end if;
+  end;
   -- decision fields on a pending request are cleared by stars_fill_decision (before the policy check)
   insert into public.stars (track_id, member_id, reason, requested_by, status, decided_by, decided_at)
-    values (ta, a, 'Fake decision', s, 'pending', s, now());
+    values (ta, a, 'Fake decision', p, 'pending', p, now());
   select count(*) into n from public.stars where reason = 'Fake decision' and decided_by is null and decided_at is null;
   if n <> 1 then raise exception 'decision fields not cleared'; end if;
   begin
-    insert into public.stars (track_id, member_id, reason, requested_by) values (ta, a, 'Spoofed requester', p);
+    insert into public.stars (track_id, member_id, reason, requested_by) values (ta, a, 'Spoofed requester', b);
     raise exception 'star with another requested_by accepted';
   exception when insufficient_privilege then null;
   end;
   begin
-    -- track of another child
-    insert into public.stars (track_id, member_id, reason, requested_by) values (tb, a, 'Wrong track', s);
+    insert into public.stars (track_id, member_id, reason, requested_by) values (tb, a, 'Wrong track', p);
     raise exception 'star on another child''s track accepted';
   exception when insufficient_privilege or check_violation then null;
   end;
   begin
-    insert into public.stars (track_id, member_id, reason, requested_by) values (ta, p, 'For a parent', s);
+    insert into public.stars (track_id, member_id, reason, requested_by) values (ta, p, 'For a parent', p);
     raise exception 'star for a parent accepted';
   exception when insufficient_privilege or check_violation then null;
   end;
 
-  -- cannot approve, decline or delete
+  -- cannot approve, decline, give, update or delete
   update public.stars set status = 'approved' where reason = 'Screen helped';
   get diagnostics n = row_count;
+  if n <> 0 then raise exception 'screen approved a star'; end if;
+  update public.stars set status = 'declined' where reason = 'Screen pending owner';
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'screen declined a star'; end if;
+  update public.stars set reason = 'Changed' where reason = 'Screen helped';
+  get diagnostics n = row_count;
   if n <> 0 then raise exception 'screen updated a star'; end if;
-  delete from public.stars where reason = 'Screen helped';
+  delete from public.stars where reason in ('Screen helped', 'Screen approved owner');
   get diagnostics n = row_count;
   if n <> 0 then raise exception 'screen deleted a star'; end if;
+  begin
+    -- "give" = a parent-made approved star
+    insert into public.stars (track_id, member_id, reason, requested_by, status, amount)
+      values (ta, a, 'Screen gave', p, 'approved', 5);
+    raise exception 'screen gave stars';
+  exception when insufficient_privilege then null;
+  end;
 
-  -- cannot touch tracks, tasks, rewards, members
+  -- cannot touch tracks, tasks, rewards, members, documents
   begin
     insert into public.star_tracks (member_id, name) values (a, 'Another');
     raise exception 'screen created a track';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into public.star_tasks (member_id, name, stars) values (a, 'Another task', 2);
+    raise exception 'screen created a task';
   exception when insufficient_privilege then null;
   end;
   begin
@@ -134,28 +258,39 @@ begin
     raise exception 'screen created a member';
   exception when insufficient_privilege then null;
   end;
+  update public.members set name = 'Renamed' where id = a;
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'screen updated another member'; end if;
   begin
-    update public.members set role = 'parent' where email = 'screen.tablet@example.com';
+    update public.members set role = 'child' where id = p;
     raise exception 'screen changed its own role';
   exception when insufficient_privilege then null;
   end;
+  begin
+    update public.members set name = 'Self rename' where id = p;
+    raise exception 'screen renamed its own member row';
+  exception when insufficient_privilege then null;
+  end;
+  delete from public.members where id = b;
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'screen deleted a member'; end if;
 
   perform pg_temp.done();
 end $$;
 
--- 3. Routines: tick and untick any child's items today, not other dates; routine star only when complete.
+-- 5. Routines: tick and untick any child's items today, not other dates; routine star only when complete.
 do $$
-declare a uuid; b uuid; s uuid; ta uuid; ka uuid; ia uuid; ib uuid; n int;
+declare a uuid; b uuid; p uuid; ta uuid; ka uuid; ia uuid; ib uuid; n int;
 begin
   select v into a from ids where k = 'a'; select v into b from ids where k = 'b';
-  select v into s from ids where k = 's'; select v into ta from ids where k = 'ta';
+  select v into p from ids where k = 'p'; select v into ta from ids where k = 'ta';
   select v into ka from ids where k = 'ka'; select v into ia from ids where k = 'ia'; select v into ib from ids where k = 'ib';
-  perform pg_temp.act_as('screen.tablet@example.com', 'authenticated');
+  perform pg_temp.act_screen();
 
   -- routine star before everything is checked: refused
   begin
     insert into public.stars (track_id, member_id, reason, requested_by, task_id, routine_slot, routine_date)
-      values (ta, a, 'Morgenstell', s, ka, 'morning', public.routine_today());
+      values (ta, a, 'Morgenstell', p, ka, 'morning', public.routine_today());
     raise exception 'routine star accepted before routine complete';
   exception when check_violation then null;
   end;
@@ -170,8 +305,8 @@ begin
   end;
 
   insert into public.stars (track_id, member_id, reason, requested_by, task_id, routine_slot, routine_date)
-    values (ta, a, 'Morgenstell', s, ka, 'morning', public.routine_today());
-  select count(*) into n from public.stars where reason = 'Morgenstell' and status = 'pending' and amount = 3 and requested_by = s;
+    values (ta, a, 'Morgenstell', p, ka, 'morning', public.routine_today());
+  select count(*) into n from public.stars where reason = 'Morgenstell' and status = 'pending' and amount = 3 and requested_by = p;
   if n <> 1 then raise exception 'routine star not pending with task amount'; end if;
 
   delete from public.routine_checks where item_id = ib;
@@ -181,7 +316,7 @@ begin
   perform pg_temp.done();
   -- an old check (made by the owner) cannot be removed by the screen
   insert into public.routine_checks (item_id, member_id, date) values (ib, b, public.routine_today() - 1);
-  perform pg_temp.act_as('screen.tablet@example.com', 'authenticated');
+  perform pg_temp.act_screen();
   delete from public.routine_checks where item_id = ib and date = public.routine_today() - 1;
   get diagnostics n = row_count;
   if n <> 0 then raise exception 'screen removed an old check'; end if;
@@ -195,12 +330,12 @@ begin
   perform pg_temp.done();
 end $$;
 
--- 4. Homework: tick done, nothing else; parent-only items invisible and untouchable.
+-- 6. Homework: tick done, nothing else; parent-only items, documents in review and logs stay out of reach.
 do $$
-declare s uuid; n int; doc uuid;
+declare n int; a uuid;
 begin
-  select v into s from ids where k = 's'; select v into doc from ids where k = 'doc';
-  perform pg_temp.act_as('screen.tablet@example.com', 'authenticated');
+  select v into a from ids where k = 'a';
+  perform pg_temp.act_screen();
 
   select count(*) into n from public.plan_items where text = 'Screen parent only';
   if n <> 0 then raise exception 'screen reads a parent-audience item'; end if;
@@ -227,20 +362,112 @@ begin
   get diagnostics n = row_count;
   if n <> 0 then raise exception 'screen ticked a parent-audience item'; end if;
 
-  -- parent-only / own-only data stays out of reach
   select count(*) into n from public.documents where status <> 'published';
-  if n <> 0 then raise exception 'screen reads unpublished documents'; end if;
+  if n <> 0 then raise exception 'screen reads documents in review'; end if;
   begin
     insert into public.documents (member_id, type, iso_week, iso_year, file_path, mime_type)
-      values ((select id from public.members where email = 'screen.child.a@example.com'), 'ukeplan', 1, 2026, 'screen/x.pdf', 'application/pdf');
+      values (a, 'ukeplan', 1, 2026, 'screen/x.pdf', 'application/pdf');
     raise exception 'screen created a document';
   exception when insufficient_privilege then null;
   end;
-  select count(*) into n from public.assistant_log;
-  if n <> 0 then raise exception 'screen reads assistant_log'; end if;
+  update public.documents set status = 'review' where status = 'published';
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'screen updated a document'; end if;
+
+  select count(*) into n from public.assistant_log where question = 'Screen child question';
+  if n <> 0 then raise exception 'screen reads others'' assistant_log'; end if;
   select count(*) into n from public.push_subscriptions;
   if n <> 0 then raise exception 'screen reads push subscriptions'; end if;
 
+  perform pg_temp.done();
+end $$;
+
+-- 7. Device lock.
+do $$
+declare dev uuid; dev2 uuid; n int; p uuid;
+begin
+  select v into p from ids where k = 'p';
+
+  -- a normal session cannot register a device; a child neither
+  perform pg_temp.act_normal();
+  begin
+    perform public.register_screen_device();
+    raise exception 'normal session registered a device';
+  exception when insufficient_privilege then null;
+  end;
+  perform pg_temp.act_as('screen.child.a@example.com', 'authenticated', '00000000-0000-4000-8000-000000000003');
+  begin
+    perform public.register_screen_device();
+    raise exception 'child registered a device';
+  exception when insufficient_privilege then null;
+  end;
+  perform pg_temp.done();
+  perform pg_temp.act_as(null, 'anon');
+  begin
+    perform public.register_screen_device();
+    raise exception 'anon registered a device';
+  exception when insufficient_privilege then null;
+  end;
+  perform pg_temp.done();
+
+  -- the screen session registers one; nobody can insert directly
+  perform pg_temp.act_screen();
+  dev := public.register_screen_device();
+  begin
+    insert into public.screen_devices (created_by) values (p);
+    raise exception 'direct device insert accepted';
+  exception when insufficient_privilege then null;
+  end;
+  -- the screen session cannot read the table or release a device
+  select count(*) into n from public.screen_devices;
+  if n <> 0 then raise exception 'screen session reads screen_devices'; end if;
+  begin
+    update public.screen_devices set released_at = now() where id = dev;
+    get diagnostics n = row_count;
+    if n <> 0 then raise exception 'screen session released a device'; end if;
+  end;
+  perform pg_temp.done();
+
+  -- locked is visible to anon (the login page), and to nobody else's data
+  perform pg_temp.act_as(null, 'anon');
+  if not public.screen_device_locked(dev) then raise exception 'device not locked'; end if;
+  if public.screen_device_locked(gen_random_uuid()) then raise exception 'unknown device locked'; end if;
+  if public.screen_device_locked(null) then raise exception 'null device locked'; end if;
+  begin
+    perform 1 from public.screen_devices;
+    raise exception 'anon reads screen_devices';
+  exception when insufficient_privilege then null;
+  end;
+  perform pg_temp.done();
+
+  -- a child cannot read or release
+  perform pg_temp.act_as('screen.child.a@example.com', 'authenticated', '00000000-0000-4000-8000-000000000003');
+  select count(*) into n from public.screen_devices;
+  if n <> 0 then raise exception 'child reads screen_devices'; end if;
+  update public.screen_devices set released_at = now() where id = dev;
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'child released a device'; end if;
+  perform pg_temp.done();
+
+  -- a parent in a normal session lists and releases; the release is final and records who/when
+  perform pg_temp.act_normal();
+  select count(*) into n from public.screen_devices where released_at is null;
+  if n <> 1 then raise exception 'parent cannot list devices'; end if;
+  begin
+    update public.screen_devices set created_by = null where id = dev;
+    raise exception 'parent changed a non-release column';
+  exception when insufficient_privilege then null;
+  end;
+  update public.screen_devices set released_at = null, released_by = null where id = dev; -- trigger stamps it anyway
+  select count(*) into n from public.screen_devices where id = dev and released_at is not null and released_by = p;
+  if n <> 1 then raise exception 'release not recorded'; end if;
+  update public.screen_devices set released_at = null where id = dev;
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'a released device was updated again'; end if;
+  perform pg_temp.done();
+
+  perform pg_temp.act_as(null, 'anon');
+  if public.screen_device_locked(dev) then raise exception 'released device still locked'; end if;
   perform pg_temp.done();
 end $$;
 

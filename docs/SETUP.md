@@ -111,7 +111,7 @@ values ('Jørgen', 'jorgen.braseth@gmail.com', 'parent', array['jorgen.braseth@g
 
 Everyone else can then be added from the app's members page.
 
-**Familieskjerm (shared tablet):** create a Google account for the tablet (or use one you have), add it on the members page with the role *Familieskjerm*, and sign in with it on the tablet. It opens `/skjerm`, where everyone picks their own name. Children can tick routines and homework and ask for stars there, but the stars stay pending until a parent approves them on their own phone; the screen account can never approve, give stars or open the parent pages.
+**Familieskjerm (shared tablet):** there is no separate account. On the tablet a parent signs in with their own Google account and chooses **Logg inn som familieskjerm** (instead of *Logg inn*). That session opens `/skjerm`, where everyone picks their own name; it has only the screen's rights in the database (children can tick routines and homework and ask for stars, but the stars stay pending until a parent approves them on their own phone; it can never approve, give stars or open the parent pages). The parent's phone is unaffected. The tablet is then locked as a family screen (a cookie plus a row in `screen_devices`): after "Logg ut" the login page there only offers the family-screen sign-in, so children cannot sign in as the parent. A parent frees the tablet from their own phone under **Profil → Familieskjermer → Frigi** (this does not sign the screen out). Needs the Supabase JWT to carry `session_id` (standard in current Supabase Auth).
 
 ## 8. Database migrations (GitHub Actions)
 

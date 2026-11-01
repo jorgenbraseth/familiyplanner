@@ -7,7 +7,7 @@ const B = "00000000-0000-4000-8000-000000000002";
 const C = "00000000-0000-4000-8000-000000000003";
 
 describe("screenPeople", () => {
-  it("drops screens and puts children first, each by name", () => {
+  it("keeps only parents and children, children first, each by name", () => {
     const list = screenPeople([m(A, "Mamma", "parent"), m(B, "Zoe", "child"), m("x", "Skjerm", "screen"), m(C, "Emma", "child")]);
     expect(list.map((p) => p.name)).toEqual(["Emma", "Zoe", "Mamma"]);
   });

@@ -2,7 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import { t } from "@/lib/i18n";
-import { LOCALES, MAX_CALENDARS, MAX_CALENDAR_ID_LENGTH, type Member, type Role } from "@/lib/members";
+import { LOCALES, MAX_CALENDARS, MAX_CALENDAR_ID_LENGTH, type Member } from "@/lib/members";
 import { saveMember, type SaveMemberState } from "./actions";
 
 const initial: SaveMemberState = { ok: false };
@@ -18,13 +18,11 @@ export function MemberForm({ member }: { member?: Member }) {
   const formRef = useRef<HTMLFormElement>(null);
   const colourRef = useRef<HTMLInputElement>(null);
   const [resetCount, setResetCount] = useState(0);
-  const [role, setRole] = useState<Role>(member?.role ?? "child");
   const [state, formAction, pending] = useActionState(
     async (prev: SaveMemberState, formData: FormData) => {
       const result = await saveMember(prev, formData);
       if (result.ok && !member) {
         formRef.current?.reset();
-        setRole("child");
         setResetCount((n) => n + 1);
       }
       return result;
@@ -52,17 +50,12 @@ export function MemberForm({ member }: { member?: Member }) {
       </label>
       <label className={label}>
         <span>{t.members.fields.role}</span>
-        <select name="role" value={role} onChange={(e) => setRole(e.target.value as Role)} className={input}>
+        <select name="role" defaultValue={member?.role ?? "child"} className={input}>
           <option value="parent">{t.members.roles.parent}</option>
           <option value="child">{t.members.roles.child}</option>
-          <option value="screen">{t.members.roles.screen}</option>
         </select>
-        {role === "screen" && <span className="block text-xs font-normal text-muted">{t.members.roleHints.screen}</span>}
       </label>
-      {/* The shared screen has no calendar of its own. */}
-      {role !== "screen" && (
-        <CalendarFields key={`${resetCount}:${member?.calendar_ids.join("\n") ?? "new"}`} initial={member?.calendar_ids ?? []} />
-      )}
+      <CalendarFields key={`${resetCount}:${member?.calendar_ids.join("\n") ?? "new"}`} initial={member?.calendar_ids ?? []} />
       <div className={label}>
         <label className="block space-y-1">
           <span>{t.members.fields.colour}</span>

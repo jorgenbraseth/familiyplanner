@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Member } from "./members";
 
-/** Who the family screen can show: parents and children (never the screen's own member). Children first, then by name. */
+/** Who the family screen can show: every parent and child (the signed-in parent appears as themselves). Children first, then by name. */
 export function screenPeople<T extends Pick<Member, "role" | "name" | "id">>(members: readonly T[]): T[] {
   return members
     .filter((m) => m.role === "parent" || m.role === "child")

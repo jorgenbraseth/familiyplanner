@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const email = await getSessionEmail();
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
   const target = new URL("/not-invited", request.nextUrl.origin);
   if (email) target.searchParams.set("email", email);
   return NextResponse.redirect(target);

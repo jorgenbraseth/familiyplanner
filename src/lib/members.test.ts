@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { familyMembers, isFamilyMember, memberInputSchema, normalizeEmail, parseMemberForm } from "./members";
+import { memberInputSchema, normalizeEmail, parseMemberForm } from "./members";
 
 function form(values: Record<string, string | string[]>) {
   const data = new FormData();
@@ -64,28 +64,15 @@ describe("normalizeEmail", () => {
   });
 });
 
-describe("family screen role", () => {
-  it("accepts screen in the members form schema", () => {
-    const parsed = memberInputSchema.safeParse({
-      name: "Stua",
-      email: "Skjerm@Example.com",
-      role: "screen",
-      calendar_ids: [],
-      colour: "#112233",
-      locale: "nb-NO",
-    });
-    expect(parsed.success).toBe(true);
-    expect(parsed.success && parsed.data.role).toBe("screen");
+describe("member roles", () => {
+  const base = { name: "Stua", email: "a@example.com", calendar_ids: [], colour: "#112233", locale: "nb-NO" };
+
+  it("accepts parent and child", () => {
+    expect(memberInputSchema.safeParse({ ...base, role: "parent" }).success).toBe(true);
+    expect(memberInputSchema.safeParse({ ...base, role: "child" }).success).toBe(true);
   });
 
-  it("leaves the screen out of the family", () => {
-    const all = [
-      { id: "1", role: "parent" as const },
-      { id: "2", role: "child" as const },
-      { id: "3", role: "screen" as const },
-    ];
-    expect(familyMembers(all).map((m) => m.id)).toEqual(["1", "2"]);
-    expect(isFamilyMember({ role: "screen" })).toBe(false);
-    expect(isFamilyMember({ role: "child" })).toBe(true);
+  it("does not accept screen: there are no screen accounts", () => {
+    expect(memberInputSchema.safeParse({ ...base, role: "screen" }).success).toBe(false);
   });
 });
