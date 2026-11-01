@@ -1,0 +1,95 @@
+import { signOut } from "@/app/auth/actions";
+import { MemberAvatar } from "@/components/member-avatar";
+import { NavPendingScope, PendingContent } from "@/components/nav-pending";
+import { Notice } from "@/components/notice";
+import { ScreenParentView } from "@/components/screen-parent";
+import { ScreenRefresh } from "@/components/screen-refresh";
+import { ScreenSwitcher } from "@/components/screen-switcher";
+import { StartView } from "@/components/start-view";
+import { ThemeSync } from "@/components/theme-sync";
+import { requireScreen } from "@/lib/auth";
+import { loadAvatarUrls } from "@/lib/avatar-urls";
+import { loadWeek } from "@/lib/calendar/view";
+import { textOnColour, tintStyle } from "@/lib/colour";
+import { dateInTimeZone, formatDayHeading } from "@/lib/dates";
+import { t } from "@/lib/i18n";
+import { MEMBER_COLUMNS, type Member } from "@/lib/members";
+import { pickPerson, screenPeople } from "@/lib/screen";
+import { loadPendingCount } from "@/lib/star-data";
+import { createClient } from "@/lib/supabase/server";
+import { parseThemeId } from "@/lib/themes";
+
+export default async function ScreenPage({ searchParams }: PageProps<"/skjerm">) {
+  await requireScreen();
+  const params = await searchParams;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("members").select(MEMBER_COLUMNS).order("created_at");
+  if (error) throw new Error("Could not read members");
+  const people = screenPeople((data ?? []) as Member[]);
+  const person = pickPerson(people, params.person);
+  if (!person) {
+    return (
+      <main className="p-8">
+        <Notice>{t.screen.nobody}</Notice>
+      </main>
+    );
+  }
+
+  const now = new Date();
+  const today = dateInTimeZone(now);
+  const avatars = await loadAvatarUrls(people);
+  const isChild = person.role === "child";
+  const [week, pending] = isChild
+    ? [null, 0]
+    : await Promise.all([loadWeek([person], 0, now), loadPendingCount()]);
+
+  return (
+    <NavPendingScope className="flex h-dvh flex-col min-[640px]:landscape:flex-row">
+      {/* The person's own theme, shown without touching this tablet's saved theme. */}
+      <ThemeSync theme={parseThemeId(person.theme)} preview />
+      <ScreenRefresh />
+      <ScreenSwitcher
+        people={people.map((p) => ({ id: p.id, name: p.name, colour: p.colour, avatarUrl: avatars[p.id] ?? null }))}
+        selectedId={person.id}
+        signOutAction={signOut}
+      />
+      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden" style={tintStyle(person.colour, 0.07)}>
+        <PendingContent key={person.id} className="space-y-10 px-5 pb-12 pt-5 min-[640px]:landscape:px-8">
+          <header className="flex items-center gap-6 rounded-3xl p-5 sm:p-6" style={tintStyle(person.colour, 0.2)}>
+            {avatars[person.id] ? (
+              <MemberAvatar colour={person.colour} url={avatars[person.id]} size={112} className="border-4" />
+            ) : (
+              <span
+                aria-hidden
+                className={`flex size-28 shrink-0 items-center justify-center rounded-full font-display text-6xl font-bold leading-none ${textOnColour(person.colour)}`}
+                style={{ backgroundColor: person.colour }}
+              >
+                {person.name.slice(0, 1).toLocaleUpperCase()}
+              </span>
+            )}
+            <div className="min-w-0">
+              <h1 className="break-words font-display text-6xl font-bold leading-none sm:text-7xl">{person.name}</h1>
+              <p className="mt-2 text-xl font-bold">{t.screen.thisIs(person.name)}</p>
+              <p className="text-lg font-semibold capitalize text-muted">{formatDayHeading(today)}</p>
+            </div>
+          </header>
+          {isChild ? (
+            <StartView member={person} previewing={false} dag={params.dag} screen />
+          ) : (
+            <>
+              {person.calendar_ids.length === 0 && <Notice>{t.screen.noCalendar}</Notice>}
+              {week && week.failedNames.length > 0 && <Notice>{t.calendar.failed(week.failedNames.join(", "))}</Notice>}
+              {week && (
+                <ScreenParentView
+                  week={week}
+                  me={{ id: person.id, name: person.name, colour: person.colour, avatarUrl: avatars[person.id] ?? null }}
+                  pending={pending}
+                />
+              )}
+            </>
+          )}
+        </PendingContent>
+      </main>
+    </NavPendingScope>
+  );
+}

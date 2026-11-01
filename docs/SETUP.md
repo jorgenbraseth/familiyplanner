@@ -111,6 +111,8 @@ values ('Jørgen', 'jorgen.braseth@gmail.com', 'parent', array['jorgen.braseth@g
 
 Everyone else can then be added from the app's members page.
 
+**Familieskjerm (shared tablet):** create a Google account for the tablet (or use one you have), add it on the members page with the role *Familieskjerm*, and sign in with it on the tablet. It opens `/skjerm`, where everyone picks their own name. Children can tick routines and homework and ask for stars there, but the stars stay pending until a parent approves them on their own phone; the screen account can never approve, give stars or open the parent pages.
+
 ## 8. Database migrations (GitHub Actions)
 
 The workflow `.github/workflows/supabase.yml` ("Supabase migrations") runs `supabase db push` when `supabase/migrations/**` changes on `main`. It never runs the seed. Add three repo secrets (GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**):

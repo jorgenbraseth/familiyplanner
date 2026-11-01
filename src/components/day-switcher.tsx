@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { NavLink, useNavPending } from "@/components/nav-pending";
 import { addDays, relativeDayLabel, daysBetween, type CalendarDate } from "@/lib/dates";
-import { dayHref, shownDay } from "@/lib/day-nav";
+import { dayHref, shownDay, type DayHrefBase } from "@/lib/day-nav";
 import { t } from "@/lib/i18n";
 
 const NAV =
@@ -14,14 +14,14 @@ const NAV =
  * a click shows the target day at once, pulses the label and dims the content until the page has loaded; the
  * neighbouring days are prefetched so the next tap is usually instant.
  */
-export function DaySwitcher({ date, today }: { date: CalendarDate; today: CalendarDate }) {
+export function DaySwitcher({ date, today, base }: { date: CalendarDate; today: CalendarDate; base?: DayHrefBase }) {
   const pending = useNavPending();
   const [target, setTarget] = useState<CalendarDate | null>(null);
   const shown = shownDay(date, target, pending);
   const isToday = daysBetween(today, shown) === 0;
   const to = (step: number) => {
     const next = addDays(shown, step);
-    return { href: dayHref(next, today), onClick: () => setTarget(next) };
+    return { href: dayHref(next, today, base), onClick: () => setTarget(next) };
   };
   const prev = to(-1);
   const next = to(1);
@@ -41,7 +41,7 @@ export function DaySwitcher({ date, today }: { date: CalendarDate; today: Calend
       </NavLink>
       {/* Always rendered so the row keeps its size; hidden on today. */}
       <NavLink
-        href="/"
+        href={dayHref(today, today, base)}
         scroll={false}
         onClick={() => setTarget(today)}
         aria-hidden={isToday}

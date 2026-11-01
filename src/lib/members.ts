@@ -2,7 +2,8 @@ import { z } from "zod";
 import { t } from "./i18n";
 import type { ThemeId } from "./themes";
 
-export type Role = "parent" | "child";
+/** "screen" is the shared family tablet (Familieskjerm): neither a parent nor a child. */
+export type Role = "parent" | "child" | "screen";
 
 export type Member = {
   id: string;
@@ -24,6 +25,16 @@ export const MEMBER_COLUMNS = "id, name, email, role, calendar_ids, colour, loca
 // Every family member is Norwegian: speech and answers are always bokmål.
 export const LOCALES = ["nb-NO"] as const;
 
+/** A real family person (parent or child), not the shared screen. */
+export function isFamilyMember(member: { role: Role }): boolean {
+  return member.role === "parent" || member.role === "child";
+}
+
+/** The members who are people: the shared screen is left out of lists of "the family". */
+export function familyMembers<T extends { role: Role }>(members: readonly T[]): T[] {
+  return members.filter(isFamilyMember);
+}
+
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
@@ -42,7 +53,7 @@ export function cleanCalendarIds(values: readonly string[]): string[] {
 export const memberInputSchema = z.object({
   name: z.string().trim().min(1, m.name).max(60, m.name),
   email: z.string().trim().toLowerCase().pipe(z.email(m.email)),
-  role: z.enum(["parent", "child"], m.role),
+  role: z.enum(["parent", "child", "screen"], m.role),
   calendar_ids: z
     .array(z.string())
     .transform(cleanCalendarIds)

@@ -381,6 +381,25 @@ export const t = {
     homeworkThisWeek: "Denne uken",
     remember: "Husk",
   },
+  // Familieskjerm: the shared tablet.
+  screen: {
+    title: "Familieskjerm",
+    switchPerson: "Bytt person",
+    people: "Familien",
+    thisIs: (name: string) => `Dette er ${/[sxz]$/i.test(name) ? `${name}'` : `${name}s`} side`,
+    requestSent: "Sendt! En voksen må godkjenne på mobilen sin.",
+    pendingStars: (n: number) => (n === 1 ? "1 stjerne venter på godkjenning" : `${n} stjerner venter på godkjenning`),
+    parentPending: (n: number) =>
+      n === 1
+        ? "1 stjerne venter på godkjenning – godkjennes på mobilen"
+        : `${n} stjerner venter på godkjenning – godkjennes på mobilen`,
+    today: "I dag",
+    restOfWeek: "Resten av uken",
+    nothingToday: "Ingenting på kalenderen i dag.",
+    nothingRestOfWeek: "Ingenting resten av uken.",
+    nobody: "Det er ingen i familien å vise ennå.",
+    noCalendar: "Ingen kalender er koblet til.",
+  },
   // Parents' home page (replaces the parents' Meg page).
   parentDay: {
     title: "Dagen i dag",
@@ -629,7 +648,8 @@ export const t = {
     confirmDelete: (name: string) => `Fjerne ${name}? Personen mister tilgangen til appen.`,
     you: "deg",
     saved: "Lagret.",
-    roles: { parent: "Forelder", child: "Barn" },
+    roles: { parent: "Forelder", child: "Barn", screen: "Familieskjerm" },
+    roleHints: { screen: "Delt nettbrett i stua. Kan ikke godkjenne stjerner." },
     locales: { "nb-NO": "Norsk" },
     fields: {
       name: "Navn",

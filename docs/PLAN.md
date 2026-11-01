@@ -7,7 +7,7 @@ A private family web app at **https://planner.braseth.family**. Each family memb
 3. Star tracks with parent approval (small reward every 5 stars, big reward at 30)
 4. A voice button that lets anyone ask Claude about their own week
 
-Extra features (kitchen-tablet view, chores, shopping list, etc.) are **out of scope for now**; see the bottom of this file.
+Extra features (chores, shopping list, etc.) are **out of scope for now**; see the bottom of this file.
 
 ---
 
@@ -188,6 +188,10 @@ Before phase 1:
 - **Extraction mistakes:** parent review step before publishing.
 - **Browser speech recognition** varies by browser; keep the text fallback.
 
+## Familieskjerm (shared tablet, owner-requested)
+
+A shared tablet (typically landscape, in the kitchen or living room) signs in with its own Google account: a `members` row with role `screen`. It shows `/skjerm`: a person rail (left in landscape, a row on top otherwise) and the overview for exactly one person at a time, in that person's colour and theme. A child's overview is the kids' start page (stars, routine, Min dag, Lekser); a parent's is their calendar for today and the rest of the week, read-only. The screen can do what a child does for any child (pending star requests, today's routine ticks, homework done) and nothing else; approvals happen on a parent's own device (RLS in `20261104090000_family_screen.sql`). No voice assistant on the screen.
+
 ## Open questions
 
 - How many children and what ages? (Picture-based UI for small kids vs text for older.)
@@ -195,4 +199,4 @@ Before phase 1:
 
 ## Later / extra features (not now)
 
-Recurring chores that earn stars · kitchen-tablet family view · morning/evening checklists · shared shopping list (with voice) · weekly digest · photo proof for stars · meal plan · wishlist for rewards · family message board · forward school emails for extraction.
+Recurring chores that earn stars · morning/evening checklists · shared shopping list (with voice) · weekly digest · photo proof for stars · meal plan · wishlist for rewards · family message board · forward school emails for extraction.

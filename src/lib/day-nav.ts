@@ -1,8 +1,15 @@
 import { addDays, dayKey, daysBetween, mondayOf, isoWeekOf, type CalendarDate } from "./dates";
 
-/** The URL of a day on the start page: `/` for today, otherwise `/?dag=YYYY-MM-DD`. */
-export function dayHref(date: CalendarDate, today: CalendarDate): string {
-  return daysBetween(today, date) === 0 ? "/" : `/?dag=${dayKey(date)}`;
+/** Where a day link points: another page and/or extra search params to keep (the family screen keeps `person`). */
+export type DayHrefBase = { path?: string; params?: Record<string, string> };
+
+/** The URL of a day on the start page: `/` for today, otherwise `/?dag=YYYY-MM-DD` (plus the base's extra params). */
+export function dayHref(date: CalendarDate, today: CalendarDate, base: DayHrefBase = {}): string {
+  const path = base.path ?? "/";
+  const query = new URLSearchParams(base.params);
+  if (daysBetween(today, date) !== 0) query.set("dag", dayKey(date));
+  const qs = query.toString();
+  return qs ? `${path}?${qs}` : path;
 }
 
 /** The URL of a week (`offset` weeks from this one) of a page: the bare path for this week, otherwise `?week=<offset>`. */

@@ -23,11 +23,14 @@ export async function StartView({
   member,
   previewing,
   dag,
+  screen = false,
 }: {
   member: Member;
   previewing: boolean;
   /** The raw `?dag=` search param: the day "Min dag" shows (today when missing or invalid). */
   dag?: string | string[];
+  /** On the family screen: the screen supplies the header, nothing links into the normal app, star requests name the child. */
+  screen?: boolean;
 }) {
   const now = new Date();
   const today = dateInTimeZone(now);
@@ -56,6 +59,8 @@ export async function StartView({
   const selectedKey = dayKey(selected);
   const events = (selWeek ?? week).days.find((d) => d.key === selectedKey)?.events ?? [];
   const failedNames = [...new Set([...week.failedNames, ...(selWeek?.failedNames ?? [])])];
+  const pendingRequests = stars ? stars.stars.filter((s) => s.status === "pending").length : 0;
+  const dayBase = screen ? { path: "/skjerm", params: { person: member.id } } : undefined;
   const tomorrow = isTomorrow(school.today, view.nextSchoolDay);
   const nextReward =
     stars && stars.progress.nextMilestone !== null
@@ -65,6 +70,7 @@ export async function StartView({
 
   return (
     <>
+      {!screen && (
       <header className="flex items-center gap-4">
         {avatars[member.id] ? (
           <MemberAvatar colour={member.colour} url={avatars[member.id]} size={64} />
@@ -82,24 +88,32 @@ export async function StartView({
           <p className="text-base font-semibold capitalize text-muted">{formatDayHeading(today)}</p>
         </div>
       </header>
+      )}
       {previewing && <Notice>{t.preview.readOnly}</Notice>}
       {member.calendar_ids.length === 0 && <Notice>{t.home.noCalendar}</Notice>}
       {failedNames.length > 0 && <Notice>{t.calendar.failed(failedNames.join(", "))}</Notice>}
 
       {/* Stars + routine, "Min dag" and Lekser sit side by side on wide screens (1 column on phones, 2 from lg, 3 from xl). */}
-      <div className="grid gap-12 lg:grid-cols-2 lg:items-start xl:grid-cols-3">
+      <div className={screen ? "grid gap-10 md:grid-cols-2 md:items-start 2xl:grid-cols-3" : "grid gap-12 lg:grid-cols-2 lg:items-start xl:grid-cols-3"}>
         <div className="space-y-8">
           {stars ? (
             <section className="space-y-3 rounded-3xl bg-warning-soft p-5 text-on-warning-soft" aria-labelledby="stars-title">
               <h2 id="stars-title" className="sr-only">{t.stars.title}</h2>
-              <Link
-                href="/stars"
-                aria-label={`${t.start.stars(stars.progress.approved, stars.progress.goal)}. ${t.start.starsLink}`}
-                className="flex items-baseline gap-3"
-              >
-                <span aria-hidden className="font-display text-6xl font-bold leading-none">{stars.progress.approved} ★</span>
-                <span aria-hidden className="text-base font-bold">{t.start.starsWord}</span>
-              </Link>
+              {screen ? (
+                <p aria-label={t.start.stars(stars.progress.approved, stars.progress.goal)} className="flex items-baseline gap-3">
+                  <span aria-hidden className="font-display text-6xl font-bold leading-none">{stars.progress.approved} ★</span>
+                  <span aria-hidden className="text-base font-bold">{t.start.starsWord}</span>
+                </p>
+              ) : (
+                <Link
+                  href="/stars"
+                  aria-label={`${t.start.stars(stars.progress.approved, stars.progress.goal)}. ${t.start.starsLink}`}
+                  className="flex items-baseline gap-3"
+                >
+                  <span aria-hidden className="font-display text-6xl font-bold leading-none">{stars.progress.approved} ★</span>
+                  <span aria-hidden className="text-base font-bold">{t.start.starsWord}</span>
+                </Link>
+              )}
               <p className="text-lg font-bold text-ink">
                 {nextReward !== null
                   ? t.start.starsToward(stars.progress.approved, stars.progress.goal, nextReward)
@@ -115,12 +129,15 @@ export async function StartView({
               >
                 <div className="h-full rounded-full bg-accent" style={{ width: `${starPercent}%` }} />
               </div>
+              {screen && pendingRequests > 0 && (
+                <p className="text-base font-bold text-ink">{t.screen.pendingStars(pendingRequests)}</p>
+              )}
               <div className="pt-2">
-                <StartStarSheet tasks={stars.tasks} previewing={previewing} />
+                <StartStarSheet tasks={stars.tasks} previewing={previewing} memberId={screen ? member.id : undefined} />
               </div>
             </section>
           ) : (
-            <StartStarSheet tasks={[]} previewing={previewing} />
+            <StartStarSheet tasks={[]} previewing={previewing} memberId={screen ? member.id : undefined} />
           )}
           <RoutineBar
             key={slot}
@@ -133,7 +150,7 @@ export async function StartView({
             tint={member.colour}
           />
         </div>
-        <StartSchool view={dayView} events={events} date={selected} today={today} />
+        <StartSchool view={dayView} events={events} date={selected} today={today} base={dayBase} />
         <StartHomework
           carried={school.carriedOver}
           items={view.homeworkDue}

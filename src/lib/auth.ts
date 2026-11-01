@@ -33,3 +33,10 @@ export async function requireParent(): Promise<Member> {
   if (member.role !== "parent") redirect("/");
   return member;
 }
+
+/** The shared family tablet (role "screen"); everyone else goes to the normal app. */
+export async function requireScreen(): Promise<Member> {
+  const member = await getCurrentMember();
+  if (member.role !== "screen") redirect("/");
+  return member;
+}

@@ -27,5 +27,6 @@ export async function setPlanItemDone(id: string, done: boolean): Promise<{ ok: 
     return { ok: false };
   }
   revalidatePath("/");
+  revalidatePath("/skjerm");
   return { ok: true };
 }

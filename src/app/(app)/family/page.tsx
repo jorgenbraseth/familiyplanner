@@ -6,7 +6,7 @@ import { loadWeek, parseWeekOffset } from "@/lib/calendar/view";
 import { visibleDays } from "@/lib/plan-view";
 import { getViewer } from "@/lib/view-as";
 import { t } from "@/lib/i18n";
-import { MEMBER_COLUMNS, type Member } from "@/lib/members";
+import { MEMBER_COLUMNS, familyMembers, type Member } from "@/lib/members";
 import { createClient } from "@/lib/supabase/server";
 import { AvatarEditor } from "@/components/avatar-editor";
 import { loadAvatarUrls } from "@/lib/avatar-urls";
@@ -19,7 +19,7 @@ export default async function FamilyPage({ searchParams }: PageProps<"/family">)
   const supabase = await createClient();
   const { data, error } = await supabase.from("members").select(MEMBER_COLUMNS).order("created_at");
   if (error) throw new Error("Could not read members");
-  const members = data as Member[];
+  const members = familyMembers(data as Member[]);
   const avatars = await loadAvatarUrls(members);
   const mine = previewing ? undefined : members.find((m) => m.id === viewing.id);
   // Kids (and "Se som barn") see only their own school events, for audience child/both; parents see every

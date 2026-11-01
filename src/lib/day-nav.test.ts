@@ -13,6 +13,16 @@ describe("dayHref", () => {
   });
 });
 
+describe("dayHref with a base", () => {
+  const base = { path: "/skjerm", params: { person: "abc" } };
+  it("keeps the extra params on today", () => {
+    expect(dayHref(today, today, base)).toBe("/skjerm?person=abc");
+  });
+  it("adds dag after the extra params", () => {
+    expect(dayHref({ year: 2026, month: 10, day: 23 }, today, base)).toBe("/skjerm?person=abc&dag=2026-10-23");
+  });
+});
+
 describe("weekHref", () => {
   it("uses the bare path for this week", () => {
     expect(weekHref("/family", 0)).toBe("/family");

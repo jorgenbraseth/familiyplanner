@@ -3,7 +3,7 @@ import { getSessionEmail } from "@/lib/auth";
 import { questionsLeftToday } from "@/lib/assistant-limit";
 import { buildSystemPrompt, firstNameOf } from "@/lib/assistant/prompt";
 import { AssistantAiError, runAssistant } from "@/lib/assistant/run";
-import { MEMBER_COLUMNS, type Member } from "@/lib/members";
+import { MEMBER_COLUMNS, familyMembers, type Member } from "@/lib/members";
 import { createClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/view-as";
 
@@ -29,11 +29,13 @@ export async function POST(request: Request) {
     if (memberError) throw new Error("Could not read the member row");
     if (!memberData) return json({ error: "unauthorized" }, 401);
     const me = memberData as Member;
+    // No assistant on the shared family screen.
+    if (me.role === "screen") return json({ error: "forbidden" }, 403);
 
     // The family list, read with the asker's own client (every member may read all members).
     const { data: familyData, error: familyError } = await supabase.from("members").select(MEMBER_COLUMNS).order("created_at");
     if (familyError) throw new Error("Could not read the family members");
-    const family = (familyData ?? []) as Member[];
+    const family = familyMembers((familyData ?? []) as Member[]);
 
     const viewer = await getViewer();
     if (viewer.previewing) return json({ error: "preview" }, 403);

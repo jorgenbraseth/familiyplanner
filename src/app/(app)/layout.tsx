@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { AssistantButton } from "@/components/assistant-button";
 import { MemberAvatar } from "@/components/member-avatar";
 import { ThemeSync } from "@/components/theme-sync";
@@ -12,6 +13,8 @@ import { stopPreview } from "./preview-actions";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const { me, viewing, previewing } = await getViewer();
+  // The shared family screen has its own app; nothing in (app) is for it.
+  if (me.role === "screen") redirect("/skjerm");
   // Parents see how many star requests wait for them; a preview shows exactly the child's app.
   const isParent = me.role === "parent" && !previewing;
   const pending = isParent ? await loadPendingCount() : 0;
