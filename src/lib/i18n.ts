@@ -29,7 +29,6 @@ export const t = {
     screenHint: "For et delt nettbrett i stua. Bare for voksne. Stjerner må fortsatt godkjennes på en voksens telefon.",
     screenParentsOnly: "Bare voksne kan starte familieskjermen.",
     screenFailed: "Kunne ikke starte familieskjermen. Prøv igjen.",
-    lockedDevice: "Denne enheten er satt opp som familieskjerm. En voksen kan frigi den under Profil på sin egen telefon.",
   },
   notInvited: {
     title: "Ikke invitert",
@@ -646,15 +645,6 @@ export const t = {
     account: "Din konto",
     name: "Navn",
     email: "E-post",
-    screens: {
-      title: "Familieskjermer",
-      intro:
-        "Nettbrett som er satt opp som familieskjerm, kan bare logge inn som familieskjerm. Frigi et nettbrett for å bruke det til vanlig innlogging etter at skjermen er logget ut. Frigivelsen logger ikke ut skjermen.",
-      setUp: (date: string, by: string | null) => (by ? `Satt opp ${date} av ${by}` : `Satt opp ${date}`),
-      release: "Frigi",
-      failed: "Kunne ikke frigi nettbrettet. Prøv igjen.",
-      none: "Ingen nettbrett er låst som familieskjerm.",
-    },
     theme: {
       title: "Tema",
       legend: "Velg tema",

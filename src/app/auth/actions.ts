@@ -1,8 +1,8 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { callbackPath, effectiveMode, parseDeviceId, parseSignInMode, SCREEN_DEVICE_COOKIE } from "@/lib/screen-mode";
+import { callbackPath, parseSignInMode } from "@/lib/screen-mode";
 import { createClient } from "@/lib/supabase/server";
 
 async function siteOrigin(): Promise<string> {
@@ -14,18 +14,11 @@ async function siteOrigin(): Promise<string> {
 
 /**
  * Starts the Google sign-in. The form's `mode` field says whether the user chose "Logg inn" or
- * "Logg inn som familieskjerm"; it travels in the redirect URL. A tablet that is locked as a family
- * screen always asks for screen mode. The callback validates everything again.
+ * "Logg inn som familieskjerm"; it travels in the redirect URL. The callback validates everything again.
  */
 export async function signInWithGoogle(formData: FormData) {
   const supabase = await createClient();
-  const deviceId = parseDeviceId((await cookies()).get(SCREEN_DEVICE_COOKIE)?.value);
-  let locked = false;
-  if (deviceId) {
-    const { data } = await supabase.rpc("screen_device_locked", { p_id: deviceId });
-    locked = data === true;
-  }
-  const mode = effectiveMode(parseSignInMode(formData.get("mode")), locked);
+  const mode = parseSignInMode(formData.get("mode"));
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
