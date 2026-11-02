@@ -154,6 +154,20 @@ export function isDailyText(
   return parts.some((p) => !!p && DAILY_PATTERN.test(p));
 }
 
+/**
+ * Phrases that mean "during the week" (bokmål, nynorsk): "i løpet av uka/veka", "denne uken", "ukelekse",
+ * "ukas lekser", "innen fredag". Deliberately not a bare "fredag" / "til fredag".
+ */
+export const WEEK_LONG_PATTERN =
+  /(?<![\p{L}\p{N}])(?:i\s+l(?:ø|o)pet\s+av\s+(?:denne\s+)?(?:uka|uken|veka|veken)|denne\s+(?:uka|uken|veka|veken)|(?:uke|veke)leks(?:e|er|en|ene|a)|(?:ukas|ukens|vekas|vekens)\s+leks(?:e|er|en|ene|a)|innen\s+fredag)(?![\p{L}\p{N}])/iu;
+
+/** True when the text says that something is to be done at some point during the week. */
+export function isWeekLongText(
+  ...parts: Array<string | null | undefined>
+): boolean {
+  return parts.some((p) => !!p && WEEK_LONG_PATTERN.test(p));
+}
+
 /** The "YYYY-MM-DD" keys of Monday..Friday of an ISO week. */
 export function schoolDayKeys(isoYear: number, isoWeek: number): string[] {
   const monday = mondayOfIsoWeek(isoYear, isoWeek);
@@ -165,6 +179,9 @@ const KIND_ORDER = ["homework", "event", "message"] as const;
 /**
  * Validates Claude's output for a ukeplan of one ISO week. Items without a date are whole-week items
  * (date = Monday). Homework and events may sit in the week or the week after; messages only in the week.
+ * Safety nets: daily homework that arrived as one whole-week item becomes one item per school day, and
+ * (non-daily) homework dated inside this week whose text says "during the week" (`isWeekLongText`) becomes
+ * a whole-week item so it shows from Monday. Homework dated in the week after keeps its date.
  */
 export function normalizeUkeplan(
   raw: unknown,
@@ -201,8 +218,16 @@ export function normalizeUkeplan(
     // Safety net: daily homework that arrived as one whole-week item becomes one item per school day.
     const daily =
       wholeWeek && raw.kind === "homework" && isDailyText(text, subject);
+    // Safety net: week-level homework dated on its deadline inside this week is a whole-week item.
+    const weekLong =
+      !wholeWeek &&
+      raw.kind === "homework" &&
+      date <= lastOfWeek &&
+      !isDailyText(text, subject) &&
+      isWeekLongText(text, subject);
+    if (weekLong) date = first;
     const dates = daily ? schoolDayKeys(isoYear, isoWeek) : [date];
-    const isWholeWeek = wholeWeek && !daily;
+    const isWholeWeek = (wholeWeek || weekLong) && !daily;
 
     let startsAt: string | null = null;
     let endsAt: string | null = null;

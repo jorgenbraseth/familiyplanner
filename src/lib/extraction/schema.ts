@@ -49,7 +49,7 @@ export const ukeplanSchema = z.object({
         .string()
         .nullable()
         .describe(
-          "The calendar date YYYY-MM-DD from the weekday table (for homework: the day it is DUE), or null when the item is for the whole week.",
+          "The calendar date YYYY-MM-DD from the weekday table (for homework: the day it is DUE, only when listed for that weekday), or null when the item is for the whole week (also homework to be done any day during the week, with the deadline kept in its text).",
         ),
       kind: z
         .enum(["homework", "event", "message"])
