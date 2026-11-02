@@ -113,7 +113,7 @@ Everyone else can then be added from the app's members page.
 
 **Familieskjerm (shared tablet):** there is no separate account. On the tablet a parent signs in with their own Google account and chooses **Logg inn som familieskjerm** (instead of *Logg inn*). That session opens `/skjerm`, where everyone picks their own name; it has only the screen's rights in the database (children can tick routines and homework and ask for stars, but the stars stay pending until a parent approves them on their own phone; it can never approve, give stars or open the parent pages). The parent's phone is unaffected. A device is never locked to being a family screen: a parent switches it back and forth by signing out (**Logg ut**) and signing in with the other button. Needs the Supabase JWT to carry `session_id` (standard in current Supabase Auth).
 
-The app keeps the display on while `/skjerm` is open (Screen Wake Lock; needs https, works in Chrome/Edge/Safari 16.4+; on iOS the first tap enables it). For a wall/kitchen tablet also set the OS auto-lock to "never" or use the tablet's guided-access/kiosk mode, and keep it on the charger.
+The app keeps the display on on every page (Screen Wake Lock; needs https, works in Chrome/Edge/Safari 16.4+; on iOS the first tap enables it). For a wall/kitchen tablet also set the OS auto-lock to "never" or use the tablet's guided-access/kiosk mode, and keep it on the charger.
 
 ## 8. Database migrations (GitHub Actions)
 

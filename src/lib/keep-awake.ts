@@ -1,4 +1,4 @@
-/** Pure decisions for the family screen's Wake Lock (`src/components/keep-awake.tsx`). */
+/** Pure decisions for the app's Wake Lock (`src/components/keep-awake.tsx`); the family screen shows a note when it fails. */
 
 export type KeepAwakeState = {
   /** `navigator.wakeLock` exists. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { KeepAwake } from "@/components/keep-awake";
+import { KeepAwakeNote } from "@/components/keep-awake";
 import { NavLink } from "@/components/nav-pending";
 import { MemberAvatar } from "@/components/member-avatar";
 import { tintStyle, textOnColour } from "@/lib/colour";
@@ -54,7 +54,7 @@ export function ScreenSwitcher({
           {t.nav.signOut}
         </button>
       </form>
-      <KeepAwake />
+      <KeepAwakeNote />
     </nav>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { Fraunces, Fredoka, Lexend, Nunito, Work_Sans } from "next/font/google";
+import { KeepAwake } from "@/components/keep-awake";
 import { SwRegister } from "@/components/sw-register";
 import { htmlLang, t } from "@/lib/i18n";
 import { THEME_COOKIE, fallbackCss, getTheme, parseThemeId, themeCss } from "@/lib/themes";
@@ -53,6 +54,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-dvh flex-col overflow-x-clip font-sans">{children}
         <SwRegister />
+        <KeepAwake />
       </body>
     </html>
   );
