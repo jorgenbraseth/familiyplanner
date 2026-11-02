@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ExtractionError } from "./errors";
 import {
   isDailyText,
+  isWeekLongText,
   normalizeTime,
   normalizeTimeplan,
   normalizeUkeplan,
@@ -34,13 +35,16 @@ describe("normalizeTime", () => {
 
 describe("normalizeUkeplan text structure", () => {
   it("keeps line breaks, trims lines, collapses spaces and blank runs", () => {
-    const text = "  Gjør oppgavene:  \r\n-  Les   side 41\n\n\n\n- Skriv tre setninger \n";
+    const text =
+      "  Gjør oppgavene:  \r\n-  Les   side 41\n\n\n\n- Skriv tre setninger \n";
     expect(uke([raw({ kind: "homework", text })])[0].text).toBe(
       "Gjør oppgavene:\n- Les side 41\n\n- Skriv tre setninger",
     );
   });
   it("caps the length as before", () => {
-    expect(uke([raw({ text: `a\n${"b".repeat(2000)}` })])[0].text).toHaveLength(1000);
+    expect(uke([raw({ text: `a\n${"b".repeat(2000)}` })])[0].text).toHaveLength(
+      1000,
+    );
   });
 });
 
@@ -141,7 +145,12 @@ describe("normalizeUkeplan", () => {
 describe("homework times", () => {
   it("drops times on homework but keeps them on events", () => {
     const out = uke([
-      raw({ kind: "homework", text: "Les", starts_at: "08:00", ends_at: "09:00" }),
+      raw({
+        kind: "homework",
+        text: "Les",
+        starts_at: "08:00",
+        ends_at: "09:00",
+      }),
       raw({ kind: "event", text: "Tur", starts_at: "08:00", ends_at: "09:00" }),
     ]);
     const by = Object.fromEntries(out.map((i) => [i.text, i]));
@@ -334,5 +343,80 @@ describe("normalizeTimeplan", () => {
 
   it("rejects results with an unexpected shape", () => {
     expect(() => normalizeTimeplan({ days: "x" })).toThrow(ExtractionError);
+  });
+});
+
+describe("week-long homework", () => {
+  const hw = (extra: Record<string, unknown> = {}) =>
+    raw({ kind: "homework", subject: "Norsk", ...extra });
+
+  it("matches week-long phrases and not a bare weekday or daily phrases", () => {
+    for (const t of [
+      "Les en bok i løpet av uka",
+      "i løpet av uken",
+      "i løpet av denne veka",
+      "Gjør ferdig denne uka",
+      "Ukelekse",
+      "ukeleksa",
+      "vekelekse",
+      "Ukas lekser",
+      "ukens lekse",
+      "Ferdig innen fredag",
+    ])
+      expect(isWeekLongText(t), t).toBe(true);
+    expect(isWeekLongText("Norsk", "Les i løpet av uka")).toBe(true);
+    for (const t of [
+      "til fredag",
+      "Lekser til tirsdag",
+      "fredag",
+      "ukeplan",
+      "ukelekseløs",
+      "Les hver dag",
+    ])
+      expect(isWeekLongText(t), t).toBe(false);
+  });
+
+  it("turns a deadline-dated week-long item into a whole-week item on Monday", () => {
+    const [item] = uke([
+      hw({
+        date: "2026-10-23",
+        text: "Les en bok i løpet av uka. Leveres fredag.",
+      }),
+    ]);
+    expect(item.date).toBe("2026-10-19");
+    expect(item.whole_week).toBe(true);
+  });
+
+  it("uses the subject too", () => {
+    const [item] = uke([
+      hw({ date: "2026-10-23", subject: "Ukelekse", text: "Les s. 4" }),
+    ]);
+    expect(item.whole_week).toBe(true);
+  });
+
+  it("keeps a plain 'til fredag' item on Friday", () => {
+    const [item] = uke([
+      hw({ date: "2026-10-23", text: "Lekser til fredag: les side 4" }),
+    ]);
+    expect(item.date).toBe("2026-10-23");
+    expect(item.whole_week).toBe(false);
+  });
+
+  it("keeps a match dated in the next week", () => {
+    const [item] = uke([
+      hw({ date: "2026-10-27", text: "Les i løpet av uka" }),
+    ]);
+    expect(item.date).toBe("2026-10-27");
+    expect(item.whole_week).toBe(false);
+  });
+
+  it("does not touch events or messages, nor daily text", () => {
+    const [msg] = uke([raw({ date: "2026-10-23", text: "Husk innen fredag" })]);
+    expect(msg.whole_week).toBe(false);
+    const [daily] = uke([
+      hw({ date: "2026-10-23", text: "Les hver dag i løpet av uka" }),
+    ]);
+    expect(daily.date).toBe("2026-10-23");
+    expect(daily.whole_week).toBe(false);
   });
 });
