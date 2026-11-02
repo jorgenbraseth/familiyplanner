@@ -1,17 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { normalizeEmail } from "@/lib/members";
-import {
-  effectiveMode,
-  parseDeviceId,
-  parseSignInMode,
-  SCREEN_DEVICE_COOKIE,
-  SCREEN_DEVICE_COOKIE_MAX_AGE_SECONDS,
-} from "@/lib/screen-mode";
+import { parseSignInMode } from "@/lib/screen-mode";
 import { createClient } from "@/lib/supabase/server";
 
 // Google → Supabase → here. Exchanges the code for a session, then applies the allowlist and, for
-// "Logg inn som familieskjerm" (or a tablet locked as a family screen), puts the session into
+// "Logg inn som familieskjerm", puts the session into
 // screen mode: only a parent can, and the database then gives that session the screen's rights only.
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
@@ -39,14 +33,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/not-invited?email=${encodeURIComponent(normalizeEmail(email))}`);
   }
 
-  const cookieStore = await cookies();
-  const deviceId = parseDeviceId(cookieStore.get(SCREEN_DEVICE_COOKIE)?.value);
-  let locked = false;
-  if (deviceId) {
-    const { data: isLocked } = await supabase.rpc("screen_device_locked", { p_id: deviceId });
-    locked = isLocked === true;
-  }
-  const mode = effectiveMode(parseSignInMode(searchParams.get("mode")), locked);
+  // A device is never locked to a mode: a stale cookie from the old device lock is removed.
+  (await cookies()).delete("screen_device");
+  const mode = parseSignInMode(searchParams.get("mode"));
   if (mode === "normal") return NextResponse.redirect(`${origin}/`);
 
   // Screen mode. Never fall through to a normal session from here on.
@@ -62,22 +51,5 @@ export async function GET(request: NextRequest) {
     return refuse("screen-failed");
   }
 
-  // Lock this tablet (unless it already is), so signing out and back in gives the screen again.
-  let lockedId = locked ? deviceId : null;
-  if (!lockedId) {
-    const { data: newId, error: registerError } = await supabase.rpc("register_screen_device");
-    if (registerError || typeof newId !== "string") {
-      console.error("register_screen_device failed", registerError?.code);
-      return refuse("screen-failed");
-    }
-    lockedId = newId;
-  }
-  cookieStore.set(SCREEN_DEVICE_COOKIE, lockedId, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: SCREEN_DEVICE_COOKIE_MAX_AGE_SECONDS,
-  });
   return NextResponse.redirect(`${origin}/skjerm`);
 }

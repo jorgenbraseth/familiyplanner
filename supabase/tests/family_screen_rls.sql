@@ -382,93 +382,13 @@ begin
   perform pg_temp.done();
 end $$;
 
--- 7. Device lock.
+-- 7. The device lock is gone: the table and its functions no longer exist.
 do $$
-declare dev uuid; dev2 uuid; n int; p uuid;
 begin
-  select v into p from ids where k = 'p';
-
-  -- a normal session cannot register a device; a child neither
-  perform pg_temp.act_normal();
-  begin
-    perform public.register_screen_device();
-    raise exception 'normal session registered a device';
-  exception when insufficient_privilege then null;
-  end;
-  perform pg_temp.act_as('screen.child.a@example.com', 'authenticated', '00000000-0000-4000-8000-000000000003');
-  begin
-    perform public.register_screen_device();
-    raise exception 'child registered a device';
-  exception when insufficient_privilege then null;
-  end;
-  perform pg_temp.done();
-  perform pg_temp.act_as(null, 'anon');
-  begin
-    perform public.register_screen_device();
-    raise exception 'anon registered a device';
-  exception when insufficient_privilege then null;
-  end;
-  perform pg_temp.done();
-
-  -- the screen session registers one; nobody can insert directly
-  perform pg_temp.act_screen();
-  dev := public.register_screen_device();
-  begin
-    insert into public.screen_devices (created_by) values (p);
-    raise exception 'direct device insert accepted';
-  exception when insufficient_privilege then null;
-  end;
-  -- the screen session cannot read the table or release a device
-  select count(*) into n from public.screen_devices;
-  if n <> 0 then raise exception 'screen session reads screen_devices'; end if;
-  begin
-    update public.screen_devices set released_at = now() where id = dev;
-    get diagnostics n = row_count;
-    if n <> 0 then raise exception 'screen session released a device'; end if;
-  end;
-  perform pg_temp.done();
-
-  -- locked is visible to anon (the login page), and to nobody else's data
-  perform pg_temp.act_as(null, 'anon');
-  if not public.screen_device_locked(dev) then raise exception 'device not locked'; end if;
-  if public.screen_device_locked(gen_random_uuid()) then raise exception 'unknown device locked'; end if;
-  if public.screen_device_locked(null) then raise exception 'null device locked'; end if;
-  begin
-    perform 1 from public.screen_devices;
-    raise exception 'anon reads screen_devices';
-  exception when insufficient_privilege then null;
-  end;
-  perform pg_temp.done();
-
-  -- a child cannot read or release
-  perform pg_temp.act_as('screen.child.a@example.com', 'authenticated', '00000000-0000-4000-8000-000000000003');
-  select count(*) into n from public.screen_devices;
-  if n <> 0 then raise exception 'child reads screen_devices'; end if;
-  update public.screen_devices set released_at = now() where id = dev;
-  get diagnostics n = row_count;
-  if n <> 0 then raise exception 'child released a device'; end if;
-  perform pg_temp.done();
-
-  -- a parent in a normal session lists and releases; the release is final and records who/when
-  perform pg_temp.act_normal();
-  select count(*) into n from public.screen_devices where released_at is null;
-  if n <> 1 then raise exception 'parent cannot list devices'; end if;
-  begin
-    update public.screen_devices set created_by = null where id = dev;
-    raise exception 'parent changed a non-release column';
-  exception when insufficient_privilege then null;
-  end;
-  update public.screen_devices set released_at = null, released_by = null where id = dev; -- trigger stamps it anyway
-  select count(*) into n from public.screen_devices where id = dev and released_at is not null and released_by = p;
-  if n <> 1 then raise exception 'release not recorded'; end if;
-  update public.screen_devices set released_at = null where id = dev;
-  get diagnostics n = row_count;
-  if n <> 0 then raise exception 'a released device was updated again'; end if;
-  perform pg_temp.done();
-
-  perform pg_temp.act_as(null, 'anon');
-  if public.screen_device_locked(dev) then raise exception 'released device still locked'; end if;
-  perform pg_temp.done();
+  if to_regclass('public.screen_devices') is not null then raise exception 'screen_devices still exists'; end if;
+  if to_regprocedure('public.register_screen_device()') is not null then raise exception 'register_screen_device still exists'; end if;
+  if to_regprocedure('public.screen_device_locked(uuid)') is not null then raise exception 'screen_device_locked still exists'; end if;
+  if to_regprocedure('public.screen_devices_release()') is not null then raise exception 'screen_devices_release still exists'; end if;
 end $$;
 
 rollback;
