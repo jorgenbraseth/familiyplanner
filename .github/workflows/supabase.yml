@@ -39,7 +39,8 @@ jobs:
         if: steps.check.outputs.run == 'true'
         run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
       # No --include-seed: supabase/seed.sql is run by hand once.
-      # --remote: since the CLI's 2026 major, `db push` targets the local stack by default.
+      # Since the CLI's 2026 major, `db push` targets the local stack by default (--remote) and asks for
+      # confirmation, which a non-terminal run cannot give (--yes).
       - name: Push migrations
         if: steps.check.outputs.run == 'true'
-        run: supabase db push --remote
+        run: supabase db push --remote --yes
