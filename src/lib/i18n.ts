@@ -453,6 +453,7 @@ export const t = {
     homeworkTitle: "Lekser i dag",
     homeworkTitleOtherDay: "Lekser",
     homeworkNone: "Ingen lekser",
+    homeworkThisWeek: "Denne uken",
     homeworkDone: "Ferdig",
     homeworkNotDone: "Ikke ferdig",
     endTitle: "Skolen slutter",
