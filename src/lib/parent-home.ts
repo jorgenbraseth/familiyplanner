@@ -23,6 +23,8 @@ export type ParentHomeChild = {
   homework: PlanItemRow[];
   /** Unfinished homework from earlier days with its label ("Fra mandag"), oldest first (today only). */
   carried: CarriedItem[];
+  /** Whole-week homework of this week, done ones included since this is the parents' view (today only). */
+  weekHomework: PlanItemRow[];
   nextSchoolDay: CalendarDate;
   homeworkTomorrow: boolean;
   schoolEnd: SchoolEnd;
@@ -76,6 +78,7 @@ export async function loadParentHome(now = new Date(), selectedDay?: CalendarDat
         pending: active?.stars.filter((s) => s.status === "pending").reverse() ?? [],
         homework: homework.items,
         carried: homework.carried,
+        weekHomework: dayKey(selected) === dayKey(today) ? view.weekHomework : [],
         nextSchoolDay: view.nextSchoolDay,
         homeworkTomorrow: homework.tomorrow,
         schoolEnd: schoolEndSummary(view.hours, view.periods.length),

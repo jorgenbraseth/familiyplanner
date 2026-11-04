@@ -8,6 +8,7 @@ import { dateInTimeZone, formatDayHeading, isoWeekOf, parseDayKey } from "@/lib/
 import { tintStyle } from "@/lib/colour";
 import { t } from "@/lib/i18n";
 import type { ParentHome } from "@/lib/parent-home";
+import type { PlanItemRow } from "@/lib/plan";
 import { uploadHref } from "@/lib/parent-home-view";
 import { formatSchoolHours, formatWeekday } from "@/lib/plan-view";
 import { rewardTextAt } from "@/lib/stars";
@@ -120,6 +121,25 @@ export function ParentHomeTop({ data, avatars = {} }: { data: ParentHome; avatar
   );
 }
 
+function HomeworkRow({ item, label }: { item: PlanItemRow; label: string | null }) {
+  return (
+    <li className="flex items-start gap-2 text-base">
+      <span
+        role="img"
+        aria-label={item.done ? t.parentHome.homeworkDone : t.parentHome.homeworkNotDone}
+        className="w-5 shrink-0 text-center font-extrabold text-primary-strong"
+      >
+        {item.done ? "✓" : "○"}
+      </span>
+      <div className="min-w-0 break-words">
+        {label && <span className="block text-sm font-semibold text-muted">{label}</span>}
+        {item.subject && <span className="block font-extrabold">{item.subject}</span>}
+        <StructuredText text={item.text} />
+      </div>
+    </li>
+  );
+}
+
 /** The parents' home, lower part: homework, notes from school and the upload links (plain, no boxes). */
 export function ParentHomeCards({ data, avatars = {} }: { data: ParentHome; avatars?: Avatars }) {
   const { children, uploadWeek } = data;
@@ -131,7 +151,7 @@ export function ParentHomeCards({ data, avatars = {} }: { data: ParentHome; avat
         <h2 id="homework-title" className={sectionTitle}>{data.isToday ? t.parentHome.homeworkTitle : t.parentHome.homeworkTitleOtherDay}</h2>
         <PendingContent>
         <ul className="space-y-6">
-          {children.map(({ child, homework, carried, homeworkTomorrow, nextSchoolDay }) => (
+          {children.map(({ child, homework, carried, weekHomework, homeworkTomorrow, nextSchoolDay }) => (
             <li key={child.id} className="space-y-1">
               <h3 className="flex items-center gap-2 text-lg font-extrabold">
                 <Dot colour={child.colour} url={avatars[child.id]} />
@@ -144,22 +164,19 @@ export function ParentHomeCards({ data, avatars = {} }: { data: ParentHome; avat
               ) : (
                 <ul className="space-y-2">
                   {[...carried, ...homework.map((item) => ({ item, label: null }))].map(({ item, label }) => (
-                    <li key={item.id} className="flex items-start gap-2 text-base">
-                      <span
-                        role="img"
-                        aria-label={item.done ? t.parentHome.homeworkDone : t.parentHome.homeworkNotDone}
-                        className="w-5 shrink-0 text-center font-extrabold text-primary-strong"
-                      >
-                        {item.done ? "✓" : "○"}
-                      </span>
-                      <div className="min-w-0 break-words">
-                        {label && <span className="block text-sm font-semibold text-muted">{label}</span>}
-                        {item.subject && <span className="block font-extrabold">{item.subject}</span>}
-                        <StructuredText text={item.text} />
-                      </div>
-                    </li>
+                    <HomeworkRow key={item.id} item={item} label={label} />
                   ))}
                 </ul>
+              )}
+              {weekHomework.length > 0 && (
+                <div className="space-y-2 pt-3">
+                  <h4 className="text-sm font-bold text-muted">{t.parentHome.homeworkThisWeek}</h4>
+                  <ul className="space-y-2">
+                    {weekHomework.map((item) => (
+                      <HomeworkRow key={item.id} item={item} label={null} />
+                    ))}
+                  </ul>
+                </div>
               )}
             </li>
           ))}
